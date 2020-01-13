@@ -1,0 +1,3 @@
+[submodule "external/udcore"]
+	path = external/udcore
+	url = git@github.com:Euclideon/udcore.git

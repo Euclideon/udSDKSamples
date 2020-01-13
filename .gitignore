@@ -1,0 +1,16 @@
+/.vs
+/Output
+/builds
+
+*.log
+*tmp.png
+
+*.tlog
+*.vcxproj
+*.vcxproj.user
+*.csproj
+*.sln
+**/obj/x64/**
+*.filters
+
+*Makefile
