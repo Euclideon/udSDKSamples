@@ -10,6 +10,7 @@ project "vaultCppSample"
 
 	--Files to include
 	files { "**" }
+	includedirs { "../../external/stb" }
 
 	--This project includes
 	IncludeVaultSDK()
