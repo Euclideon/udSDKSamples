@@ -40,7 +40,7 @@ end
 function IncludeVaultSDK()
 	includedirs(_OPTIONS["vaultsdk"] .. "/include")
 	libdirs { _OPTIONS["vaultsdk"] .. "/include" }
-	
+
 	local osname, distroExtension = getosinfo()
 
 	if os.target() == premake.MACOSX then
@@ -63,7 +63,7 @@ function IncludeVaultSDK()
 		os.execute("/usr/bin/hdiutil detach /Volumes/vaultSDK")
 		os.execute("/usr/bin/hdiutil detach " .. device)
 		os.execute("rm -r builds/vaultSDK.dmg")
-		
+
 		prelinkcommands {
 			"rm -rf %{prj.targetdir}/%{prj.targetname}.app/Contents/Frameworks",
 			"mkdir -p %{prj.targetdir}/%{prj.targetname}.app/Contents/Frameworks",
@@ -120,14 +120,19 @@ solution "VaultSDKSamples"
 	group "external"
 		--dofile "external/udCore/project.lua"
 
-	group ""
-	
+	group "languages"
+
 	if os.target() ~= "android" and os.target() ~= "ios" and os.target() ~= "emscripten" then
 		dofile "languages/c/project.lua"
 		dofile "languages/cpp/project.lua"
 	end
-	
+
 	if os.target() == premake.WINDOWS then
 		dofile "languages/csharp/project.lua"
 		dofile "integrations/winforms-csharp/project.lua"
 	end
+
+	group "features"
+		if os.target() ~= "android" and os.target() ~= "ios" and os.target() ~= "emscripten" then
+			dofile "features/convertcustomdata/project.lua"
+		end
