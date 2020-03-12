@@ -110,41 +110,6 @@ Smoothing on (note that tree branches are no longer captured by the collision mo
 
 As the attached mesh is modified often by this script, baking options for the mesh collider should be turned off for performance reasons
 
-## Advanced Example
-
-The advanced example can be accessed by navigating to Scenes/AdvancedSampleScene in the project view. In addition to the flying camera provided in the basic scene, there are two modes available in play mode demonstrating the
-use of the vdkCollider
-
-```E``` Key is used to switch between Demos during play
-
-
-
-### Driving Simulator
-
-![Driving Example](./docs/drivingExample.png "Driving Example")
-
-This is based on [Vehicle Tools](https://assetstore.unity.com/packages/essentials/tutorial-projects/vehicle-tools-83660) by Unity Technologies
-
-In game controls:
-
-```W S A D``` Control acceleration, deceleration, turn left and turn right respectively
-```K``` switches the active vehicle from a selection
-
-### 3rd Person Ragdoll
-
-![Ragdoll Example](./docs/ragdollExample.png "Ragdoll Example")
-
-Based on the example [Ragdoll and Transition to Mecanim](https://assetstore.unity.com/packages/templates/systems/ragdoll-and-transition-to-mecanim-38568) by Staz Berzokov
-
-Mouse controls the position of the third person camera
-
-```W S A D``` to move the character around
-
-```SPACE```  To jump
-
-```R``` Resets the position of the active vehicle
-
-
 ## Known Issues
 
 ### License Expired
