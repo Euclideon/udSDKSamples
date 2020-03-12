@@ -1,6 +1,6 @@
 # VDK Unity
 
-This project demonstrates the use of Euclideon Vault developer Kit (VDK) with the Unity Real Time Development Platform. 
+This project demonstrates the use of Euclideon Vault developer Kit (Vault SDK) with the Unity Real Time Development Platform. 
 
 ```
 Language:              C#
@@ -9,32 +9,25 @@ Contributor:           Euclideon Vault Development Team <support@euclideon.com>
 Organization:          Euclideon, https://euclideon.com/vault
 Date:                  2020-02-03
 Vault SDK Version:     0.5.0
-Toolsets:              Requires Unity >=2019.3
+Toolsets:              Requires Unity >= 2019.3.4f1
 ```
 
-## Resources Required
-Unity Postprocessing >=v2.3.0
+## Quickstart guide 
 
-## How to use the sample
-<!-- TODO: Explain how this sample can be used and what is required to get it running -->
-There are two projects included:
+**The UnityVDK requires a valid license for Euclideon Vault SDK, trial licenses can be obtained [here](https://zfrmz.com/gwVUru84d60yUedxmLx9/?ref=Unity%20Sample%20Code)** 
+The VDK is tested with Unity 2019.3.4f1 - it may work in other versions of Unity, but we can't guarentee that it does. Please sneure you have Unity 2019.3.4f1 installed.
 
-* This is the basic project, including a basic flight camera and collider, this demonstrates the basic concepts required to get simulations and games using VDK running in unity. This is ideal for developers wishing to use VDK with their own projects
-* There is also an advanced project: including a driving simulator and third person ragdoll. This demonstrates use of VDK with Unity physics and is good for exploring and testing interactions of unity systems with Unlimited Detail point clouds.
+### Installation - New or Existing Project
+The fastest way to install VDK for Unity is to go [here](https://Euclideon.com/unity) and follow the onscreen instructions.
 
-**Both examples require a valid license for Euclideon Vault SDK, trial licenses can be obtained [here](https://zfrmz.com/gwVUru84d60yUedxmLx9/?ref=Unity%20Sample%20Code)** 
+### Installation - Github Samples
+1. Download and extract Vault SDK 0.5.0 package from [here](https://earth.vault.euclideon.com) using your license credentials (if you do not have one, free trials are available from [here](https://zfrmz.com/gwVUru84d60yUedxmLx9/?ref=Unity%20Sample%20Code) )
+2. Clone or Download the Unity Vault SDK examples from [here](https://github.com/Euclideon/vaultsdksamples)
+3. Copy the files from _Euclideon_vdk0.5.0/lib/(_your operating system here_)/_ to _vaultsdksamples/integrations/unity-csharp/Assets/VDK 
+3. Open the Vault SDK Unity example project by navigating to _vaultsdksamples/integrations/unity-csharp/Assets/Scenes and opening SampleScene
+4. From the Toolbar, Navigate to VDK > Set User Info - and enter your VaultSDK username/password, then press Save User Info.
 
-### Installation
-
-Both examples are tested with Unity 2019.3.0f6, all steps must be repeated for each package in their respective directories.
-
-1. Download and extract VDK 0.5.0 package from [here](https://earth.vault.euclideon.com) using your license credentials (if you do not have one, free trials are available from [here](https://zfrmz.com/gwVUru84d60yUedxmLx9/?ref=Unity%20Sample%20Code) )
-2. Download the Unity VDK examples from [here](https://github.com/Euclideon/vaultsdksamples)
-3. Copy the files from _Euclideon_vdk0.5.0/lib/(_your operating system here_)/_ to _vaultsdksamples/integrations/unity-csharp/Assets/VDK in your Unity project
-4. Replace the username and password lines from _Assets/VDK/vdkLogin.cs_ to your vault login details 
-5. Open Unity Hub, Select Add and specify the  project as the source folder; select the unity version next to the project name; click on the project name
-6. Open Window \-> package manager \-> Post Processing \-> update (ensure that postprocessing packages are installed and up to date, \>v2.3.0)
-7. Open the sample scene from the project, (Scenes/SampleScene in the project expolorer) press play to fly the camera in the chose scene using game view. Refer to known issues if the game does not run
+VaultSDK with Unity is now ready to go! Press play!
 
 ### Changing UDS model
 
@@ -50,8 +43,9 @@ Photogrammetry model of the Gold Coast courtesy of [Aerometrex](https://aerometr
 
 ## Basic Example
 
-This is an example demonstrating how to use VDK with unity, it includes a minimalist example of a flight camera and an attached collider. 
+This is an example demonstrating how to use Vault SDK with Unity, it includes a minimalist example of a flight camera and an attached collider.
 Unlimited detail rendering is implemented as a postprocessing effect that can be applied to cameras in order to display UDS objects.
+
 
 ### Sample Scene Structure
 ![The Structure of the basic sample scene](./docs/sampleSceneStructure.png "Structure of the Sample Scene")
@@ -74,7 +68,7 @@ and login information between objects, and a ```vdkRenderContext```, enabling th
 
 ### VDKPPER 
 
-_VDKPPES.cs_ contains the implemention of VDK in Unity as a post processing effect. The associated shader is ```vdkShader.shader```
+_VDKPPES.cs_ contains the implemention of Vault SDK in Unity as a post processing effect. The associated shader is ```vdkShader.shader```
 
 ### VDK Collider
 
@@ -118,17 +112,13 @@ As the attached mesh is modified often by this script, baking options for the me
 
 ## Known Issues
 
-### Postprocessing bug on initial import
+### License Expired
+As of Vault SDK 0.5.0 the licensing system may malfunction intermittently with multiple views active. This includes the views generated by vdkCollider instances. As a consequence rendering of may be interrupted during play for a short period after 5 minutes with the following exception:
+
 ```C#
-NullReferenceException: Object reference not set to an instance of an object
-UnityEngine.Rendering.PostProcessing.AmbientOcclusion.IsEnabledAndSupported (UnityEngine.Rendering.PostProcessing.PostProcessRenderContext context) (at Library/PackageCache/com.unity.postprocessing@2.3.0/PostProcessing/Runtime/Effects/AmbientOcclusion.cs:182)
-UnityEngine.Rendering.PostProcessing.PostProcessLayer.SetLegacyCameraFlags (UnityEngine.Rendering.PostProcessing.PostProcessRenderContext context) (at Library/PackageCache/com.unity.postprocessing@2.3.0/PostProcessing/Runtime/PostProcessLayer.cs:771)
-UnityEngine.Rendering.PostProcessing.PostProcessLayer.SetupContext (UnityEngine.Rendering.PostProcessing.PostProcessRenderContext context) (at Library/PackageCache/com.unity.postprocessing@2.3.0/PostProcessing/Runtime/PostProcessLayer.cs:863)
-UnityEngine.Rendering.PostProcessing.PostProcessLayer.BuildCommandBuffers () (at Library/PackageCache/com.unity.postprocessing@2.3.0/PostProcessing/Runtime/PostProcessLayer.cs:533)
-UnityEngine.Rendering.PostProcessing.PostProcessLayer.OnPreCull () (at Library/PackageCache/com.unity.postprocessing@2.3.0/PostProcessing/Runtime/PostProcessLayer.cs:462)
-UnityEngine.GUIUtility:ProcessEvent(Int32, IntPtr)
+Exception: vdkRenderContext.Render failed: vE_InvalidLicense
+Vault.vdkRenderContext.Render (Vault.vdkRenderView renderView, Vault.vdkRenderInstance[] pModels, System.Int32 modelCount) (at Assets/VDK/VaultAPI.cs:348)
 ```
 
-This occurs as a result of a bug in the postprocessing package, the solution is to remove the postprocessing layer from the
-camera(s) and re add it with the same settings as provided. 
+This is expected to be fixed in future releases of Vault SDK, it can currently be avoided by using a single render view (i.e. no vdkColliders)
 

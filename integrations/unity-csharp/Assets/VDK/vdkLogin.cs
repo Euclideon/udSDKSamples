@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 using Vault;
 namespace Vault
 {
@@ -11,10 +12,20 @@ namespace Vault
         public static vdkContext vContext = new vdkContext();
         public static vdkRenderContext renderer = new vdkRenderContext();
         public static string vaultServer = "https://earth.vault.euclideon.com";
-        public static string vaultUsername = "";
-        public static string vaultPassword = "";
+        public static string vaultUsername = ""; // leave empty
+        
+        public static string vaultPassword = ""; // leave empty
+
+        // These strings exist to ensure during development no typo or error is ever set regarding the saving/loading/reading of 
+        // .. usernames and passwords.
+        public static string SavedUsernameKey = "VDKUsername";
+        public static string SavedPasswordKey = "VDKPassword";
         public static void Login()
         {
+            // Using editor prefs unfortunatly
+            vaultUsername = EditorPrefs.GetString(SavedUsernameKey);
+            vaultPassword = EditorPrefs.GetString(SavedPasswordKey);
+
             if (!GlobalVDKContext.isCreated)
             {
                 try
