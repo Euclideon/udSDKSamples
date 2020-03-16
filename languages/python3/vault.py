@@ -169,3 +169,23 @@ class vdkPointCloud:
     pMetadata = c_char_p(0)
     _HandleReturnValue(self.vdkPointCloud_GetMetadata(self.model, byref(pMetadata)))
     return pMetadata.value.decode('utf8')
+
+class vdkConvertContext:
+  def __init__(self):
+      self.vdkConvert_CreateContext = getattr(vaultSDK, "vdkConvert_CreateContext")
+      self.vdkConvert_DestroyContext  = getattr(vaultSDK, "vdkConvert_DestroyContext")
+      self.vdkConvert_SetOutputFilename = getattr(vaultSDK, "vdkConvert_SetOutputFilename")
+      self.vdkConvert_AddItem = getattr(vaultSDK, "vdkConvert_AddItem")
+      self.vdkConvert_DoConvert = getattr(vaultSDK, "vdkConvert_DoConvert")
+      self.convertContext = c_void_p(0)
+
+  def Create(self, context):
+      _HandleReturnValue(self.vdkConvert_CreateContext(context.context, byref(self.convertContext)))
+  def Destroy(self):
+      _HandleReturnValue(self.vdkConvert_DestroyContext(byref(self.convertContext)))
+  def Output(self, fileName):
+      _HandleReturnValue(self.vdkConvert_SetOutputFilename(self.convertContext, fileName.encode('utf8')))
+  def AddItem(self, modelName):
+      _HandleReturnValue(self.vdkConvert_AddItem(self.convertContext, modelName.encode('utf8')))
+  def DoConvert(self):
+      _HandleReturnValue(self.vdkConvert_DoConvert(self.convertContext))
