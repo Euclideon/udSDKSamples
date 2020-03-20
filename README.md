@@ -1,4 +1,4 @@
-# Euclideon Vault Client
+# Euclideon Vault SDK Samples
 
 This is the repository for Euclideon Vault SDK Sample Projects.
 
@@ -18,7 +18,7 @@ You will *need* Euclideon Vault Software Development Kit (Vault SDK) you can [si
 2. Generate project files
   a) For Windows using VS2019, run `create_project.bat` and follow the prompts
   b) Information for other platforms coming soon
-  
+
 From that you can build and run in your preferred environment.
 
 ## Contributing
@@ -43,7 +43,7 @@ We will be tagging issues and pull requests in the following way:
 - **bug** – We consider this issue to be a bug. This tag is for bugs in implemented features, or something we consider to be a “bug level” change. Things marked with Bug have a corresponding bug in the Euclideon internal bug tracking system.
   - Example: A specific LAS file fails to convert correctly
 
-- **feature** – Denotes something that is not yet implemented.  
+- **feature** – Denotes something that is not yet implemented.
   - Example: Exporting Camera flythrough's to Video files
 
 - **discussion** – Denotes a discussion on the board that does not relate to a specific feature.
@@ -65,7 +65,7 @@ We will be tagging issues and pull requests in the following way:
 
 Additional tags may be used to denote specific types of issues or components of the system.
   - Example: **rendering** or **inputs**
-  
+
 ## Important Links
 - The Euclideon Vault [Homepage](https://www.euclideon.com/vault/)
 - The repository for [Euclideon Vault Client](https://github.com/euclideon/vaultclient) shows more advanced (and integrated) usage of Vault SDK
