@@ -28,7 +28,6 @@ project "ConvertCustomData"
 		postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["vaultsdk"] .. '\\lib\\win_x64\\vaultSDK.dll" "$(TargetDir)\\"' }
 
 	filter { "system:linux" }
-		buildoptions { "-std=c99" }
 		links { "vaultSDK", "z", "m" }
 
 		--This need to be changed to work in other distros
