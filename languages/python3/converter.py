@@ -10,8 +10,10 @@
 import vault
 
 from ctypes import c_int, c_float
+import os
+import platform
 from os import getcwd
-from os.path import dirname, basename
+from os.path import dirname, basename, abspath
 from sys import exit
 from PIL import Image
 from sys import argv
@@ -20,10 +22,16 @@ from sys import argv
 ####################### Setup #########################
 #######################################################
 cwd = getcwd()
-SDKPath = cwd + "\\vaultSDK"
 
-modelFile = cwd + "\\FileToConvert.uds"
-outFile = cwd + "\\ConvertedUDS.uds"
+SDKPath = os.environ.get("VAULTSDK_HOME")
+if SDKPath and platform.system() == 'Windows':
+    SDKPath +="/lib/win_x64/vaultSDK"
+    #TODO add checks for other operating systems
+else:#we assume that the .dll or .so file is in the current working directory
+    SDKPath = abspath("./vaultSDK")
+
+modelFiles = [abspath("../../samplefiles/DirCube.uds")]
+outFile = abspath("./ConvertedUDS.uds")
 
 appName = "PythonSample_Convert"
 
@@ -36,12 +44,9 @@ if len(argv) >= 3:
   userPass = argv[2]
 
 if len(argv) >= 4:
-  modelFile = argv[3]
-
-#######################################################
-######################## Main #########################
-#######################################################
-if __name__ == "__main__":
+  modelFiles = argv[3:]
+  
+def convertModel(modelFile, outFile):
     # Load the SDK and fetch symbols
     vault.LoadVaultSDK(SDKPath)
 
@@ -80,4 +85,13 @@ if __name__ == "__main__":
         elif (vaultError == vault.vdkError.ServerFailure):
             print("Unable to negotiate with server, please confirm the server address")
         elif (vaultError != vault.vdkError.Success):
-            print("Unknown error occurred, please try again later.")
+            print("Error: ", vault.vdkError(vaultError).name)
+    
+
+#######################################################
+######################## Main #########################
+#######################################################
+if __name__ == "__main__":
+    for modelFile in modelFiles:
+        outFile = abspath("./converted_"+modelFile)
+        convertModel(modelFile, outFile)
