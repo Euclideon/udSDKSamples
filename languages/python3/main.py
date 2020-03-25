@@ -1,6 +1,8 @@
 import vault
 
 from ctypes import c_int, c_float
+import os
+import platform
 from os import getcwd
 from os.path import dirname, basename, abspath
 from sys import exit
@@ -8,10 +10,20 @@ from PIL import Image
 from sys import argv
 
 cwd = getcwd()
-SDKPath = cwd + "\\vaultSDK"
-#modelFile = cwd + "\\DirCube.uds"
+
+#Try to determine the location of the SDK shared library, 
+#if the environment does not include one we fall back to looking in the 
+#currrent working directory
+SDKPath = os.environ.get("VAULTSDK_HOME")
+if SDKPath and platform.system() == 'Windows':
+    SDKPath +="/lib/win_x64/vaultSDK"
+    #TODO add checks for other operating systems
+else:#we assume that the .dll or .so file is in the current working directory
+    SDKPath = abspath("./vaultSDK")
+    
+
 modelFile = abspath("../../samplefiles/DirCube.uds")
-outFile = cwd + "\\tmp.png"
+outFile = abspath("./tmp.png")
 
 appName = "PythonSample"
 serverPath = "https://earth.vault.euclideon.com"
