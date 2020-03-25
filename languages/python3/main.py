@@ -2,14 +2,15 @@ import vault
 
 from ctypes import c_int, c_float
 from os import getcwd
-from os.path import dirname, basename
+from os.path import dirname, basename, abspath
 from sys import exit
 from PIL import Image
 from sys import argv
 
 cwd = getcwd()
 SDKPath = cwd + "\\vaultSDK"
-modelFile = cwd + "\\DirCube.uds"
+#modelFile = cwd + "\\DirCube.uds"
+modelFile = abspath("../../samplefiles/DirCube.uds")
 outFile = cwd + "\\tmp.png"
 
 appName = "PythonSample"
@@ -22,7 +23,7 @@ if len(argv) >= 3:
   userPass = argv[2]
 
 if len(argv) >= 4:
-  modelFile = argv[3]
+  modelFile = abspath(argv[3])
 
 width = 1280
 height = 720
@@ -71,7 +72,7 @@ if __name__ == "__main__":
         vaultError = err.args[1]
         if (vaultError == vault.vdkError.ConnectionFailure):
             print("Could not connect to server.")
-        elif (vaultError == vault.vdkError.NotAllowed):
+        elif (vaultError == vault.vdkError.AuthFailure):
             print("Username or Password incorrect.")
         elif (vaultError == vault.vdkError.OutOfSync):
             print("Your clock doesn't match the remote server clock.")
@@ -80,4 +81,4 @@ if __name__ == "__main__":
         elif (vaultError == vault.vdkError.ServerFailure):
             print("Unable to negotiate with server, please confirm the server address")
         elif (vaultError != vault.vdkError.Success):
-            print("Unknown error occurred, please try again later.")
+            print("Error: ", vault.vdkError(vaultError).name)
