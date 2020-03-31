@@ -8,7 +8,7 @@ class VdkException(Exception):
         vaultError = this.args[1]
         if (vaultError == vdkError.ConnectionFailure):
             print("Could not connect to server.")
-        elif (vaultError == vdkError.NotAllowed):
+        elif (vaultError == vdkError.AuthFailure):
             print("Username or Password incorrect.")
         elif (vaultError == vdkError.OutOfSync):
             print("Your clock doesn't match the remote server clock.")
@@ -17,7 +17,7 @@ class VdkException(Exception):
         elif (vaultError == vdkError.ServerFailure):
             print("Unable to negotiate with server, please confirm the server address")
         elif (vaultError != vdkError.Success):
-            print("Error: ", this.args[0])
+            print("Error {}: {}; please consult Vault SDK documentation".format(this.args[1],this.args[0]))
 
 def LoadVaultSDK(SDKPath):
   global vaultSDK

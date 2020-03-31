@@ -55,7 +55,7 @@ convertContext = vault.vdkConvertContext()
 
 def vault_login():
     """
-    to vault server and requests a license
+    Connect to vault server and requests a license
 
     Returns
     -------
@@ -102,7 +102,6 @@ def convert_model(modelFiles, outFile):
       
       print("Converting files:\n {} to {}".format(formattedInputNames,outFile))
       convertContext.DoConvert()
-      #input("Conversion successful! Press Enter to continue...")
       print("done")
       
       
