@@ -185,9 +185,9 @@
 							if (distanceF == 1.0)
 								discard;
 							
-                            vec4 distance4 = czm_inverseProjection * vec4(v_st, distanceF, 1.0);
-							//gl_FragColor = vec4(distance4.xyz / distance4.w / 10000.0, 1);
-							//czm_writeLogDepth(0.1 * distance4.x/distance4.w);
+							vec4 windowPosition = vec4(v_st, distanceF, 1.0);
+							vec4 clipPosition = czm_viewportOrthographic * windowPosition;
+							czm_writeLogDepth(clipPosition.w); 
                         }
                     `;
 
