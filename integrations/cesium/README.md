@@ -1,4 +1,4 @@
-## Esri SceneView
+## CesiumJS
 
 <!-- TODO: Write a brief abstract explaining this sample -->
 Demonstration of integrating the Vault SDK JS WASM Module into Cesium JS.
