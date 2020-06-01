@@ -35,8 +35,8 @@ project "RenderingCustomVoxelShaders"
 		postbuildcommands { 'cp "' .. _OPTIONS["vaultsdk"] .. '/lib/ubuntu18.04_GCC_x64/libvaultSDK.so" "%{cfg.targetdir}/"' }
 
 	filter { "system:macosx" }
-		frameworkdirs { "../builds/vaultsdk/samples/CSample" }
+		frameworkdirs { "../../builds/features/renderingcustomvoxelshaders" }
 		links { "vaultSDK.framework" }
-		prebuildcommands { 'cp -af "../../builds/vaultsdk/lib/vaultSDK.framework" "../../builds/vaultsdk/samples/CSample/vaultSDK.framework"' }
+		prebuildcommands { 'cp -af "../../builds/vaultsdk/lib/vaultSDK.framework" "../../builds/features/renderingcustomvoxelshaders/vaultSDK.framework"' }
 
 	filter {}
