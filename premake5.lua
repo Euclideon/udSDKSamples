@@ -135,4 +135,5 @@ solution "VaultSDKSamples"
 	group "features"
 		if os.target() ~= "android" and os.target() ~= "ios" and os.target() ~= "emscripten" then
 			dofile "features/convertcustomdata/project.lua"
+			dofile "features/renderingcustomvoxelshaders/project.lua"
 		end

@@ -1,11 +1,12 @@
-project "ConvertCustomData"
+project "RenderingCustomVoxelShaders"
 	kind "ConsoleApp"
 	language "C++"
+	cppdialect "C++11"
 	flags { "FatalWarnings" }
 	tags { "vault-project" }
 
-	targetdir "../../builds/features/customconversion"
-	debugdir "../../builds/features/customconversion"
+	targetdir "../../builds/features/renderingcustomvoxelshaders"
+	debugdir "../../builds/features/renderingcustomvoxelshaders"
 
 	--Files to include
 	files { "*.h", "*.cpp", "*.md", "*.lua" }
@@ -34,8 +35,8 @@ project "ConvertCustomData"
 		postbuildcommands { 'cp "' .. _OPTIONS["vaultsdk"] .. '/lib/ubuntu18.04_GCC_x64/libvaultSDK.so" "%{cfg.targetdir}/"' }
 
 	filter { "system:macosx" }
-		frameworkdirs { "../../builds/features/customconversion" }
+		frameworkdirs { "../../builds/features/renderingcustomvoxelshaders" }
 		links { "vaultSDK.framework" }
-		prebuildcommands { 'cp -af "../../builds/vaultsdk/lib/vaultSDK.framework" "../../builds/features/customconversion/vaultSDK.framework"' }
+		prebuildcommands { 'cp -af "../../builds/vaultsdk/lib/vaultSDK.framework" "../../builds/features/renderingcustomvoxelshaders/vaultSDK.framework"' }
 
 	filter {}
