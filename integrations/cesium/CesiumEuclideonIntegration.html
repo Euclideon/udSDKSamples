@@ -25,7 +25,7 @@
         padding: 0;
         overflow: hidden;
       }
-	  
+
       #loginBox {
         position: absolute;
         bottom: 50px;
@@ -51,36 +51,36 @@
     </div>
     <script>
       var easyVDKReady = 0;
-	  
+
       var viewer = new Cesium.Viewer("cesiumContainer", {
-	    scene3DOnly: true
-	  });
-	  
-	  var colourTextureGL;
-	  var udTextureDepth;
-	  var previousWidth = 16;
-	  var previousHeight = 16;
-	  
+        scene3DOnly: true
+      });
+
+      var colourTextureGL;
+      var udTextureDepth;
+      var previousWidth = 16;
+      var previousHeight = 16;
+
             class VtxfPrimitive {
                 constructor() {
-					var positions = new Float32Array([-1,-1,  1,-1,  1,1, -1,-1,  1,1,  -1,1]);
-					var sts = new Float32Array([0,0,  1,0,  1,1,  0,0,  1,1,  0,1]);
-					
-					var context = viewer.scene.context;
+                    var positions = new Float32Array([-1,-1,  1,-1,  1,1, -1,-1,  1,1,  -1,1]);
+                    var sts = new Float32Array([0,0,  1,0,  1,1,  0,0,  1,1,  0,1]);
+
+                    var context = viewer.scene.context;
                     colourTextureGL = new Cesium.Texture({
                         context: context,
                         pixelFormat: Cesium.PixelFormat.RGBA,
                         width: previousWidth,
                         height: previousHeight
                     });
-					
+
                     udTextureDepth = new Cesium.Texture({
                         context: context,
                         pixelFormat: Cesium.PixelFormat.ALPHA,
                         width: previousWidth,
                         height: previousHeight
                     });
-					
+
                     var attributeLocations = {
                         position: 0,
                         textureCoordinates: 1,
@@ -101,93 +101,93 @@
                     `;
 
                     var vtxfFragmentShader = `
-						#extension GL_EXT_frag_depth : enable
+                        #extension GL_EXT_frag_depth : enable
                         varying vec2 v_st;
 
                         uniform sampler2D udImage;
                         uniform sampler2D udDepth;
 
-						  //RGBA to Float from https://github.com/ihmeuw/glsl-rgba-to-float/blob/master/index.glsl
-						  // Denormalize 8-bit color channels to integers in the range 0 to 255.
-						  ivec4 floatsToBytes(vec4 inputFloats, bool littleEndian) {
-							ivec4 bytes = ivec4(inputFloats * 255.0);
-							return (
-							  littleEndian
-							  ? bytes.abgr
-							  : bytes
-							);
-						  }
+                          //RGBA to Float from https://github.com/ihmeuw/glsl-rgba-to-float/blob/master/index.glsl
+                          // Denormalize 8-bit color channels to integers in the range 0 to 255.
+                          ivec4 floatsToBytes(vec4 inputFloats, bool littleEndian) {
+                            ivec4 bytes = ivec4(inputFloats * 255.0);
+                            return (
+                              littleEndian
+                              ? bytes.abgr
+                              : bytes
+                            );
+                          }
 
-						  // Break the four bytes down into an array of 32 bits.
-						  void bytesToBits(const in ivec4 bytes, out bool bits[32]) {
-							for (int channelIndex = 0; channelIndex < 4; ++channelIndex) {
-							  float acc = float(bytes[channelIndex]);
-							  for (int indexInByte = 7; indexInByte >= 0; --indexInByte) {
-								float powerOfTwo = exp2(float(indexInByte));
-								bool bit = acc >= powerOfTwo;
-								bits[channelIndex * 8 + (7 - indexInByte)] = bit;
-								acc = mod(acc, powerOfTwo);
-							  }
-							}
-						  }
+                          // Break the four bytes down into an array of 32 bits.
+                          void bytesToBits(const in ivec4 bytes, out bool bits[32]) {
+                            for (int channelIndex = 0; channelIndex < 4; ++channelIndex) {
+                              float acc = float(bytes[channelIndex]);
+                              for (int indexInByte = 7; indexInByte >= 0; --indexInByte) {
+                                float powerOfTwo = exp2(float(indexInByte));
+                                bool bit = acc >= powerOfTwo;
+                                bits[channelIndex * 8 + (7 - indexInByte)] = bit;
+                                acc = mod(acc, powerOfTwo);
+                              }
+                            }
+                          }
 
-						  // Compute the exponent of the 32-bit float.
-						  float getExponent(bool bits[32]) {
-							const int startIndex = 1;
-							const int bitStringLength = 8;
-							const int endBeforeIndex = startIndex + bitStringLength;
-							float acc = 0.0;
-							int pow2 = bitStringLength - 1;
-							for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
-							  acc += float(bits[bitIndex]) * exp2(float(pow2--));
-							}
-							return acc;
-						  }
+                          // Compute the exponent of the 32-bit float.
+                          float getExponent(bool bits[32]) {
+                            const int startIndex = 1;
+                            const int bitStringLength = 8;
+                            const int endBeforeIndex = startIndex + bitStringLength;
+                            float acc = 0.0;
+                            int pow2 = bitStringLength - 1;
+                            for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
+                              acc += float(bits[bitIndex]) * exp2(float(pow2--));
+                            }
+                            return acc;
+                          }
 
-						  // Compute the mantissa of the 32-bit float.
-						  float getMantissa(bool bits[32], bool subnormal) {
-							const int startIndex = 9;
-							const int bitStringLength = 23;
-							const int endBeforeIndex = startIndex + bitStringLength;
-							// Leading/implicit/hidden bit convention:
-							// If the number is not subnormal (with exponent 0), we add a leading 1 digit.
-							float acc = float(!subnormal) * exp2(float(bitStringLength));
-							int pow2 = bitStringLength - 1;
-							for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
-							  acc += float(bits[bitIndex]) * exp2(float(pow2--));
-							}
-							return acc;
-						  }
+                          // Compute the mantissa of the 32-bit float.
+                          float getMantissa(bool bits[32], bool subnormal) {
+                            const int startIndex = 9;
+                            const int bitStringLength = 23;
+                            const int endBeforeIndex = startIndex + bitStringLength;
+                            // Leading/implicit/hidden bit convention:
+                            // If the number is not subnormal (with exponent 0), we add a leading 1 digit.
+                            float acc = float(!subnormal) * exp2(float(bitStringLength));
+                            int pow2 = bitStringLength - 1;
+                            for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
+                              acc += float(bits[bitIndex]) * exp2(float(pow2--));
+                            }
+                            return acc;
+                          }
 
-						  // Parse the float from its 32 bits.
-						  float bitsToFloat(bool bits[32]) {
-							float signBit = float(bits[0]) * -2.0 + 1.0;
-							float exponent = getExponent(bits);
-							bool subnormal = abs(exponent - 0.0) < 0.01;
-							float mantissa = getMantissa(bits, subnormal);
-							float exponentBias = 127.0;
-							return signBit * mantissa * exp2(exponent - exponentBias - 23.0);
-						  }
+                          // Parse the float from its 32 bits.
+                          float bitsToFloat(bool bits[32]) {
+                            float signBit = float(bits[0]) * -2.0 + 1.0;
+                            float exponent = getExponent(bits);
+                            bool subnormal = abs(exponent - 0.0) < 0.01;
+                            float mantissa = getMantissa(bits, subnormal);
+                            float exponentBias = 127.0;
+                            return signBit * mantissa * exp2(exponent - exponentBias - 23.0);
+                          }
 
-						  // Decode a 32-bit float from the RGBA color channels of a texel.
-						  float rgbaToFloat(vec4 texelRGBA, bool littleEndian) {
-							ivec4 rgbaBytes = floatsToBytes(texelRGBA, littleEndian);
-							bool bits[32];
-							bytesToBits(rgbaBytes, bits);
-							return bitsToFloat(bits);
-						  }
+                          // Decode a 32-bit float from the RGBA color channels of a texel.
+                          float rgbaToFloat(vec4 texelRGBA, bool littleEndian) {
+                            ivec4 rgbaBytes = floatsToBytes(texelRGBA, littleEndian);
+                            bool bits[32];
+                            bytesToBits(rgbaBytes, bits);
+                            return bitsToFloat(bits);
+                          }
 
                         void main()
                         {
                             gl_FragColor = texture2D(udImage, v_st).bgra;
-							float distanceF = rgbaToFloat(texture2D(udDepth, v_st), true);
-							
-							if (distanceF == 1.0)
-								discard;
-							
-							vec4 windowPosition = vec4(v_st, distanceF, 1.0);
-							vec4 clipPosition = czm_viewportOrthographic * windowPosition;
-							czm_writeLogDepth(clipPosition.w); 
+                            float distanceF = rgbaToFloat(texture2D(udDepth, v_st), true);
+
+                            if (distanceF == 1.0)
+                                discard;
+
+                            vec4 windowPosition = vec4(v_st, distanceF, 1.0);
+                            vec4 clipPosition = czm_viewportOrthographic * windowPosition;
+                            czm_writeLogDepth(clipPosition.w);
                         }
                     `;
 
@@ -278,78 +278,78 @@
                     if (!this.show) {
                         return;
                     }
-					
-					if (easyVDKReady == 2)
-					{
-					  var thisWidth = viewer.canvas.width;
-					  var thisHeight = viewer.canvas.height;
-					  
-					  // For some reason the upload only works as a square
-					  if (thisWidth > thisHeight)
-						thisHeight = thisWidth;
-					  else
-						thisWidth = thisHeight;
-					
-					  if (thisWidth != this.prevWidth || thisHeight != this.prevHeight)
-					  {
-					    console.log("Resize To: " + thisWidth + "," + thisHeight);
-					  
-						this.prevWidth = thisWidth;
-						this.prevHeight = thisHeight;
-					  
-						EasyVDK_ResizeScene(thisWidth, thisHeight, 0, 0);
 
-						var context = viewer.scene.context;
-						colourTextureGL.destroy();
-						colourTextureGL = new Cesium.Texture({
-							context: context,
-							pixelFormat: Cesium.PixelFormat.RGBA,
-							width: thisWidth,
-							height: thisHeight
-						});
-						udTextureDepth.destroy();
-						udTextureDepth = new Cesium.Texture({
-							context: context,
-							pixelFormat: Cesium.PixelFormat.RGBA,
-							width: thisWidth,
-							height: thisHeight
-						});
-					  }
+                    if (easyVDKReady == 2)
+                    {
+                      var thisWidth = viewer.canvas.width;
+                      var thisHeight = viewer.canvas.height;
 
-					  var v = frameState.camera.viewMatrix;
-					  EasyVDK_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+                      // For some reason the upload only works as a square
+                      if (thisWidth > thisHeight)
+                        thisHeight = thisWidth;
+                      else
+                        thisWidth = thisHeight;
 
-					  var v = frameState.camera.frustum.projectionMatrix;
-					  EasyVDK_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+                      if (thisWidth != this.prevWidth || thisHeight != this.prevHeight)
+                      {
+                        console.log("Resize To: " + thisWidth + "," + thisHeight);
 
-					  EasyVDK_RenderQueue();
+                        this.prevWidth = thisWidth;
+                        this.prevHeight = thisHeight;
 
-					  var ptr = EasyVDK_GetColourBuffer();
-					  var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(thisWidth*thisHeight*4)));
-					  
-					  colourTextureGL.copyFrom({
-						  width: thisWidth,
-						  height: thisHeight,
-						  arrayBufferView : data
-					  });
-					  
-					  var ptr = EasyVDK_GetDepthBuffer();
-					  var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(thisWidth*thisHeight*4)));
-					  
-					  udTextureDepth.copyFrom({
-						  width: thisWidth,
-						  height: thisHeight,
-						  arrayBufferView : dataHeap
-					  });
-					  
-						if (!Cesium.defined(this._command)) {
-							this._command = this._createCommand(frameState.context);
-						}
+                        EasyVDK_ResizeScene(thisWidth, thisHeight, 0, 0);
 
-						if (Cesium.defined(this._command)) {
-							frameState.commandList.push(this._command);
-						}
-					}
+                        var context = viewer.scene.context;
+                        colourTextureGL.destroy();
+                        colourTextureGL = new Cesium.Texture({
+                            context: context,
+                            pixelFormat: Cesium.PixelFormat.RGBA,
+                            width: thisWidth,
+                            height: thisHeight
+                        });
+                        udTextureDepth.destroy();
+                        udTextureDepth = new Cesium.Texture({
+                            context: context,
+                            pixelFormat: Cesium.PixelFormat.RGBA,
+                            width: thisWidth,
+                            height: thisHeight
+                        });
+                      }
+
+                      var v = frameState.camera.viewMatrix;
+                      EasyVDK_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+                      var v = frameState.camera.frustum.projectionMatrix;
+                      EasyVDK_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+                      EasyVDK_RenderQueue();
+
+                      var ptr = EasyVDK_GetColourBuffer();
+                      var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(thisWidth*thisHeight*4)));
+
+                      colourTextureGL.copyFrom({
+                          width: thisWidth,
+                          height: thisHeight,
+                          arrayBufferView : data
+                      });
+
+                      var ptr = EasyVDK_GetDepthBuffer();
+                      var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(thisWidth*thisHeight*4)));
+
+                      udTextureDepth.copyFrom({
+                          width: thisWidth,
+                          height: thisHeight,
+                          arrayBufferView : dataHeap
+                      });
+
+                        if (!Cesium.defined(this._command)) {
+                            this._command = this._createCommand(frameState.context);
+                        }
+
+                        if (Cesium.defined(this._command)) {
+                            frameState.commandList.push(this._command);
+                        }
+                    }
                 }
 
                 isDestroyed() {
@@ -363,23 +363,21 @@
                     return destroyObject(this);
                 };
             }
-			
+
             var position = Cesium.Cartesian3.fromDegrees(153.0, -27.0, 0.5);
             var myBox = viewer.scene.primitives.add(new VtxfPrimitive());
 
             viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(position, 100000));
 
     </script>
-	
-	<script>
-      function CreateVDKPlugin()
-      {
+
+    <script>
+      function CreateVDKPlugin() {
         easyVDKReady = 1;
         document.getElementById("loginBox").style.display = "block";
       };
 
-      function LoginVDKPlugin(username, password)
-      {
+      function LoginVDKPlugin(username, password) {
         if (easyVDKReady != 1)
           Alert("Not ready to login!");
 
@@ -445,14 +443,14 @@
       };
 
       Module.setStatus('Downloading...');
-	  
-	  function loginVDK(ev) {
+
+      function loginVDK(ev) {
         if (easyVDKReady == 1) {
           LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
-		}
+        }
       }
-		  
-	  document.getElementById("loginBtn").addEventListener("click", loginVDK);
+
+      document.getElementById("loginBtn").addEventListener("click", loginVDK);
     </script>
   </body>
 </html>
