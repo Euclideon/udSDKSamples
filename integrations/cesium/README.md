@@ -37,22 +37,22 @@ Toolsets:
 
 1. Start with the basic sandbox Cesium scene
 1. Add a Screen Space quad based on the [custom primitive example](https://github.com/cesiumlab/cesium-custom-primitive)
-  a. In the shader, add 2 texture/sampler sets; one will be the colour buffer, one will be the depth buffer
-  a. Set up the custom primitive to upload a random colour every frame to test upload support
+   1. In the shader, add 2 texture/sampler sets; one will be the colour buffer, one will be the depth buffer
+   1. Set up the custom primitive to upload a random colour every frame to test upload support
 1. Add the VaultSDKJS Module
-  a. Add login box to the sceen
-  a. Identify the geospatial zone used in Cesium (default is EPSG:4978)
+   1. Add login box to the sceen
+   1. Identify the geospatial zone used in Cesium (default is EPSG:4978)
 1. In the custom primitive:
-  a. Render the UDS files in the Update function
-  a. Upload the colour and depth buffer
-  a. Resize the textures when the screen changes (update both the GPU buffer and the VaultSDKJS buffers)
+   1. Render the UDS files in the Update function
+   1. Upload the colour and depth buffer
+   1. Resize the textures when the screen changes (update both the GPU buffer and the VaultSDKJS buffers)
 
 ## Notes & Limitations
 1. Due to format limitations in WebGL (not present in WebGL2) the Depth buffer has to be uploaded as RGBA8 and unpacked as floating point value in the shader.
 1. The current integration does not handle:
-  a. The buffers getting destroyed if the WebGL context goes out of scope
-  a. There is no alert to the user if a UDS file does not load correctly.
-  a. There is a known issue in VaultSDK-JS the prevents some models from being correctly rotated in ECEF mode.
+   1. The buffers getting destroyed if the WebGL context goes out of scope
+   1. There is no alert to the user if a UDS file does not load correctly.
+   1. There is a known issue in VaultSDK-JS the prevents some models from being correctly rotated in ECEF mode.
 
 
 <!-- End -->
