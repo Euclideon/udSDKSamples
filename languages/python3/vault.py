@@ -1,9 +1,48 @@
 from ctypes import *
 from enum import IntEnum, unique
+import platform
+import os
+
+class VdkException(Exception):
+    def printout(this):
+        vaultError = this.args[1]
+        if (vaultError == vdkError.ConnectionFailure):
+            print("Could not connect to server.")
+        elif (vaultError == vdkError.AuthFailure):
+            print("Username or Password incorrect.")
+        elif (vaultError == vdkError.OutOfSync):
+            print("Your clock doesn't match the remote server clock.")
+        elif (vaultError == vdkError.SecurityFailure):
+            print("Could not open a secure channel to the server.")
+        elif (vaultError == vdkError.ServerFailure):
+            print("Unable to negotiate with server, please confirm the server address")
+        elif (vaultError != vdkError.Success):
+            print("Error {}: {}; please consult Vault SDK documentation".format(this.args[1],this.args[0]))
 
 def LoadVaultSDK(SDKPath):
   global vaultSDK
-  vaultSDK = CDLL(SDKPath)
+  try:
+      vaultSDK = CDLL(SDKPath)
+  except OSError:
+    print("No local Vault shared object/dll found in current working directory, trying path in VAULTSDK_HOME environment variable...")
+    SDKPath = os.environ.get("VAULTSDK_HOME")
+    if SDKPath==None:
+        raise FileNotFoundError("Environment variable VAULTSDK_HOME not set, please refer to Vault SDK documentation")
+        
+    if platform.system() == 'Windows':
+        SDKPath +="/lib/win_x64/vaultSDK"
+
+    #TODO Add support for these paths:
+    #elif platform.system() == "Linux":
+    #    print("Platform not supported")
+        
+    #elif platform.system() == "Darwin":
+    #    print("Platform not supported"
+    else:
+        print("Platform {} not supported by this sample".format(platform.system()))
+        exit()
+    print("Using Vault SDK shared object located at {}".format(SDKPath))
+    vaultSDK = CDLL(SDKPath)
 
 @unique
 class vdkError(IntEnum):
@@ -45,7 +84,7 @@ class vdkError(IntEnum):
 def _HandleReturnValue(retVal):
   if retVal != vdkError.Success:
     err = vdkError(retVal)
-    raise Exception(err.name, err.value)
+    raise VdkException(err.name, err.value)
 
 @unique
 class vdkRenderViewMatrix(IntEnum):
