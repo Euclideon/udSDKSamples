@@ -1,4 +1,4 @@
-project "vaultCSSample"
+project "CSSample"
 	kind "ConsoleApp"
 	language "C#"
 	flags { "FatalWarnings" }
@@ -7,7 +7,7 @@ project "vaultCSSample"
 	targetdir "../../builds/samples/csharp"
 	debugdir "../../builds/samples/csharp"
 
-	postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["vaultsdk"] .. '\\lib\\win_x64\\vaultSDK.dll" "$(TargetDir)\\"' }
+	postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["udsdk"] .. '\\lib\\win_x64\\udSDK.dll" "$(TargetDir)\\"' }
 
 	--Files to include
 	files { "**" }

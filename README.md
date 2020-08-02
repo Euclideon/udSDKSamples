@@ -1,8 +1,8 @@
-# Euclideon Vault SDK Samples
+# Euclideon udSDK Sample Projects
 
-This is the repository for Euclideon Vault SDK Sample Projects.
+This is the repository for Euclideon udSDK Sample Projects.
 
-The Euclideon Vault Development team will be monitoring and responding to issues as best we can. Please attempt to avoid filing duplicates of open or closed items when possible.
+The Euclideon Development team will be monitoring and responding to issues as best we can. Please attempt to avoid filing duplicates of open or closed items when possible.
 
 _We are open-sourcing to increase transparency of our development efforts and to engage the incredibly skilled developers in the open-source and GIS communities._
 
@@ -12,7 +12,9 @@ Vulnerabilites should be reported via email to vulnerabilities@euclideon.com [[P
 
 ## Getting Started
 
-You will *need* Euclideon Vault Software Development Kit (Vault SDK) you can [sign up here](https://zfrmz.com/EmzYcU5zn7axokCDMfuW) or access the Vault SDK through your Vault Server portal.
+You will need a udStream account and have downloaded the udSDK.
+
+> You can [sign up here](https://udstream.euclideon.com/register.html) for a free account or use a private udStream server if you have access to one.
 
 1. Check out the entire repo (note there are recursive submodules that you will need)
 2. Generate project files
@@ -23,7 +25,7 @@ From that you can build and run in your preferred environment.
 
 ## Contributing
 
-You've created a new fix or have developed a new integration for Euclideon Vault SDK, awesome!
+You've created a new fix, sample or have developed a new integration for Euclideon udSDK, awesome!
 
 1. If you haven't already, create a fork of the repository
 2. Create a topic branch, and make all of your changes on that branch
@@ -47,7 +49,7 @@ We will be tagging issues and pull requests in the following way:
   - Example: Exporting Camera flythrough's to Video files
 
 - **discussion** – Denotes a discussion on the board that does not relate to a specific feature.
-  - Example: Vault Client's loading screen should display landmarks from around the world
+  - Example: udStream's loading screen should display landmarks from around the world
 
 - **fixed** – When possible, we will mark issues that have been completed internally. Unfortunately we cannot say specifically when the next release that includes the change will be.
 
@@ -67,5 +69,5 @@ Additional tags may be used to denote specific types of issues or components of 
   - Example: **rendering** or **inputs**
 
 ## Important Links
-- The Euclideon Vault [Homepage](https://www.euclideon.com/vault/)
-- The repository for [Euclideon Vault Client](https://github.com/euclideon/vaultclient) shows more advanced (and integrated) usage of Vault SDK
+- The Euclideon [Homepage](https://www.euclideon.com/)
+- The repository for [Euclideon udStream](https://github.com/euclideon/vaultclient) shows more advanced (and integrated) usage of udSDK

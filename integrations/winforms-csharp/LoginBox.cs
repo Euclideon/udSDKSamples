@@ -1,16 +1,16 @@
 using System;
 using System.Windows.Forms;
 
-using Vault;
+using udSDK;
 
 namespace VDKWinForms
 {
   public partial class LoginBox : Form
   {
-    private Vault.vdkContext vaultCtx = null;
+    private udContext vaultCtx = null;
     private bool loginSuccess = false;
 
-    public LoginBox(ref Vault.vdkContext vaultCtx)
+    public LoginBox(ref udContext vaultCtx)
     {
       InitializeComponent();
 

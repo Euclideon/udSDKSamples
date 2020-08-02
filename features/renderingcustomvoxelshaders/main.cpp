@@ -3,12 +3,12 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "VaultSDKFeatureSamples.h"
-#include "vdkContext.h"
-#include "vdkRenderContext.h"
-#include "vdkRenderView.h"
-#include "vdkPointCloud.h"
-#include "vdkError.h"
+#include "udSDKFeatureSamples.h"
+#include "udContext.h"
+#include "udRenderContext.h"
+#include "udRenderTarget.h"
+#include "udPointCloud.h"
+#include "udError.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -23,12 +23,12 @@ struct CustomVoxelShaderData
   uint32_t attributeOffset;
 };
 
-uint32_t CustomVoxelShader(struct vdkPointCloud *pPointCloud, uint64_t voxelID, const void *pVoxelUserData)
+uint32_t CustomVoxelShader(struct udPointCloud *pPointCloud, const udVoxelID *pVoxelID, const void *pVoxelUserData)
 {
   CustomVoxelShaderData *pData = (CustomVoxelShaderData*)pVoxelUserData;
   const uint16_t *pIntensity;
 
-  vdkPointCloud_GetAttributeAddress(pPointCloud, voxelID, pData->attributeOffset, (const void**)&pIntensity);
+  udPointCloud_GetAttributeAddress(pPointCloud, pVoxelID, pData->attributeOffset, (const void**)&pIntensity);
 
   uint32_t intensityValue = (*pIntensity >> 8);
 
@@ -38,8 +38,8 @@ uint32_t CustomVoxelShader(struct vdkPointCloud *pPointCloud, uint64_t voxelID, 
 int main(int argc, char **ppArgv)
 {
   // This confirms that the statics have been configured correctly
-  static_assert(s_VaultUsername[0] != '\0', "Username needs to be configured in VaultSDKFeatureSamples.h");
-  static_assert(s_VaultPassword[0] != '\0', "Password needs to be configured in VaultSDKFeatureSamples.h");
+  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in VaultSDKFeatureSamples.h");
+  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in VaultSDKFeatureSamples.h");
 
   // Define our variables
   const double cameraMatrix[] = {
@@ -50,14 +50,14 @@ int main(int argc, char **ppArgv)
     +50.0,-55.0,+55.0,1
   };
 
-  vdkError vdkResult = vE_Success;
-  vdkContext *pContext = nullptr;
-  vdkRenderContext *pRenderer = nullptr;
-  vdkRenderView *pRenderView = nullptr;
-  vdkRenderInstance instance = {};
-  vdkRenderOptions options = {};
-  vdkPointCloud *pModel = nullptr;
-  vdkPointCloudHeader header;
+  udError vdkResult = udE_Success;
+  udContext *pContext = nullptr;
+  udRenderContext *pRenderer = nullptr;
+  udRenderTarget *pRenderView = nullptr;
+  udRenderInstance instance = {};
+  udRenderSettings options = {};
+  udPointCloud *pModel = nullptr;
+  udPointCloudHeader header;
 
   CustomVoxelShaderData vsData = {};
 
@@ -65,46 +65,41 @@ int main(int argc, char **ppArgv)
   float *pDepthBuffer = new float[Width * Height];
 
   // Resume Session or Login
-  if (vdkContext_TryResume(&pContext, s_VaultServer, s_SampleName, s_VaultUsername, false) != vE_Success)
-    vdkResult = vdkContext_Connect(&pContext, s_VaultServer, s_SampleName, s_VaultUsername, s_VaultPassword);
+  if (udContext_TryResume(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, false) != udE_Success)
+    vdkResult = udContext_Connect(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, s_udStreamPassword);
 
-  if (vdkResult != vE_Success)
+  if (vdkResult != udE_Success)
     ExitWithMessage(vdkResult, "Could not login!");
 
-  // This is only required because we're doing a single render.
-  // If we were trying to render a viewport over and over the render call does this internally async
-  if (vdkContext_RequestLicense(pContext, vdkLT_Render) != vE_Success)
-    ExitWithMessage(1, "Could not get license");
-
-  if (vdkRenderContext_Create(pContext, &pRenderer) != vE_Success)
+  if (udRenderContext_Create(pContext, &pRenderer) != udE_Success)
     ExitWithMessage(2, "Could not create render context");
 
-  if (vdkRenderView_Create(pContext, &pRenderView, pRenderer, Width, Height) != vE_Success)
-    ExitWithMessage(3, "Could not create render view");
+  if (udRenderTarget_Create(pContext, &pRenderView, pRenderer, Width, Height) != udE_Success)
+    ExitWithMessage(3, "Could not create render target");
 
-  if (vdkRenderView_SetTargets(pRenderView, pColorBuffer, 0, pDepthBuffer) != vE_Success)
-    ExitWithMessage(4, "Could not create render view");
+  if (udRenderTarget_SetTargets(pRenderView, pColorBuffer, 0, pDepthBuffer) != udE_Success)
+    ExitWithMessage(4, "Could not set render target buffers");
 
-  if (vdkRenderView_SetMatrix(pRenderView, vdkRVM_Camera, cameraMatrix) != vE_Success)
-    ExitWithMessage(5, "Could not create render view");
+  if (udRenderTarget_SetMatrix(pRenderView, udRTM_Camera, cameraMatrix) != udE_Success)
+    ExitWithMessage(5, "Could not set render target matrix");
 
-  if (vdkPointCloud_Load(pContext, &pModel, "../../../samplefiles/HistogramTest.uds", &header) != vE_Success)
-    ExitWithMessage(6, "Could not create render view");
+  if (udPointCloud_Load(pContext, &pModel, "../../../samplefiles/HistogramTest.uds", &header) != udE_Success)
+    ExitWithMessage(6, "Could not load sample UDS file");
 
   instance.pPointCloud = pModel;
   memcpy(instance.matrix, header.storedMatrix, sizeof(header.storedMatrix));
   instance.pVoxelShader = CustomVoxelShader;
   instance.pVoxelUserData = &vsData;
 
-  options.flags = vdkRF_BlockingStreaming; // This is required to do the full streaming within 1 frame rather than progressively refining over multiple frames
+  options.flags = udRCF_BlockingStreaming; // This is required to do the full streaming within 1 frame rather than progressively refining over multiple frames
 
-  if (vdkPointCloud_GetHeader(pModel, &header) != vE_Success)
+  if (udPointCloud_GetHeader(pModel, &header) != udE_Success)
     ExitWithMessage(7, "Rendering failed!");
 
-  if (vdkAttributeSet_GetOffsetOfNamedAttribute(&header.attributes, "udIntensity", &vsData.attributeOffset) != vE_Success)
-    ExitWithMessage(8, "Attribute note found!");
+  if (udAttributeSet_GetOffsetOfNamedAttribute(&header.attributes, "udIntensity", &vsData.attributeOffset) != udE_Success)
+    ExitWithMessage(8, "Attribute not found!");
   
-  if (vdkRenderContext_Render(pRenderer, pRenderView, &instance, 1, &options) != vE_Success)
+  if (udRenderContext_Render(pRenderer, pRenderView, &instance, 1, &options) != udE_Success)
     ExitWithMessage(9, "Rendering failed!");
 
   // pColorBuffer now has the contents of the intensity channel from the voxel shader
@@ -120,10 +115,10 @@ int main(int argc, char **ppArgv)
   // Clean up
   delete pDepthBuffer;
   delete pColorBuffer;
-  vdkPointCloud_Unload(&pModel);
-  vdkRenderView_Destroy(&pRenderView);
-  vdkRenderContext_Destroy(&pRenderer);
-  vdkContext_Disconnect(&pContext);
+  udPointCloud_Unload(&pModel);
+  udRenderTarget_Destroy(&pRenderView);
+  udRenderContext_Destroy(&pRenderer);
+  udContext_Disconnect(&pContext, true);
 
   return 0;
 }

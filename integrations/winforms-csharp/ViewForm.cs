@@ -3,15 +3,15 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
 
-using Vault;
+using udSDK;
 
 namespace VDKWinForms
 {
   public partial class ViewForm : Form
   {
-    vdkContext vaultCtx;
-    vdkRenderContext renderCtx;
-    vdkRenderView renderView;
+    udContext vaultCtx;
+    udRenderContext renderCtx;
+    udRenderTarget renderView;
     uint vdkWidth;
     uint vdkHeight;
     uint[] vdkColorBuffer;
@@ -25,15 +25,15 @@ namespace VDKWinForms
     {
       InitializeComponent();
 
-      vaultCtx = new vdkContext();
+      vaultCtx = new udContext();
 
       LoginBox box = new LoginBox(ref vaultCtx);
       box.ShowDialog();
 
       if (box.GetLoginInfo())
       {
-        renderCtx = new vdkRenderContext();
-        renderView = new vdkRenderView();
+        renderCtx = new udRenderContext();
+        renderView = new udRenderTarget();
 
         vdkWidth = (uint)panel1.Width;
         vdkHeight = (uint)panel1.Height;
@@ -61,7 +61,7 @@ namespace VDKWinForms
         return;
       }
 
-      vdkRenderInstance[] renderInstances = new vdkRenderInstance[listBox1.Items.Count];
+      udRenderInstance[] renderInstances = new udRenderInstance[listBox1.Items.Count];
 
       time += 0.01f;
       double angle = -Math.PI / 3.0;
@@ -98,7 +98,7 @@ namespace VDKWinForms
           0,0,0,1
         };
 
-      renderView.SetMatrix(Vault.RenderViewMatrix.Camera, cameraMatrix);
+      renderView.SetMatrix(RenderViewMatrix.Camera, cameraMatrix);
       
       renderCtx.Render(renderView, renderInstances, renderInstances.Length);
 
@@ -141,17 +141,17 @@ namespace VDKWinForms
 
   class PointCloud
   {
-    public vdkPointCloud pointCloud;
+    public udPointCloud pointCloud;
     public double[] matrix;
     string filename;
 
-    public PointCloud(string filename, vdkContext vaultCtx)
+    public PointCloud(string filename, udContext vaultCtx)
     {
       this.filename = filename;
 
-      vdkPointCloudHeader header = new vdkPointCloudHeader();
+      udPointCloudHeader header = new udPointCloudHeader();
 
-      pointCloud = new vdkPointCloud();
+      pointCloud = new udPointCloud();
       pointCloud.Load(vaultCtx, filename, ref header);
 
       matrix = header.storedMatrix;

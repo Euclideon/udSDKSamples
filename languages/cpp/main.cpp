@@ -1,6 +1,6 @@
 // A Vault Client Hello World! program in C++.
 
-#include "vault.h"
+#include "udSDK.h"
 
 #define STB_IMAGE_IMPLEMENTATION 1
 #include "stb_image.h"
@@ -10,20 +10,18 @@
 #include <iostream>
 #include <string.h>
 
-bool Convert(std::string inputPath, std::string outputPath, Vault::Context &context)
+bool Convert(std::string inputPath, std::string outputPath, udSDK::Context &context)
 {
-  const vdkConvertInfo *pConvertInfo = nullptr;
-  Vault::Convert convert(&context, &pConvertInfo);
+  const udConvertInfo *pConvertInfo = nullptr;
+  udSDK::Convert convert(&context, &pConvertInfo);
 
-  context.RequestLicense(vdkLT_Convert);
-  
   convert.SetOutputFilename(outputPath.c_str());
   convert.AddItem(inputPath);
 
-  return (convert.DoConvert() == vE_Success);
+  return (convert.DoConvert() == udE_Success);
 }
 
-bool Render(std::string inputPath, Vault::Context &context)
+bool Render(std::string inputPath, udSDK::Context &context)
 {
   const int width = 1280;
   const int height = 720;
@@ -38,20 +36,18 @@ bool Render(std::string inputPath, Vault::Context &context)
   int *pColorBuffer = new int[width * height];
   float *pDepthBuffer = new float[width * height];
 
-  std::vector<Vault::PointCloud*> models;
+  std::vector<udSDK::PointCloud*> models;
 
-  Vault::RenderContext renderer(&context);
-  Vault::RenderView renderView(&context, &renderer, width, height);
-  Vault::PointCloud pointcloud(&context, inputPath);
+  udSDK::RenderContext renderer(&context);
+  udSDK::RenderTarget renderView(&context, &renderer, width, height);
+  udSDK::PointCloud pointcloud(&context, inputPath);
 
   models.push_back(&pointcloud);
 
-  context.RequestLicense(vdkLT_Render);
-
   renderView.SetTargets(pColorBuffer, 0, pDepthBuffer);
-  renderView.SetMatrix(vdkRVM_Camera, cameraMatrix);
+  renderView.SetMatrix(udRTM_Camera, cameraMatrix);
   
-  vdkError error = renderer.Render(&renderView, models, true);
+  udError error = renderer.Render(&renderView, models, true);
   
   for (int y = 0; y < height; y++)
   {
@@ -71,7 +67,7 @@ bool Render(std::string inputPath, Vault::Context &context)
   }
 
   if (stbi_write_png("tmp.png", width, height, 4, pColorBuffer, width * sizeof(int)) == 0)
-    error = vE_Failure;
+    error = udE_Failure;
 
   delete[] pDepthBuffer;
   delete[] pColorBuffer;
@@ -81,15 +77,15 @@ bool Render(std::string inputPath, Vault::Context &context)
 
 int main(int argc, char **ppArgv)
 {
-  std::string serverPath = "https://earth.vault.euclideon.com";
-  std::string username = "Username";
-  std::string password = "Password";
-  std::string modelName = "DirCube.uds";
+  std::string serverPath = "https://udstream.euclideon.com";
+  std::string email = "";
+  std::string password = "";
+  std::string modelName = "https://models.euclideon.com/DirCube.uds"; //Can be any local or remote file
 
   for (int i = 0; i < argc; ++i)
   {
     if (strcmp(ppArgv[i], "-u") == 0 && i + 1 < argc)
-      username = ppArgv[++i];
+      email = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-p") == 0 && i + 1 < argc)
       password = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-s") == 0 && i + 1 < argc)
@@ -98,7 +94,7 @@ int main(int argc, char **ppArgv)
       modelName = ppArgv[++i];
   }
 
-  Vault::Context context(serverPath, "C++ Sample", username, password);
+  udSDK::Context context(serverPath, "C++ Sample", email, password);
 
   bool vRender = Render(modelName, context);
   bool vConvert = Convert(modelName, modelName + ".uds", context);

@@ -7,10 +7,10 @@ C# usage
 ```
 Language:              C#
 Type:                  Language Example
-Contributor:           Euclideon Vault Development Team <support@euclideon.com>
-Organization:          Euclideon, https://euclideon.com/vault
-Date:                  2020-02-03
-Vault SDK Version:     0.5.0
+Contributor:           Euclideon Development Team <support@euclideon.com>
+Organization:          Euclideon, https://euclideon.com
+Date:                  2020-08-03
+udSDK Version:         2.0.0
 Toolsets:              C# & .NET4.7.2
 ```
 

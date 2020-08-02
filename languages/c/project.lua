@@ -1,8 +1,7 @@
-project "vaultCSample"
+project "udSDKCSample"
 	kind "ConsoleApp"
 	language "C"
 	flags { "FatalWarnings" }
-	tags { "vault-project" }
 
 	targetdir "../../builds/samples/c"
 	debugdir "../../builds/samples/c"
@@ -12,7 +11,7 @@ project "vaultCSample"
 	includedirs { "../../external/stb" }
 
 	--This project includes
-	IncludeVaultSDK()
+	IncludeUDSDK()
 
 	-- filters
 	filter { "configurations:Debug" }
@@ -24,19 +23,19 @@ project "vaultCSample"
 		optimize "Full"
 
 	filter { "system:windows" }
-		links { "vaultSDK" }
-		postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["vaultsdk"] .. '\\lib\\win_x64\\vaultSDK.dll" "$(TargetDir)\\"' }
+		links { "udSDK" }
+		postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["udsdk"] .. '\\lib\\win_x64\\udSDK.dll" "$(TargetDir)\\"' }
 
 	filter { "system:linux" }
 		buildoptions { "-std=c99" }
-		links { "vaultSDK", "z", "m" }
+		links { "udSDK", "z", "m" }
 
 		--This need to be changed to work in other distros
-		postbuildcommands { 'cp "' .. _OPTIONS["vaultsdk"] .. '/lib/ubuntu18.04_GCC_x64/libvaultSDK.so" "%{cfg.targetdir}/"' }
+		postbuildcommands { 'cp "' .. _OPTIONS["udsdk"] .. '/lib/ubuntu18.04_GCC_x64/libudSDK.so" "%{cfg.targetdir}/"' }
 
 	filter { "system:macosx" }
-		frameworkdirs { "../builds/vaultsdk/samples/CSample" }
-		links { "vaultSDK.framework" }
-		prebuildcommands { 'cp -af "../../builds/vaultsdk/lib/vaultSDK.framework" "../../builds/vaultsdk/samples/CSample/vaultSDK.framework"' }
+		frameworkdirs { "../builds/udsdk/samples/CSample" }
+		links { "udSDK.framework" }
+		prebuildcommands { 'cp -af "../../builds/udsdk/lib/udSDK.framework" "../../builds/udsdk/samples/CSample/udSDK.framework"' }
 
 	filter {}

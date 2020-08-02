@@ -3,7 +3,6 @@ project "RenderingCustomVoxelShaders"
 	language "C++"
 	cppdialect "C++11"
 	flags { "FatalWarnings" }
-	tags { "vault-project" }
 
 	targetdir "../../builds/features/renderingcustomvoxelshaders"
 	debugdir "../../builds/features/renderingcustomvoxelshaders"
@@ -13,7 +12,7 @@ project "RenderingCustomVoxelShaders"
 	includedirs { "../../external/stb", "../shared" }
 
 	--This project includes
-	IncludeVaultSDK()
+	IncludeUDSDK()
 
 	-- filters
 	filter { "configurations:Debug" }
@@ -25,18 +24,18 @@ project "RenderingCustomVoxelShaders"
 		optimize "Full"
 
 	filter { "system:windows" }
-		links { "vaultSDK" }
-		postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["vaultsdk"] .. '\\lib\\win_x64\\vaultSDK.dll" "$(TargetDir)\\"' }
+		links { "udSDK" }
+		postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["udsdk"] .. '\\lib\\win_x64\\udSDK.dll" "$(TargetDir)\\"' }
 
 	filter { "system:linux" }
-		links { "vaultSDK", "z", "m" }
+		links { "udSDK", "z", "m" }
 
 		--This need to be changed to work in other distros
-		postbuildcommands { 'cp "' .. _OPTIONS["vaultsdk"] .. '/lib/ubuntu18.04_GCC_x64/libvaultSDK.so" "%{cfg.targetdir}/"' }
+		postbuildcommands { 'cp "' .. _OPTIONS["udsdk"] .. '/lib/ubuntu18.04_GCC_x64/libudSDK.so" "%{cfg.targetdir}/"' }
 
 	filter { "system:macosx" }
 		frameworkdirs { "../../builds/features/renderingcustomvoxelshaders" }
-		links { "vaultSDK.framework" }
-		prebuildcommands { 'cp -af "../../builds/vaultsdk/lib/vaultSDK.framework" "../../builds/features/renderingcustomvoxelshaders/vaultSDK.framework"' }
+		links { "udSDK.framework" }
+		prebuildcommands { 'cp -af "../../builds/udsdk/lib/udSDK.framework" "../../builds/features/renderingcustomvoxelshaders/udSDK.framework"' }
 
 	filter {}

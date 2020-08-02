@@ -3,7 +3,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Drawing;
 
-namespace VaultClient
+namespace udSDKSample
 {
   class Program
   {
@@ -12,24 +12,24 @@ namespace VaultClient
       const int width = 1280;
       const int height = 720;
 
-      Vault.vdkContext context = new Vault.vdkContext();
-      Vault.vdkRenderContext renderer = new Vault.vdkRenderContext();
-      Vault.vdkRenderView renderView = new Vault.vdkRenderView();
-      Vault.vdkPointCloud udModel = new Vault.vdkPointCloud();
-      Vault.vdkPointCloudHeader header = new Vault.vdkPointCloudHeader();
+      udSDK.udContext context = new udSDK.udContext();
+      udSDK.udRenderContext renderer = new udSDK.udRenderContext();
+      udSDK.udRenderTarget renderView = new udSDK.udRenderTarget();
+      udSDK.udPointCloud udModel = new udSDK.udPointCloud();
+      udSDK.udPointCloudHeader header = new udSDK.udPointCloudHeader();
       uint[] colorBuffer = new uint[width * height];
       float[] depthBuffer = new float[width * height];
 
-      string server = "https://earth.vault.euclideon.com";
-      string username = "Username";
-      string password = "Password";
-      string modelName = "DirCube.uds";
+      string server = "https://udstream.euclideon.com";
+      string email = "";
+      string password = "";
+      string modelName = "https://models.euclideon.com/DirCube.uds"; // Can be local or remote
       bool pause = false;
 
       for (int i = 0; i < args.Length; ++i)
       {
         if (args[i] == "-u" && i + 1 < args.Length)
-          username = args[++i];
+          email = args[++i];
         else if (args[i] == "-p" && i + 1 < args.Length)
           password = args[++i];
         else if (args[i] == "-s" && i + 1 < args.Length)
@@ -42,17 +42,7 @@ namespace VaultClient
 
       try
       {
-        context.Connect(server, "C# Sample", username, password);
-        context.RequestLicense(Vault.LicenseType.Render);
-
-        Vault.vdkLicenseInfo info = new Vault.vdkLicenseInfo();
-        context.GetLicenseInfo(Vault.LicenseType.Render, ref info);
-
-        if (info.queuePosition == -1)
-        {
-          UInt64 unixTimestamp = (UInt64)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-          Console.WriteLine("License fetched and available for another {0} seconds.", info.expiresTimestamp - unixTimestamp);
-        }
+        context.Connect(server, "C# Sample", email, password);
 
         renderer.Create(context);
         renderView.Create(context, renderer, width, height);
@@ -66,20 +56,20 @@ namespace VaultClient
           0,-5,0,1
         };
 
-        renderView.SetMatrix(Vault.RenderViewMatrix.Camera, cameraMatrix);
+        renderView.SetMatrix(udSDK.RenderViewMatrix.Camera, cameraMatrix);
 
-        Vault.vdkRenderInstance item = new Vault.vdkRenderInstance();
+        udSDK.udRenderInstance item = new udSDK.udRenderInstance();
         item.pointCloud = udModel.pModel;
         item.worldMatrix = header.storedMatrix;
 
-        Vault.vdkRenderInstance itemFlipped = new Vault.vdkRenderInstance();
+        udSDK.udRenderInstance itemFlipped = new udSDK.udRenderInstance();
         itemFlipped.pointCloud = udModel.pModel;
         itemFlipped.worldMatrix = header.storedMatrix;
         itemFlipped.worldMatrix[0] = -itemFlipped.worldMatrix[0];
         itemFlipped.worldMatrix[5] = -itemFlipped.worldMatrix[5];
         itemFlipped.worldMatrix[10] = -itemFlipped.worldMatrix[10];
 
-        Vault.vdkRenderInstance[] modelArray = new Vault.vdkRenderInstance[]{ item, itemFlipped };
+        udSDK.udRenderInstance[] modelArray = new udSDK.udRenderInstance[]{ item, itemFlipped };
 
         for (int i = 0; i < 10; i++)
           renderer.Render(renderView, modelArray, modelArray.Length);
@@ -106,15 +96,9 @@ namespace VaultClient
       }
     }
 
-    static void Convert(string inputPath, string outputPath, Vault.vdkContext context)
+    static void Convert(string inputPath, string outputPath, udSDK.udContext context)
     {
-      Vault.vdkLicenseInfo info = new Vault.vdkLicenseInfo();
-      context.GetLicenseInfo(Vault.LicenseType.Convert, ref info);
-
-      if (info.queuePosition == -1)
-        context.RequestLicense(Vault.LicenseType.Convert);
-
-      Vault.vdkConvertContext convertContext = new Vault.vdkConvertContext();
+      udSDK.udConvertContext convertContext = new udSDK.udConvertContext();
       convertContext.Create(context);
 
       convertContext.AddFile(inputPath);

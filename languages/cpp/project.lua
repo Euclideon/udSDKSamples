@@ -1,9 +1,8 @@
-project "vaultCppSample"
+project "CPPSample"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++11"
 	flags { "FatalWarnings" }
-	tags { "vault-project" }
 
 	targetdir "../../builds/samples/cpp"
 	debugdir "../../builds/samples/cpp"
@@ -13,7 +12,7 @@ project "vaultCppSample"
 	includedirs { "../../external/stb" }
 
 	--This project includes
-	IncludeVaultSDK()
+	IncludeUDSDK()
 
 	-- filters
 	filter { "configurations:Debug" }
@@ -28,8 +27,8 @@ project "vaultCppSample"
 		links { "z", "m" }
 
 	filter { "system:macosx" }
-		frameworkdirs { "../builds/vaultsdk/samples/CppSample" }
-		links { "vaultSDK.framework" }
-		prebuildcommands { 'cp -af "../../builds/vaultsdk/lib/vaultSDK.framework" "../../builds/vaultsdk/samples/CppSample/vaultSDK.framework"' }
+		frameworkdirs { "../builds/udsdk/samples/CppSample" }
+		links { "udSDK.framework" }
+		prebuildcommands { 'cp -af "../../builds/udsdk/lib/udSDK.framework" "../../builds/udsdk/samples/CppSample/udSDK.framework"' }
 
 	filter {}

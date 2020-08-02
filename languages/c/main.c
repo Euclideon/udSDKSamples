@@ -1,10 +1,10 @@
 // A Vault Client Hello World! program in C.
 
-#include "vdkContext.h"
-#include "vdkRenderContext.h"
-#include "vdkRenderView.h"
-#include "vdkPointCloud.h"
-#include "vdkError.h"
+#include "udContext.h"
+#include "udRenderContext.h"
+#include "udRenderTarget.h"
+#include "udPointCloud.h"
+#include "udError.h"
 
 #define STB_IMAGE_IMPLEMENTATION 1
 #include "stb_image.h"
@@ -25,7 +25,7 @@ int main(int argc, char **ppArgv)
   int x, y;
   const int width = 1280;
   const int height = 720;
-  char *pServerPath = "https://earth.vault.euclideon.com";
+  char *pServerPath = "https://udstream.euclideon.com";
   char *pUsername = "Username";
   char *pPassword = "Password";
   char *pModelName = "DirCube.uds";
@@ -52,14 +52,14 @@ int main(int argc, char **ppArgv)
     5,-75,5,1
   };
 
-  enum vdkError error;
-  struct vdkContext *pContext = NULL;
-  struct vdkRenderContext *pRenderer = NULL;
-  struct vdkRenderView *pRenderView = NULL;
-  struct vdkRenderInstance instance;
-  struct vdkRenderOptions options;
-  struct vdkPointCloud *pModel = NULL;
-  struct vdkPointCloudHeader header;
+  enum udError error;
+  struct udContext *pContext = NULL;
+  struct udRenderContext *pRenderer = NULL;
+  struct udRenderTarget *pRenderTarget = NULL;
+  struct udRenderInstance instance;
+  struct udRenderSettings options;
+  struct udPointCloud *pModel = NULL;
+  struct udPointCloudHeader header;
   int *pColorBuffer = (int*)malloc(sizeof(int) * width * height);
   float *pDepthBuffer = (float*)malloc(sizeof(float) * width * height);
 
@@ -67,43 +67,41 @@ int main(int argc, char **ppArgv)
   memset(&header, 0, sizeof(header));
   memset(&options, 0, sizeof(options));
 
-  error = vdkContext_Connect(&pContext, pServerPath, "CClient", pUsername, pPassword);
-  if (error != vE_Success)
+  error = udContext_TryResume(&pContext, pServerPath, "CClient", pUsername, 0);
+
+  if (error != udE_Success)
+    error = udContext_Connect(&pContext, pServerPath, "CClient", pUsername, pPassword);
+
+  if (error != udE_Success)
     goto epilogue;
 
-  // This is only required because we're doing a single render.
-  // If we were trying to render a viewport over and over the render call does this internally async
-  error = vdkContext_RequestLicense(pContext, vdkLT_Render);
-  if (error != vE_Success)
+  error = udRenderContext_Create(pContext, &pRenderer);
+  if (error != udE_Success)
     goto epilogue;
 
-  error = vdkRenderContext_Create(pContext, &pRenderer);
-  if (error != vE_Success)
+  error = udRenderTarget_Create(pContext, &pRenderTarget, pRenderer, width, height);
+  if (error != udE_Success)
     goto epilogue;
 
-  error = vdkRenderView_Create(pContext, &pRenderView, pRenderer, width, height);
-  if (error != vE_Success)
-    goto epilogue;
-
-  error = vdkPointCloud_Load(pContext, &pModel, pModelName, &header);
-  if (error != vE_Success)
+  error = udPointCloud_Load(pContext, &pModel, pModelName, &header);
+  if (error != udE_Success)
     goto epilogue;
 
   instance.pPointCloud = pModel;
   memcpy(instance.matrix, header.storedMatrix, sizeof(header.storedMatrix));
 
-  error = vdkRenderView_SetTargets(pRenderView, pColorBuffer, 0, pDepthBuffer);
-  if (error != vE_Success)
+  error = udRenderTarget_SetTargets(pRenderTarget, pColorBuffer, 0, pDepthBuffer);
+  if (error != udE_Success)
     goto epilogue;
 
-  error = vdkRenderView_SetMatrix(pRenderView, vdkRVM_Camera, cameraMatrix);
-  if (error != vE_Success)
+  error = udRenderTarget_SetMatrix(pRenderTarget, udRTM_Camera, cameraMatrix);
+  if (error != udE_Success)
     goto epilogue;
 
-  options.flags = vdkRF_BlockingStreaming; // This is required to do the full streaming within 1 frame rather than progressively refining over multiple frames
+  options.flags = udRCF_BlockingStreaming; // This is required to do the full streaming within 1 frame rather than progressively refining over multiple frames
 
-  error = vdkRenderContext_Render(pRenderer, pRenderView, &instance, 1, &options);
-  if (error != vE_Success)
+  error = udRenderContext_Render(pRenderer, pRenderTarget, &instance, 1, &options);
+  if (error != udE_Success)
     goto epilogue;
 
   for (y = 0; y < height; y++)
@@ -136,10 +134,10 @@ int main(int argc, char **ppArgv)
 epilogue:
   free(pDepthBuffer);
   free(pColorBuffer);
-  vdkPointCloud_Unload(&pModel);
-  vdkRenderView_Destroy(&pRenderView);
-  vdkRenderContext_Destroy(&pRenderer);
-  vdkContext_Disconnect(&pContext);
+  udPointCloud_Unload(&pModel);
+  udRenderTarget_Destroy(&pRenderTarget);
+  udRenderContext_Destroy(&pRenderer);
+  udContext_Disconnect(&pContext, 0);
 
   return error;
 }

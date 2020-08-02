@@ -4,7 +4,7 @@ project "winforms-csharp"
 	flags { "FatalWarnings" }
 	location(".")
 
-	postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["vaultsdk"] .. '\\lib\\win_x64\\vaultSDK.dll" "$(TargetDir)\\"' }
+	postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["udsdk"] .. '\\lib\\win_x64\\udSDK.dll" "$(TargetDir)\\"' }
 
 	--Files to include
 	files { "**" }

@@ -7,10 +7,10 @@ Feature sample to generate a UDS file from a set of points
 ```
 Language:              (C-Style) C++
 Type:                  Feature Example
-Contributor:           Euclideon Vault Development Team <support@euclideon.com>
-Organization:          Euclideon, https://euclideon.com/vault
-Date:                  2020-02-20
-Vault SDK Version:     0.5.1
+Contributor:           Euclideon Development Team <support@euclideon.com>
+Organization:          Euclideon, https://euclideon.com
+Date:                  2020-08-03
+udSDK Version:         2.0.0
 Toolsets:              C++11 compiler
 ```
 
@@ -21,7 +21,7 @@ _No additional resources or libraries required_
 ## How to use the sample
 <!-- TODO: Explain how this sample can be used and what is required to get it running -->
 1. Create the project in the sample root directory (see instructions there for more information)
-2. Set User information in the `VaultSDKFeatureSamples.h` file (if updating a sample, be careful not to push these back upstream)
+2. Set User information in the `udSDKFeatureSamples.h` file (if updating a sample, be careful not to push these back upstream)
 3. Run the sample and observe a UDS is output from the data provided in CustomConvertTest_ReadFloat
 
 <!-- End -->

@@ -1,4 +1,4 @@
-import vault
+import udSDK
 
 from ctypes import c_int, c_float
 import os
@@ -9,18 +9,18 @@ from PIL import Image
 from sys import argv
 
 # Load the SDK and fetch symbols
-SDKPath = abspath("./vaultSDK")
-vault.LoadVaultSDK(SDKPath)
-vaultSDK = vault.vaultSDK
+SDKPath = abspath("./udSDK")
+udSDK.LoadudSDK(SDKPath)
+udSDKDLL = udSDK.udSDKDLL
     
 
 modelFile = abspath("../../samplefiles/DirCube.uds")
 outFile = abspath("./tmp.png")
 
 appName = "PythonSample"
-serverPath = "https://earth.vault.euclideon.com"
-userName = "Username"
-userPass = "Password"
+serverPath = "https://udstream.euclideon.com"
+userName = ""
+userPass = ""
 
 
 
@@ -47,33 +47,32 @@ if __name__ == "__main__":
         modelFile = abspath(argv[3])
 
     # Do the thing
-    vaultContext = vault.vdkContext()
-    vaultRenderer = vault.vdkRenderContext()
-    vaultRenderView = vault.vdkRenderView()
-    vaultModel = vault.vdkPointCloud()
+    udContext = udSDK.udContext()
+    udRenderer = udSDK.udRenderContext()
+    udRenderTarget = udSDK.udRenderTarget()
+    udModel = udSDK.udPointCloud()
 
     try:
       #initialize
-      vaultContext.Connect(serverPath, appName, userName, userPass)
-      vaultContext.RequestLicense(vault.vdkLicenseType.Render)
-      vaultRenderer.Create(vaultContext)
-      vaultRenderView.Create(vaultContext, vaultRenderer, width, height)
-      vaultModel.Load(vaultContext, modelFile)
-      vaultRenderView.SetTargets(colourBuffer, 0, depthBuffer)
-      vaultRenderView.SetMatrix(vault.vdkRenderViewMatrix.Camera, cameraMatrix)
+      udContext.Connect(serverPath, appName, userName, userPass)
+      udRenderer.Create(udContext)
+      udRenderTarget.Create(udContext, udRenderer, width, height)
+      udModel.Load(udContext, modelFile)
+      udRenderTarget.SetTargets(colourBuffer, 0, depthBuffer)
+      udRenderTarget.SetMatrix(udSDK.udRenderTargetMatrix.Camera, cameraMatrix)
 
-      models = [vaultModel]
+      models = [udModel]
 
       for x in range(10):
-        vaultRenderer.Render(vaultRenderView, models)
+        udRenderer.Render(udRenderTarget, models)
 
       Image.frombuffer("RGBA", (width, height), colourBuffer, "raw", "RGBA", 0, 1).save(outFile)
       print("{0} written to the build directory.\nPress enter to exit.\n".format(basename(outFile)))
 
       # Exit gracefully
-      vaultModel.Unload()
-      vaultRenderView.Destroy()
-      vaultRenderer.Destroy()
-      vaultContext.Disconnect()
-    except vault.VdkException as err:
+      udModel.Unload()
+      udRenderTarget.Destroy()
+      udRenderer.Destroy()
+      udContext.Disconnect()
+    except udSDK.udException as err:
       err.printout()

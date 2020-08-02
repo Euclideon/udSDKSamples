@@ -46,7 +46,7 @@ namespace VDKWinForms
             this.servernameTB.Name = "servernameTB";
             this.servernameTB.Size = new System.Drawing.Size(414, 22);
             this.servernameTB.TabIndex = 3;
-            this.servernameTB.Text = "https://earth.vault.euclideon.com";
+            this.servernameTB.Text = "https://udstream.euclideon.com";
             // 
             // usernameTB
             // 

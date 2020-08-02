@@ -12,8 +12,8 @@
     />
     <title>Cesium/Euclideon Integration</title>
     <script src="Cesium/Cesium.js"></script>
-    <script async src="euclideon/vaultsdkjs.js"></script>
-    <script async src="euclideon/easyvaultsdkjs.js"></script>
+    <script async src="euclideon/udsdkjs.js"></script>
+    <script async src="euclideon/easyudsdkjs.js"></script>
     <style>
       @import url(Cesium/Widgets/widgets.css);
       html,
@@ -45,7 +45,7 @@
     <div id="toolbar"></div>
     <div id="loginBox">
         <span id="errorMessage" style="color: red;"></span>
-        <label>Euclideon Vault Username: <input id="usernameTxt" type="text" /></label>
+        <label>udStream Username: <input id="usernameTxt" type="text" /></label>
         <label>Password: <input id="passwordTxt" type="password" /></label>
         <button id="loginBtn">Login!</login>
     </div>
@@ -387,16 +387,16 @@
         {
           console.log("EasyVDK Logged in.");
 
-          udsAerometrixBrisbane = EasyVDK_LoadModel("https://az.vault.euclideon.com/Aerometrex_Brisbane_75mm.uds");
+          udsAerometrixBrisbane = EasyVDK_LoadModel("https://models.euclideon.com/Aerometrex_Brisbane_75mm.uds");
           EasyVDK_RenderQueueAddModel(udsAerometrixBrisbane, 112.0, 4978);
 
-          udsAerometrixGoldCoast = EasyVDK_LoadModel("https://az.vault.euclideon.com/GoldCoast_20mm.uds");
+          udsAerometrixGoldCoast = EasyVDK_LoadModel("https://models.euclideon.com/GoldCoast_20mm.uds");
           EasyVDK_RenderQueueAddModel(udsAerometrixGoldCoast, 140.0, 4978);
 
-          udsMelb = EasyVDK_LoadModel("https://az.vault.euclideon.com/Melbourne_75mm.uds");
+          udsMelb = EasyVDK_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds");
           EasyVDK_RenderQueueAddModel(udsMelb, 150.0, 4978);
 
-          udsVancouver = EasyVDK_LoadModel("https://az.vault.euclideon.com/Vancouver.uds");
+          udsVancouver = EasyVDK_LoadModel("https://models.euclideon.com/Vancouver.uds");
           EasyVDK_RenderQueueAddModel(udsVancouver, 227.0, 4978);
 
           easyVDKReady = 2;

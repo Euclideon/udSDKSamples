@@ -3,9 +3,9 @@
 #include <math.h>
 #include <stdlib.h>
 
-#include "VaultSDKFeatureSamples.h"
-#include "vdkContext.h"
-#include "vdkConvertCustom.h"
+#include "udSDKFeatureSamples.h"
+#include "udContext.h"
+#include "udConvertCustom.h"
 
 const char s_SampleName[] = "SampleCustomConvert";
 
@@ -16,12 +16,12 @@ struct CustomConvert
   uint32_t pointsWritten;
 };
 
-vdkError CustomConvertTest_Open(struct vdkConvertCustomItem * /*pConvertInput*/, uint32_t /*everyNth*/, const double /*origin*/[3], double /*pointResolution*/, enum vdkConvertCustomItemFlags /*flags*/)
+udError CustomConvertTest_Open(struct udConvertCustomItem * /*pConvertInput*/, uint32_t /*everyNth*/, const double /*origin*/[3], double /*pointResolution*/, enum udConvertCustomItemFlags /*flags*/)
 {
-  return vE_Success;
+  return udE_Success;
 }
 
-vdkError CustomConvertTest_ReadFloat(struct vdkConvertCustomItem *pConvertInput, struct vdkPointBufferF64 *pBuffer)
+udError CustomConvertTest_ReadFloat(struct udConvertCustomItem *pConvertInput, struct udPointBufferF64 *pBuffer)
 {
   CustomConvert *pItem = (CustomConvert *)pConvertInput->pData;
 
@@ -54,15 +54,15 @@ vdkError CustomConvertTest_ReadFloat(struct vdkConvertCustomItem *pConvertInput,
     ++pBuffer->pointCount;
   }
 
-  return vE_Success;
+  return udE_Success;
 }
 
-void CustomConvertTest_Destroy(struct vdkConvertCustomItem *pConvertInput)
+void CustomConvertTest_Destroy(struct udConvertCustomItem *pConvertInput)
 {
-  vdkAttributeSet_Free(&pConvertInput->attributes);
+  udAttributeSet_Destroy(&pConvertInput->attributes);
 }
 
-void CustomConvertTest_Close(struct vdkConvertCustomItem * /*pConvertInput*/)
+void CustomConvertTest_Close(struct udConvertCustomItem * /*pConvertInput*/)
 {
   //Do nothing
 }
@@ -70,29 +70,29 @@ void CustomConvertTest_Close(struct vdkConvertCustomItem * /*pConvertInput*/)
 int main(int argc, char **ppArgv)
 {
   // This confirms that the statics have been configured correctly
-  static_assert(s_VaultUsername[0] != '\0', "Username needs to be configured in VaultSDKFeatureSamples.h");
-  static_assert(s_VaultPassword[0] != '\0', "Password needs to be configured in VaultSDKFeatureSamples.h");
+  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in VaultSDKFeatureSamples.h");
+  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in VaultSDKFeatureSamples.h");
 
   // Define our variables
-  vdkError vdkResult = vE_Success;
-  vdkContext *pContext = nullptr;
+  udError udResult = udE_Success;
+  udContext *pContext = nullptr;
 
   // Resume Session or Login
-  if (vdkContext_TryResume(&pContext, s_VaultServer, s_SampleName, s_VaultUsername, false) != vE_Success)
-    vdkResult = vdkContext_Connect(&pContext, s_VaultServer, s_SampleName, s_VaultUsername, s_VaultPassword);
+  if (udContext_TryResume(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, false) != udE_Success)
+    udResult = udContext_Connect(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, s_udStreamPassword);
 
-  if (vdkResult != vE_Success)
-    ExitWithMessage(vdkResult, "Could not login!");
+  if (udResult != udE_Success)
+    ExitWithMessage(udResult, "Could not login!");
 
   // Initialise Convert State
-  vdkConvertContext *pConvertCtx = nullptr;
-  if (vdkConvert_CreateContext(pContext, &pConvertCtx) != vE_Success)
+  udConvertContext *pConvertCtx = nullptr;
+  if (udConvert_CreateContext(pContext, &pConvertCtx) != udE_Success)
     ExitWithMessage(1, "Could not create convert context!");
 
-  vdkConvert_SetOutputFilename(pConvertCtx, "ConvertCustom.uds");
+  udConvert_SetOutputFilename(pConvertCtx, "ConvertCustom.uds");
 
   // Setup the custom item
-  vdkConvertCustomItem item = {};
+  udConvertCustomItem item = {};
   CustomConvert itemInfo = {};
 
   item.pOpen = CustomConvertTest_Open;
@@ -108,19 +108,19 @@ int main(int argc, char **ppArgv)
   item.pointCountIsEstimate = false;
 
   item.sourceResolution = 0.1;
-  vdkAttributeSet_Generate(&item.attributes, vdkSAC_ARGB | vdkSAC_Intensity | vdkSAC_Classification, 0);
+  udAttributeSet_Create(&item.attributes, udSAC_ARGB | udSAC_Intensity | udSAC_Classification, 0);
 
   // Do the actual conversion
-  if (vdkConvert_AddCustomItem(pConvertCtx, &item) != vE_Success)
+  if (udConvert_AddCustomItem(pConvertCtx, &item) != udE_Success)
     ExitWithMessage(1, "Could not add custom convert item!");
 
   // Start the conversion
-  if (vdkConvert_DoConvert(pConvertCtx) != vE_Success)
+  if (udConvert_DoConvert(pConvertCtx) != udE_Success)
     ExitWithMessage(1, "Conversion failed!");
 
   // Cleanup
-  vdkConvert_DestroyContext(&pConvertCtx);
-  vdkContext_Disconnect(&pContext);
+  udConvert_DestroyContext(&pConvertCtx);
+  udContext_Disconnect(&pContext, false);
 
   return 0;
 }
