@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
-    <title>VaultSDK Esri Demo</title>
+    <title>udSDK Esri Demo</title>
 
     <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/light/main.css" />
     <script src="https://js.arcgis.com/4.14/"></script>
@@ -135,7 +135,7 @@
 
     <!-- Our application -->
     <script>
-      var easyVDKReady = 0;
+      var udSDKJSReady = 0;
 
       require([
         "esri/core/declare",
@@ -257,7 +257,7 @@
             var width = context.camera.width;
             var height = context.camera.height;
 
-            if (easyVDKReady == 2)
+            if (udSDKJSReady == 2)
             {
               if (width != this.prevWidth || height != this.prevHeight)
               {
@@ -274,25 +274,25 @@
                 gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
 
-                EasyVDK_ResizeScene(width, height, 0, 0);
+                udSDKJS_ResizeScene(width, height, 0, 0);
               }
 
               var v = context.camera.viewMatrix;
-              EasyVDK_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+              udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
               var v = context.camera.projectionMatrix;
-              EasyVDK_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+              udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
-              EasyVDK_RenderQueue();
+              udSDKJS_RenderQueue();
 
-              var ptr = EasyVDK_GetColourBuffer();
+              var ptr = udSDKJS_GetColourBuffer();
               var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
 
               gl.activeTexture(gl.TEXTURE0);
               gl.bindTexture(gl.TEXTURE_2D, this.texture);
               gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
 
-              var ptr = EasyVDK_GetDepthBuffer();
+              var ptr = udSDKJS_GetDepthBuffer();
               var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
 
               gl.activeTexture(gl.TEXTURE1);
@@ -435,7 +435,7 @@
           document.getElementById("loginBtn").addEventListener("click", loginVDK);
 
           function loginVDK(ev) {
-            if (easyVDKReady == 1)
+            if (udSDKJSReady == 1)
                 LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
           }
         });
@@ -445,57 +445,57 @@
         externalRenderers.add(view, vaultSDKRenderer);
       });
     </script>
-    <script async src=vaultsdkjs.js></script>
-    <script async src=easyvaultsdkjs.js></script>
+    <script async src=udsdkjs.js></script>
+    <script async src=easyudsdkjs.js></script>
   </head>
 
   <body>
     <div id="viewDiv"></div>
     <div id="loginBox">
         <span id="errorMessage" style="color: red;"></span>
-        <label>Euclideon Vault Username: <input id="usernameTxt" type="text" /></label>
-        <label>Password: <input id="passwordTxt" type="password" /></label>
+        <label>Euclideon Login: <input id="usernameTxt" type="text" placeholder="Email" /></label>
+        <label><input id="passwordTxt" type="password" placeholder="Password" /></label>
         <button id="loginBtn">Login!</login>
     </div>
     <script>
       function CreateVDKPlugin()
       {
-        easyVDKReady = 1;
+        udSDKJSReady = 1;
         document.getElementById("loginBox").style.display = "block";
       };
 
       function LoginVDKPlugin(username, password)
       {
-        if (easyVDKReady != 1)
+        if (udSDKJSReady != 1)
           Alert("Not ready to login!");
 
-        var status = EasyVDK(username, password, "Esri ArcScene");
+        var status = udSDKJS(username, password, "Esri ArcScene");
 
         if (status == 0)
         {
-          console.log("EasyVDK Logged in.");
+          console.log("udSDKJS Logged in.");
 
           // Photogrammetry model of the Gold Coast courtesy of [Aerometrex](https://aerometrex.com.au/).
-          udsAerometrixGoldCoast = EasyVDK_LoadModel("https://az.vault.euclideon.com/GoldCoast_20mm.uds");
-          EasyVDK_RenderQueueAddModel(udsAerometrixGoldCoast, 140.0, -1);
+          udsAerometrixGoldCoast = udSDKJS_LoadModel("https://models.euclideon.com/GoldCoast_20mm.uds");
+          udSDKJS_RenderQueueAddModel(udsAerometrixGoldCoast, 140.0, -1);
 
           // LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/).
-          udsMelb = EasyVDK_LoadModel("https://az.vault.euclideon.com/Melbourne_75mm.uds");
-          EasyVDK_RenderQueueAddModel(udsMelb, 150.0, -1);
+          udsMelb = udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds");
+          udSDKJS_RenderQueueAddModel(udsMelb, 150.0, -1);
 
           // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
-          udsVancouver = EasyVDK_LoadModel("https://az.vault.euclideon.com/Vancouver_Colour.uds");
-          EasyVDK_RenderQueueAddModel(udsVancouver, 227.0, -1);
+          udsVancouver = udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds");
+          udSDKJS_RenderQueueAddModel(udsVancouver, 227.0, -1);
 
-          easyVDKReady = 2;
+          udSDKJSReady = 2;
           document.getElementById("loginBox").style.display = "none";
         }
         else
         {
           if (status == 13)
-            document.getElementById("errorMessage").innerText = "EasyVDK Error / Username & Password Wrong";
+            document.getElementById("errorMessage").innerText = "udSDKJS Error / Email or Password Wrong";
           else
-            document.getElementById("errorMessage").innerText = "EasyVDK FAILED Error=" + status;
+            document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + status;
         }
       }
 
