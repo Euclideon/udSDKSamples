@@ -45,12 +45,12 @@
     <div id="toolbar"></div>
     <div id="loginBox">
         <span id="errorMessage" style="color: red;"></span>
-        <label>udStream Username: <input id="usernameTxt" type="text" /></label>
-        <label>Password: <input id="passwordTxt" type="password" /></label>
+        <label>Euclideon Login: <input id="usernameTxt" type="text" placeholder="Email" /></label>
+        <label><input id="passwordTxt" type="password" placeholder="Password" /></label>
         <button id="loginBtn">Login!</login>
     </div>
     <script>
-      var easyVDKReady = 0;
+      var udSDKReady = 0;
 
       var viewer = new Cesium.Viewer("cesiumContainer", {
         scene3DOnly: true
@@ -279,7 +279,7 @@
                         return;
                     }
 
-                    if (easyVDKReady == 2)
+                    if (udSDKReady == 2)
                     {
                       var thisWidth = viewer.canvas.width;
                       var thisHeight = viewer.canvas.height;
@@ -297,7 +297,7 @@
                         this.prevWidth = thisWidth;
                         this.prevHeight = thisHeight;
 
-                        EasyVDK_ResizeScene(thisWidth, thisHeight, 0, 0);
+                        udSDKJS_ResizeScene(thisWidth, thisHeight, 0, 0);
 
                         var context = viewer.scene.context;
                         colourTextureGL.destroy();
@@ -317,14 +317,14 @@
                       }
 
                       var v = frameState.camera.viewMatrix;
-                      EasyVDK_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+                      udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
                       var v = frameState.camera.frustum.projectionMatrix;
-                      EasyVDK_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+                      udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
-                      EasyVDK_RenderQueue();
+                      udSDKJS_RenderQueue();
 
-                      var ptr = EasyVDK_GetColourBuffer();
+                      var ptr = udSDKJS_GetColourBuffer();
                       var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(thisWidth*thisHeight*4)));
 
                       colourTextureGL.copyFrom({
@@ -333,7 +333,7 @@
                           arrayBufferView : data
                       });
 
-                      var ptr = EasyVDK_GetDepthBuffer();
+                      var ptr = udSDKJS_GetDepthBuffer();
                       var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(thisWidth*thisHeight*4)));
 
                       udTextureDepth.copyFrom({
@@ -372,49 +372,49 @@
     </script>
 
     <script>
-      function CreateVDKPlugin() {
-        easyVDKReady = 1;
+      function udSDKPluginInit() {
+        udSDKReady = 1;
         document.getElementById("loginBox").style.display = "block";
       };
 
-      function LoginVDKPlugin(username, password) {
-        if (easyVDKReady != 1)
+      function udSDKPluginLoad(username, password) {
+        if (udSDKReady != 1)
           Alert("Not ready to login!");
 
-        var status = EasyVDK(username, password, "Cesium");
+        var status = udSDKJS(username, password, "Cesium");
 
         if (status == 0)
         {
-          console.log("EasyVDK Logged in.");
+          console.log("udSDKJS Logged in.");
 
-          udsAerometrixBrisbane = EasyVDK_LoadModel("https://models.euclideon.com/Aerometrex_Brisbane_75mm.uds");
-          EasyVDK_RenderQueueAddModel(udsAerometrixBrisbane, 112.0, 4978);
+          udsAerometrixBrisbane = udSDKJS_LoadModel("https://models.euclideon.com/Aerometrex_Brisbane_75mm.uds");
+          udSDKJS_RenderQueueAddModel(udsAerometrixBrisbane, 112.0, 4978);
 
-          udsAerometrixGoldCoast = EasyVDK_LoadModel("https://models.euclideon.com/GoldCoast_20mm.uds");
-          EasyVDK_RenderQueueAddModel(udsAerometrixGoldCoast, 140.0, 4978);
+          udsAerometrixGoldCoast = udSDKJS_LoadModel("https://models.euclideon.com/GoldCoast_20mm.uds");
+          udSDKJS_RenderQueueAddModel(udsAerometrixGoldCoast, 140.0, 4978);
 
-          udsMelb = EasyVDK_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds");
-          EasyVDK_RenderQueueAddModel(udsMelb, 150.0, 4978);
+          udsMelb = udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds");
+          udSDKJS_RenderQueueAddModel(udsMelb, 150.0, 4978);
 
-          udsVancouver = EasyVDK_LoadModel("https://models.euclideon.com/Vancouver.uds");
-          EasyVDK_RenderQueueAddModel(udsVancouver, 227.0, 4978);
+          udsVancouver = udSDKJS_LoadModel("https://models.euclideon.com/Vancouver.uds");
+          udSDKJS_RenderQueueAddModel(udsVancouver, 227.0, 4978);
 
-          easyVDKReady = 2;
+          udSDKReady = 2;
           document.getElementById("loginBox").style.display = "none";
         }
         else
         {
           if (status == 13)
-            document.getElementById("errorMessage").innerText = "EasyVDK Error / Username & Password Wrong";
+            document.getElementById("errorMessage").innerText = "udSDKJS Error / Username & Password Wrong";
           else
-            document.getElementById("errorMessage").innerText = "EasyVDK FAILED Error=" + status;
+            document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + status;
         }
       }
 
       var Module = {
         noExitRuntime: true,
         preRun: [],
-        postRun: CreateVDKPlugin,
+        postRun: udSDKPluginInit,
         setStatus: function(text) {
           if (!Module.setStatus.last)
             Module.setStatus.last = { time: Date.now(), text: '' };
@@ -445,8 +445,8 @@
       Module.setStatus('Downloading...');
 
       function loginVDK(ev) {
-        if (easyVDKReady == 1) {
-          LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
+        if (udSDKReady == 1) {
+          udSDKPluginLoad(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
         }
       }
 
