@@ -29,7 +29,7 @@ Toolsets:
 3. Login to the login box.
 4. Observe the models in the viewer.
   - Photogrammetry model of the Brisbane and Gold Coast regions courtesy of [Aerometrex](https://aerometrex.com.au/).
-  - LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/).
+  - LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/2dqj-9ydd).
   - LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
 
 ## How this Integration works
