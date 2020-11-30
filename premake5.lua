@@ -135,5 +135,11 @@ solution "udSDKSamples"
 	group "features"
 		if os.target() ~= "android" and os.target() ~= "ios" and os.target() ~= "emscripten" then
 			dofile "features/convertcustomdata/project.lua"
+			dofile "features/convertdem/project.lua"
 			dofile "features/renderingcustomvoxelshaders/project.lua"
+		end
+
+	group "libraries"
+		if os.target() ~= "android" and os.target() ~= "ios" and os.target() ~= "emscripten" then
+			dofile "external/udcore/project.lua"
 		end
