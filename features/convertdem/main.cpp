@@ -8,7 +8,9 @@
 #include "udSDKFeatureSamples.h"
 #include "udContext.h"
 #include "udConvertCustom.h"
+#include "udTriangleVoxelizer.h"
 
+#include "udGeoZone.h"
 // Format available here https://en.wikipedia.org/wiki/USGS_DEM
 
 // Please note: This sample project uses the udCore helper library
@@ -32,10 +34,21 @@ struct DEMConvert
   uint8_t *pImage;
   int32_t width;
   int32_t height;
+
+  //Voxeliser
+  udTriangleVoxelizer *pTriVox;
+  int32_t indexX; // could be changed to a single index
+  int32_t indexY;
+  int8_t triIndex;
+
+  double outputResolution;
 };
 
-udError DEMConvertTest_Open(struct udConvertCustomItem * /*pConvertInput*/, uint32_t /*everyNth*/, const double /*origin*/[3], double /*pointResolution*/, enum udConvertCustomItemFlags /*flags*/)
+udError DEMConvertTest_Open(struct udConvertCustomItem * pConvertInput, uint32_t /*everyNth*/, const double /*origin*/[3], double pointResolution, enum udConvertCustomItemFlags /*flags*/)
 {
+  DEMConvert *pItem = (DEMConvert *)pConvertInput->pData;
+  pItem->outputResolution = pointResolution;
+
   return udE_Success;
 }
 
@@ -57,9 +70,6 @@ udError DEMConvertTest_ReadFloat(struct udConvertCustomItem *pConvertInput, stru
       pBuffer->pAttributes[i * pBuffer->attributeStride + 1] = green;
       pBuffer->pAttributes[i * pBuffer->attributeStride + 2] = blue;
 
-      int px = (pItem->pointsWritten % pItem->rows);
-      int py = (pItem->pointsWritten / pItem->rows);
-
       pBuffer->pPositions[i * 3 + 0] = pItem->pPoints[pItem->pointsWritten].x;
       pBuffer->pPositions[i * 3 + 1] = pItem->pPoints[pItem->pointsWritten].y;
       pBuffer->pPositions[i * 3 + 2] = pItem->pPoints[pItem->pointsWritten].z;
@@ -73,54 +83,76 @@ udError DEMConvertTest_ReadFloat(struct udConvertCustomItem *pConvertInput, stru
   {
     printf("\rConverting... %.2f %u/%u", (double)pItem->pointsWritten / (pItem->width * pItem->height), pItem->pointsWritten, pItem->width * pItem->height);
 
-    for (uint32_t i = pBuffer->pointCount; i < pBuffer->pointsAllocated && pItem->pointsWritten < pItem->width * pItem->height; ++i)
+    for (int32_t i = pBuffer->pointCount; pBuffer->pointCount < pBuffer->pointsAllocated && pItem->indexY < pItem->rows - 1; ++i)
     {
-      int px = (pItem->pointsWritten % pItem->width);
-      int py = pItem->height - (pItem->pointsWritten / pItem->width) - 1;
-      double imageX = (pItem->columns-1) * px / double(pItem->width);
-      double imageY = (pItem->rows-1) * py / double(pItem->height);
-
-      double yIntF, xIntF;
-      double xFrac = modf(imageX, &xIntF);
-      double yFrac = modf(imageY, &yIntF);
-
-      int yInt = (int)yIntF;
-      int xInt = (int)xIntF;
-
-      while ((yInt+1) >= pItem->rows)
-      {
-        yFrac = 1.0;
-        yInt = pItem->rows - 2;
-      }
-
-      while ((xInt + 1) >= pItem->columns)
-      {
-        xFrac = 1.0;
-        xInt = pItem->columns - 2;
-      }
-
-      pBuffer->pAttributes[i * pBuffer->attributeStride + 0] = pItem->pImage[pItem->pointsWritten * 3 + 0];
-      pBuffer->pAttributes[i * pBuffer->attributeStride + 1] = pItem->pImage[pItem->pointsWritten * 3 + 1];
-      pBuffer->pAttributes[i * pBuffer->attributeStride + 2] = pItem->pImage[pItem->pointsWritten * 3 + 2];
-
       udDouble3 corners[4];
-      corners[0] = pItem->pPoints[(xInt + 0) * pItem->rows + (yInt + 0)];
-      corners[1] = pItem->pPoints[(xInt + 0) * pItem->rows + (yInt + 1)];
-      corners[2] = pItem->pPoints[(xInt + 1) * pItem->rows + (yInt + 0)];
-      corners[3] = pItem->pPoints[(xInt + 1) * pItem->rows + (yInt + 1)];
+      corners[0] = pItem->pPoints[(pItem->indexX + 0) * pItem->rows + (pItem->indexY + 0)];
+      corners[1] = pItem->pPoints[(pItem->indexX + 0) * pItem->rows + (pItem->indexY + 1)];
+      corners[2] = pItem->pPoints[(pItem->indexX + 1) * pItem->rows + (pItem->indexY + 0)];
+      corners[3] = pItem->pPoints[(pItem->indexX + 1) * pItem->rows + (pItem->indexY + 1)];
+      const double p0[3] = { corners[0].x, corners[0].y, corners[0].z };
+      const double p1[3] = { corners[1].x, corners[1].y, corners[1].z };
+      const double p2[3] = { corners[2].x, corners[2].y, corners[2].z };
+      const double p3[3] = { corners[3].x, corners[3].y, corners[3].z };
 
-      udDouble3 position = udLerp(udLerp(corners[0], corners[2], xFrac), udLerp(corners[1], corners[3], xFrac), yFrac);
+      udDouble2 p0UV, p1UV, p2UV;
+      p0UV = udDouble2::create(double(pItem->indexX) / double(pItem->columns), double(pItem->indexY) / double(pItem->rows));
 
-      pBuffer->pPositions[i * 3 + 0] = position.x;
-      pBuffer->pPositions[i * 3 + 1] = position.y;
-      pBuffer->pPositions[i * 3 + 2] = position.z;
+      if (pItem->triIndex == 0)
+      {
+        udTriangleVoxelizer_SetTriangle(pItem->pTriVox, p0, p2, p3);
+        p1UV = udDouble2::create(double(pItem->indexX + 1) / double(pItem->columns), double(pItem->indexY) / double(pItem->rows));
+        p2UV = udDouble2::create(double(pItem->indexX + 1) / double(pItem->columns), double(pItem->indexY + 1) / double(pItem->rows));
+      }
+      else
+      {
+        udTriangleVoxelizer_SetTriangle(pItem->pTriVox, p0, p3, p1);
+        p1UV = udDouble2::create(double(pItem->indexX + 1) / double(pItem->columns), double(pItem->indexY + 1) / double(pItem->rows));
+        p2UV = udDouble2::create(double(pItem->indexX) / double(pItem->columns), double(pItem->indexY + 1) / double(pItem->rows));
+      }
+      
+      double *pPointsPosition = nullptr;
+      double *pPointsBWeights = nullptr;
+      uint32_t pointsCount = UINT32_MAX;
+      uint32_t maxPoints = (pBuffer->pointsAllocated > pBuffer->pointCount) ? pBuffer->pointsAllocated - pBuffer->pointCount : 0;
+      while (pointsCount != 0 && maxPoints > 0)
+      {
+        udTriangleVoxelizer_GetPoints(pItem->pTriVox, &pPointsPosition, &pPointsBWeights, &pointsCount, pBuffer->pointsAllocated - pBuffer->pointCount);
+        for (uint32_t point = 0; point < pointsCount; ++point)
+        {
+          udDouble2 UV = udClamp(p0UV * pPointsBWeights[point * 3 + 0] + p1UV * pPointsBWeights[point * 3 + 1] + p2UV * pPointsBWeights[point * 3 + 2], udDouble2::zero(), udDouble2::one());
+          int imageIndex = int(UV.x * (pItem->width - 1.0) + int((1.0 - UV.y) * (pItem->height - 1.0)) * double(pItem->width));
 
-      ++pItem->pointsTotalOut;
-      ++pItem->pointsWritten;
-      ++pBuffer->pointCount;
+          pBuffer->pAttributes[pBuffer->pointCount * pBuffer->attributeStride + 0] = pItem->pImage[imageIndex * 3 + 2];
+          pBuffer->pAttributes[pBuffer->pointCount * pBuffer->attributeStride + 1] = pItem->pImage[imageIndex * 3 + 1];
+          pBuffer->pAttributes[pBuffer->pointCount * pBuffer->attributeStride + 2] = pItem->pImage[imageIndex * 3 + 0];
+
+          pBuffer->pPositions[pBuffer->pointCount * 3 + 0] = pPointsPosition[point * 3 + 0];
+          pBuffer->pPositions[pBuffer->pointCount * 3 + 1] = pPointsPosition[point * 3 + 1];
+          pBuffer->pPositions[pBuffer->pointCount * 3 + 2] = pPointsPosition[point * 3 + 2];
+
+          ++pItem->pointsTotalOut;
+          ++pItem->pointsWritten;
+          ++pBuffer->pointCount;
+        }
+        maxPoints = (pBuffer->pointsAllocated > pBuffer->pointCount) ? pBuffer->pointsAllocated - pBuffer->pointCount : 0;
+      }
+
+      if (pBuffer->pointsAllocated - pBuffer->pointCount != 0)
+      {
+        pItem->triIndex = pItem->triIndex == 0 ? 1 : 0; // next poly
+        if (pItem->triIndex == 0 && pItem->indexX < pItem->columns - 2) // next square
+        {
+          ++pItem->indexX;
+        }
+        else if (pItem->triIndex == 0) // new line
+        {
+          ++pItem->indexY;
+          pItem->indexX = 0;
+        }
+      }
     }
   }
-
   return udE_Success;
 }
 
@@ -149,9 +181,9 @@ int main(int argc, char **ppArgv)
 
   uint8_t *pIData = nullptr;
 
-  if (argc < 3)
+  if (argc < 4)
   {
-    stbi_load(ppArgv[2], &width, &height, &channels, 3);
+    pIData = stbi_load(ppArgv[2], &width, &height, &channels, 3);
     printf("Image Loaded %dx%d\n", width, height);
   }
 
@@ -165,10 +197,13 @@ int main(int argc, char **ppArgv)
   udDouble2 cornerNE;
   udDouble2 cornerSE;
   udDouble2 elevationLimits;
-  udDouble2 resolution;
+  udDouble2 resolution = {0, 0};
 
-  int numberOfCols;
-  int expectedRows;
+  double gridRes;
+  udTriangleVoxelizer *pTriVox;
+
+  int numberOfCols = 0;
+  int expectedRows = 0;
 
   if (udFile_Load(ppArgv[1], &pData) == udR_Success)
   {
@@ -217,16 +252,10 @@ int main(int argc, char **ppArgv)
 
       for (int j = 0; j < mIndex; ++j) // Loop over longitude (West->East)
       {
-        // 0 < j < 226 (Longitude)
-        // 0 < i < 301 (Latitude)
-        // pPoints is LongLat order
-
-
         int elevation = udStrAtoi(&pData[read], &count); read += count;
         pPoints[i * mIndex + j] = udDouble3::create(xPos / 3600.0, (yPos + resolution.y * j) / 3600.0, elevation / 10);
       }
     }
-
     udFree(pData);
   }
 
@@ -252,6 +281,16 @@ int main(int argc, char **ppArgv)
   udConvertCustomItem item = {};
   DEMConvert itemInfo = {};
 
+  // Convert to Cartesian
+  int srid;
+  udGeoZone_FindSRID(&srid, pPoints[0], true);
+  item.srid = srid;
+
+  udGeoZone zone;
+  udGeoZone_SetFromSRID(&zone, srid);
+  for (int i = 0; i < numberOfCols * expectedRows; ++i)
+    pPoints[i] = udGeoZone_LatLongToCartesian(zone, pPoints[i], true);
+
   itemInfo.pPoints = pPoints;
   itemInfo.columns = numberOfCols;
   itemInfo.rows = expectedRows;
@@ -259,6 +298,14 @@ int main(int argc, char **ppArgv)
   itemInfo.pImage = pIData;
   itemInfo.width = width;
   itemInfo.height = height;
+
+  gridRes = 10.0;
+  udTriangleVoxelizer_Create(&pTriVox, gridRes);
+
+  itemInfo.indexX = 0;
+  itemInfo.indexY = 0;
+  itemInfo.triIndex = 0;
+  itemInfo.pTriVox = pTriVox;
 
   item.pOpen = DEMConvertTest_Open;
   item.pReadPointsFloat = DEMConvertTest_ReadFloat;
@@ -271,8 +318,8 @@ int main(int argc, char **ppArgv)
   item.boundsKnown = false;
   item.pointCount = ((pIData == nullptr) ? (numberOfCols * expectedRows) : (width * height));
   item.pointCountIsEstimate = true;// false;
-  item.sourceProjection = udCSP_SourceLongLat;
-  item.sourceResolution = 2.0;
+  item.sourceProjection = udCSP_SourceCartesian;
+  item.sourceResolution = 10.0;
 
   udAttributeSet_Create(&item.attributes, udSAC_ARGB, 0);
 
@@ -291,6 +338,7 @@ int main(int argc, char **ppArgv)
   printf("\nOutput %u points\n", itemInfo.pointsTotalOut);
 
   // Cleanup
+  udTriangleVoxelizer_Destroy(&pTriVox);
   udConvert_DestroyContext(&pConvertCtx);
   udContext_Disconnect(&pContext, false);
 
