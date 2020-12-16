@@ -177,18 +177,22 @@
                             return bitsToFloat(bits);
                           }
 
-                        void main()
-                        {
+                          void main()
+                          {
                             gl_FragColor = texture2D(udImage, v_st).bgra;
                             float distanceF = rgbaToFloat(texture2D(udDepth, v_st), true);
 
                             if (distanceF == 1.0)
-                                discard;
+                              discard;
 
-                            vec4 windowPosition = vec4(v_st, distanceF, 1.0);
-                            vec4 clipPosition = czm_viewportOrthographic * windowPosition;
-                            czm_writeLogDepth(clipPosition.w);
-                        }
+                            vec4 clipPosition = vec4(v_st * 2.0 - 1.0, distanceF, 1.0);
+                            vec4 eyePosition = czm_inverseProjection * clipPosition;
+                            eyePosition /= eyePosition.w;
+
+                            float distanceM = length((czm_inverseView * eyePosition).xyz - czm_viewerPositionWC);
+
+                            czm_writeLogDepth(distanceM);
+                          }
                     `;
 
 
