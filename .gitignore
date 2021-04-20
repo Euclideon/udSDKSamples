@@ -22,3 +22,5 @@ integrations/unity-csharp/Packages/
 integrations/unity-csharp/obj/
 **/vaultSDK.dll
 **/vaultSDK.lib
+/integrations/cesium/Cesium
+/integrations/cesium/euclideon
