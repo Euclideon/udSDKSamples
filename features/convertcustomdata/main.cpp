@@ -70,8 +70,8 @@ void CustomConvertTest_Close(struct udConvertCustomItem * /*pConvertInput*/)
 int main(int argc, char **ppArgv)
 {
   // This confirms that the statics have been configured correctly
-  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in VaultSDKFeatureSamples.h");
-  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in VaultSDKFeatureSamples.h");
+  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in udSDKFeatureSamples.h");
+  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in udSDKFeatureSamples.h");
 
   // Define our variables
   udError udResult = udE_Success;
