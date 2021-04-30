@@ -10,7 +10,7 @@ Type:                  Feature Example
 Contributor:           Euclideon Development Team <support@euclideon.com>
 Organization:          Euclideon, https://euclideon.com
 Date:                  2020-30-11
-udSDK Version:         2.0.0
+udSDK Version:         2.1.0
 Toolsets:              C++11 compiler
 ```
 

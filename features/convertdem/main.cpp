@@ -169,8 +169,8 @@ void DEMConvertTest_Close(struct udConvertCustomItem * /*pConvertInput*/)
 int main(int argc, char **ppArgv)
 {
   // This confirms that the statics have been configured correctly
-  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in VaultSDKFeatureSamples.h");
-  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in VaultSDKFeatureSamples.h");
+  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in udSDKFeatureSamples.h");
+  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in udSDKFeatureSamples.h");
 
   int width = 0;
   int height = 0;
@@ -213,7 +213,7 @@ int main(int argc, char **ppArgv)
     int unitsV = udStrAtoi(&pData[535]); // 1=feet;2=metre
 
     if (unitsH != 3)
-      ExitWithMessage(udE_NotSupported, "Only Arc-Seconds is supported!");
+      ExitWithMessage(udE_Unsupported, "Only Arc-Seconds is supported!");
 
     cornerSW = udDouble2::create(udStrAtof64(&pData[546]), udStrAtof64(&pData[570]));
     cornerNW = udDouble2::create(udStrAtof64(&pData[594]), udStrAtof64(&pData[618]));
