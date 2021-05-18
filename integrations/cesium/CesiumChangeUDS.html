@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8" />
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
+    />
+    <title>Cesium/Euclideon Integration</title>
+    <script src="Cesium/Cesium.js"></script>
+    <script async src="euclideon/udsdkjs.js"></script>
+    <script async src="euclideon/easyudsdkjs.js"></script>
+    <style>
+      @import url(Cesium/Widgets/widgets.css);
+      html,
+      body,
+      #cesiumContainer {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      #loginBox {
+        position: absolute;
+        bottom: 50px;
+        right: 12px;
+        padding: 12px;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: none;
+      }
+      #modelBox {
+        position: absolute;
+        bottom: 50px;
+        right: 12px;
+        padding: 12px;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cesiumContainer"></div>
+    <div id="loadingOverlay">
+        <h1>Loading...</h1>
+    </div>
+    <div id="modelBox">
+      <label>Model URL: <input id="model" type="text" placeholder="Type a UDS model..." /></label>
+      <button id="loadModelBtn">Load Model</login>
+  </div>
+    <div id="toolbar"></div>
+    <div id="loginBox">
+        <span id="errorMessage" style="color: red;"></span>
+        <label>Euclideon Login: <input id="usernameTxt" type="text" placeholder="Email" /></label>
+        <label><input id="passwordTxt" type="password" placeholder="Password" /></label>
+        <button id="loginBtn">Login!</login>
+    </div>
+    <script>
+      var udSDKReady = 0;
+
+      var viewer = new Cesium.Viewer("cesiumContainer", {
+        scene3DOnly: true,
+        imageryProvider: new Cesium.UrlTemplateImageryProvider({
+          url: 'https://slippy.vault.euclideon.com/aerial/{z}/{x}/{y}.png',
+          credit: new Cesium.Credit(`© ${new Date().getFullYear()} TomTom, Microsoft`, true),
+          maximumLevel: 18,
+          enablePickFeatures: false
+        }),
+        baseLayerPicker: false,
+        geocoder: false,
+      });
+
+      var colourTextureGL;
+      var udTextureDepth;
+      var previousWidth = 16;
+      var previousHeight = 16;
+
+            class VtxfPrimitive {
+                constructor() {
+                    var positions = new Float32Array([-1,-1,  1,-1,  1,1, -1,-1,  1,1,  -1,1]);
+                    var sts = new Float32Array([0,0,  1,0,  1,1,  0,0,  1,1,  0,1]);
+
+                    var context = viewer.scene.context;
+                    colourTextureGL = new Cesium.Texture({
+                        context: context,
+                        pixelFormat: Cesium.PixelFormat.RGBA,
+                        width: previousWidth,
+                        height: previousHeight
+                    });
+
+                    udTextureDepth = new Cesium.Texture({
+                        context: context,
+                        pixelFormat: Cesium.PixelFormat.ALPHA,
+                        width: previousWidth,
+                        height: previousHeight
+                    });
+
+                    var attributeLocations = {
+                        position: 0,
+                        textureCoordinates: 1,
+                    };
+
+                    var vtxfVertexShader = `
+                        attribute vec2 position;
+                        attribute vec2 st;
+                        attribute float batchId;
+
+                        varying vec2 v_st;
+
+                        void main()
+                        {
+                            v_st = st;
+                            gl_Position = vec4(position, 1.0, 1.0);
+                        }
+                    `;
+
+                    var vtxfFragmentShader = `
+                        #extension GL_EXT_frag_depth : enable
+                        varying vec2 v_st;
+
+                        uniform sampler2D udImage;
+                        uniform sampler2D udDepth;
+
+                          //RGBA to Float from https://github.com/ihmeuw/glsl-rgba-to-float/blob/master/index.glsl
+                          // Denormalize 8-bit color channels to integers in the range 0 to 255.
+                          ivec4 floatsToBytes(vec4 inputFloats, bool littleEndian) {
+                            ivec4 bytes = ivec4(inputFloats * 255.0);
+                            return (
+                              littleEndian
+                              ? bytes.abgr
+                              : bytes
+                            );
+                          }
+
+                          // Break the four bytes down into an array of 32 bits.
+                          void bytesToBits(const in ivec4 bytes, out bool bits[32]) {
+                            for (int channelIndex = 0; channelIndex < 4; ++channelIndex) {
+                              float acc = float(bytes[channelIndex]);
+                              for (int indexInByte = 7; indexInByte >= 0; --indexInByte) {
+                                float powerOfTwo = exp2(float(indexInByte));
+                                bool bit = acc >= powerOfTwo;
+                                bits[channelIndex * 8 + (7 - indexInByte)] = bit;
+                                acc = mod(acc, powerOfTwo);
+                              }
+                            }
+                          }
+
+                          // Compute the exponent of the 32-bit float.
+                          float getExponent(bool bits[32]) {
+                            const int startIndex = 1;
+                            const int bitStringLength = 8;
+                            const int endBeforeIndex = startIndex + bitStringLength;
+                            float acc = 0.0;
+                            int pow2 = bitStringLength - 1;
+                            for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
+                              acc += float(bits[bitIndex]) * exp2(float(pow2--));
+                            }
+                            return acc;
+                          }
+
+                          // Compute the mantissa of the 32-bit float.
+                          float getMantissa(bool bits[32], bool subnormal) {
+                            const int startIndex = 9;
+                            const int bitStringLength = 23;
+                            const int endBeforeIndex = startIndex + bitStringLength;
+                            // Leading/implicit/hidden bit convention:
+                            // If the number is not subnormal (with exponent 0), we add a leading 1 digit.
+                            float acc = float(!subnormal) * exp2(float(bitStringLength));
+                            int pow2 = bitStringLength - 1;
+                            for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
+                              acc += float(bits[bitIndex]) * exp2(float(pow2--));
+                            }
+                            return acc;
+                          }
+
+                          // Parse the float from its 32 bits.
+                          float bitsToFloat(bool bits[32]) {
+                            float signBit = float(bits[0]) * -2.0 + 1.0;
+                            float exponent = getExponent(bits);
+                            bool subnormal = abs(exponent - 0.0) < 0.01;
+                            float mantissa = getMantissa(bits, subnormal);
+                            float exponentBias = 127.0;
+                            return signBit * mantissa * exp2(exponent - exponentBias - 23.0);
+                          }
+
+                          // Decode a 32-bit float from the RGBA color channels of a texel.
+                          float rgbaToFloat(vec4 texelRGBA, bool littleEndian) {
+                            ivec4 rgbaBytes = floatsToBytes(texelRGBA, littleEndian);
+                            bool bits[32];
+                            bytesToBits(rgbaBytes, bits);
+                            return bitsToFloat(bits);
+                          }
+
+                          void main()
+                          {
+                            gl_FragColor = texture2D(udImage, v_st).bgra;
+                            float distanceF = rgbaToFloat(texture2D(udDepth, v_st), true);
+
+                            if (distanceF == 1.0)
+                              discard;
+
+                            vec4 clipPosition = vec4(v_st * 2.0 - 1.0, distanceF, 1.0);
+                            vec4 eyePosition = czm_inverseProjection * clipPosition;
+                            eyePosition /= eyePosition.w;
+
+                            float distanceM = length((czm_inverseView * eyePosition).xyz - czm_viewerPositionWC);
+
+                            czm_writeLogDepth(distanceM);
+                          }
+                    `;
+
+
+                    function createVertexArray(context) {
+                        var geometry = new Cesium.Geometry({
+                            attributes: {
+                                position: new Cesium.GeometryAttribute({
+                                    componentDatatype: Cesium.ComponentDatatype.FLOAT,
+                                    componentsPerAttribute: 2,
+                                    values: positions
+                                }),
+                                textureCoordinates: new Cesium.GeometryAttribute({
+                                    componentDatatype: Cesium.ComponentDatatype.FLOAT,
+                                    componentsPerAttribute: 2,
+                                    values: sts
+                                })
+                            },
+                            primitiveType: Cesium.PrimitiveType.TRIANGLES
+                        });
+
+                        var vertexArray = Cesium.VertexArray.fromGeometry({
+                            context: context,
+                            geometry: geometry,
+                            attributeLocations: attributeLocations,
+                            bufferUsage: Cesium.BufferUsage.STATIC_DRAW
+                        });
+
+                        return vertexArray;
+                    };
+
+                    function createCommand(context) {
+                        var translucent = false;
+                        var closed = true;
+
+                        var rawRenderState = Cesium.Appearance.getDefaultRenderState(translucent, closed, undefined);
+                        var renderState = Cesium.RenderState.fromCache(rawRenderState);
+
+                        var vertexShaderSource = new Cesium.ShaderSource({
+                            sources: [vtxfVertexShader]
+                        });
+
+                        var fragmentShaderSource = new Cesium.ShaderSource({
+                            sources: [vtxfFragmentShader]
+                        });
+
+                        var uniformMap = {
+                            udImage: function() {
+                                if (Cesium.defined(colourTextureGL)) {
+                                    return colourTextureGL;
+                                } else {
+                                    return context.defaultTexture;
+                                }
+                            },
+                            udDepth: function() {
+                                if (Cesium.defined(udTextureDepth)) {
+                                    return udTextureDepth;
+                                } else {
+                                    return context.defaultTexture;
+                                }
+                            }
+                        };
+
+                        var shaderProgram = Cesium.ShaderProgram.fromCache({
+                            context: context,
+                            vertexShaderSource: vertexShaderSource,
+                            fragmentShaderSource: fragmentShaderSource,
+                            attributeLocations: attributeLocations
+                        });
+
+                        return new Cesium.DrawCommand({
+                            vertexArray: createVertexArray(context),
+                            primitiveType: Cesium.PrimitiveType.TRIANGLES,
+                            renderState: renderState,
+                            shaderProgram: shaderProgram,
+                            uniformMap: uniformMap,
+                            owner: this,
+                            pass: Cesium.Pass.OPAQUE
+                        });
+                    }
+
+                    this.show = true;
+                    this._command = undefined;
+                    this._createCommand = createCommand;
+                }
+
+                update(frameState) {
+                    if (!this.show) {
+                        return;
+                    }
+
+                    if (udSDKReady == 2)
+                    {
+                      var thisWidth = viewer.canvas.width;
+                      var thisHeight = viewer.canvas.height;
+
+                      if (thisWidth != this.prevWidth || thisHeight != this.prevHeight)
+                      {
+                        this.prevWidth = thisWidth;
+                        this.prevHeight = thisHeight;
+
+                        udSDKJS_ResizeScene(thisWidth, thisHeight, 0, 0);
+
+                        var context = viewer.scene.context;
+                        colourTextureGL.destroy();
+                        colourTextureGL = new Cesium.Texture({
+                            context: context,
+                            pixelFormat: Cesium.PixelFormat.RGBA,
+                            width: thisWidth,
+                            height: thisHeight
+                        });
+                        udTextureDepth.destroy();
+                        udTextureDepth = new Cesium.Texture({
+                            context: context,
+                            pixelFormat: Cesium.PixelFormat.RGBA,
+                            width: thisWidth,
+                            height: thisHeight
+                        });
+                      }
+
+                      var v = frameState.camera.viewMatrix;
+                      udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+                      var v = frameState.camera.frustum.projectionMatrix;
+                      udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+                      udSDKJS_RenderQueue();
+
+                      var ptr = udSDKJS_GetColourBuffer();
+                      var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(thisWidth*thisHeight*4)));
+
+                      colourTextureGL.copyFrom({
+                          width: thisWidth,
+                          height: thisHeight,
+                          arrayBufferView : data
+                      });
+
+                      var ptr = udSDKJS_GetDepthBuffer();
+                      var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(thisWidth*thisHeight*4)));
+
+                      udTextureDepth.copyFrom({
+                          width: thisWidth,
+                          height: thisHeight,
+                          arrayBufferView : dataHeap
+                      });
+
+                        if (!Cesium.defined(this._command)) {
+                            this._command = this._createCommand(frameState.context);
+                        }
+
+                        if (Cesium.defined(this._command)) {
+                            frameState.commandList.push(this._command);
+                        }
+                    }
+                }
+
+                isDestroyed() {
+                    return false;
+                }
+
+                destroy() {
+                    if (Cesium.defined(this._command)) {
+                        this._command.shaderProgram = this._command.shaderProgram && this._command.shaderProgram.destroy();
+                    }
+                    return destroyObject(this);
+                };
+            }
+
+            var myBox = viewer.scene.primitives.add(new VtxfPrimitive());
+
+    </script>
+
+    <script>
+      function loadModels() {
+        var model = findGetParameter("model");
+
+        if (typeof model === 'string')
+        {
+            getParamModel = udSDKJS_LoadModel(model);
+            udSDKJS_RenderQueueAddModel(getParamModel, 0.0, 4978);
+            modeldetails = udSDKJS_GetHeaderData(getParamModel);
+
+            var position = Cesium.Cartesian3.fromDegrees(modeldetails.latLong[1], modeldetails.latLong[0], 0.0);
+            viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(position, modeldetails.scaledRange));
+        }
+        else
+        {
+            udSDKJS_RenderQueueClear()
+            getParamModel = udSDKJS_LoadModel(document.getElementById("model").value);
+            udSDKJS_RenderQueueAddModel(getParamModel, 0.0, 4978);
+            modeldetails = udSDKJS_GetHeaderData(getParamModel);
+
+            var position = Cesium.Cartesian3.fromDegrees(modeldetails.latLong[1], modeldetails.latLong[0], 0.0);
+            viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(position, modeldetails.scaledRange));
+            udSDKReady = 2;
+        }        
+      }
+
+      function udSDKPluginInit() {
+        udSDKJS_RegisterShared();
+        udSDKReady = 1;
+        if (udSDKJS_Domain("Cesium") == 0)
+        {
+          document.getElementById("modelBox").style.display = "block";
+        }  
+        else
+          document.getElementById("loginBox").style.display = "block";
+      };
+
+      function findGetParameter(parameterName) {
+          var result = null;
+          var tmp = [];
+          location.search
+              .substr(1)
+              .split("&")
+              .forEach(function (item) {
+                tmp = item.split("=");
+                if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
+              });
+          return result;
+      }
+
+      function udSDKPluginLoad(username, password) {
+        if (udSDKReady != 1)
+          Alert("Not ready to login!");
+        var status = udSDKJS_Login(username, password, "Cesium");
+
+        if (status == 0)
+        {
+          document.getElementById("loginBox").style.display = "none";
+          document.getElementById("modelBox").style.display = "block";
+        }
+        else
+        {
+          if (status == 13)
+            document.getElementById("errorMessage").innerText = "udSDKJS Error / Username & Password Wrong";
+          else
+            document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + status;
+        }
+      }
+
+      var Module = {
+        noExitRuntime: true,
+        preRun: [],
+        postRun: udSDKPluginInit,
+        setStatus: function(text) {
+          if (!Module.setStatus.last)
+            Module.setStatus.last = { time: Date.now(), text: '' };
+
+          if (text === Module.setStatus.last.text)
+            return;
+
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30)
+            return; // if this is a progress update, skip it if too soon
+
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+          if (m) {
+            text = m[1];
+          }
+
+          console.log(text);
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function(left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+
+      Module.setStatus('Downloading...');
+
+      function loginVDK(ev) {
+        if (udSDKReady == 1) {
+          udSDKPluginLoad(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
+        }
+      }
+
+      document.getElementById("passwordTxt").addEventListener("keyup", function(event) { if (event.keyCode === 13) { event.preventDefault(); document.getElementById("loginBtn").click(); }});
+      document.getElementById("usernameTxt").addEventListener("keyup", function(event) { if (event.keyCode === 13) { event.preventDefault(); document.getElementById("loginBtn").click(); }});
+      document.getElementById("loginBtn").addEventListener("click", loginVDK);
+      document.getElementById("loadModelBtn").addEventListener("click", loadModels);
+    </script>
+  </body>
+</html>
