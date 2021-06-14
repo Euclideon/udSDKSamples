@@ -1,0 +1,6 @@
+*.uds
+*.log
+*.py
+/udSDK/
+/node_modules/
+/.vscode/
