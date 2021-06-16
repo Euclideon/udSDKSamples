@@ -81,7 +81,8 @@ udError DEMConvertTest_ReadFloat(struct udConvertCustomItem *pConvertInput, stru
   }
   else
   {
-    printf("\rConverting... %.2f %u/%u", (double)pItem->pointsWritten / (pItem->width * pItem->height), pItem->pointsWritten, pItem->width * pItem->height);
+    double completed = (double)pItem->indexX / ((pItem->columns - 2) * (pItem->rows - 1)) + (double)pItem->indexY / (pItem->rows - 1);
+    printf("\rConverting... %.2f%% - X:%5d/%d Y:%5d/%d (%u points)", 100.0 * completed, pItem->indexX, (pItem->columns - 2), pItem->indexY, (pItem->rows - 1), pItem->pointsWritten);
 
     for (int32_t i = pBuffer->pointCount; pBuffer->pointCount < pBuffer->pointsAllocated && pItem->indexY < pItem->rows - 1; ++i)
     {
@@ -199,7 +200,7 @@ int main(int argc, char **ppArgv)
   udDouble2 elevationLimits;
   udDouble2 resolution = {0, 0};
 
-  double gridRes;
+  double gridRes = 1.0;
   udTriangleVoxelizer *pTriVox;
 
   int numberOfCols = 0;
@@ -275,8 +276,6 @@ int main(int argc, char **ppArgv)
   if (udConvert_CreateContext(pContext, &pConvertCtx) != udE_Success)
     ExitWithMessage(1, "Could not create convert context!");
 
-  udConvert_SetOutputFilename(pConvertCtx, "C:/datasets/DEM/dem.uds");
-
   // Setup the custom item
   udConvertCustomItem item = {};
   DEMConvert itemInfo = {};
@@ -299,7 +298,13 @@ int main(int argc, char **ppArgv)
   itemInfo.width = width;
   itemInfo.height = height;
 
-  gridRes = 10.0;
+  if (pIData != nullptr)
+    gridRes = udMin(30.0 * udMag2(cornerSE - cornerNE) / height, 30.0 * udMag2(cornerNE - cornerNW) / width);
+  else
+    gridRes = 10.0;
+
+  printf("Converting at %.3fm resolution\n", gridRes);
+
   udTriangleVoxelizer_Create(&pTriVox, gridRes);
 
   itemInfo.indexX = 0;
@@ -314,12 +319,12 @@ int main(int argc, char **ppArgv)
 
   item.pData = &itemInfo;
 
-  item.pName = "DEM Item";
+  item.pName = ppArgv[1];
   item.boundsKnown = false;
   item.pointCount = ((pIData == nullptr) ? (numberOfCols * expectedRows) : (width * height));
   item.pointCountIsEstimate = true;// false;
   item.sourceProjection = udCSP_SourceCartesian;
-  item.sourceResolution = 10.0;
+  item.sourceResolution = gridRes;
 
   udAttributeSet_Create(&item.attributes, udSAC_ARGB, 0);
 
