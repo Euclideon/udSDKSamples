@@ -11,9 +11,14 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
+    "fs": "0.0.1-security",
     "gtfs-realtime-bindings": "0.0.6",
+    "http": "0.0.1-security",
+    "https": "^1.0.0",
     "node-fetch": "^2.6.1",
-    "request": "^2.88.2"
+    "node-static": "^0.7.11",
+    "request": "^2.88.2",
+    "websocket": "^1.0.34"
   },
   "devDependencies": {
     "eslint": "^7.28.0"

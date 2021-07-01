@@ -2,6 +2,7 @@ const express = require('express')
 const request = require('request');
 const GtfsRealtimeBindings = require('gtfs-realtime-bindings');
 const app = express();
+
 const port = 4006;
 
 app.use(function(req, res, next) {
@@ -90,5 +91,5 @@ app.get('/gtfsrt-alerts', (req, res) => {
 
 // Server listening
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}...`)
+  console.log(`NodeJS Server listening on port ${port}...`)
 });
