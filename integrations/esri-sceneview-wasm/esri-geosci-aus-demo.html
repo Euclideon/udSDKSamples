@@ -1,34 +1,16 @@
 <!DOCTYPE html>
 <html>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>udSDK Integrate with Esri Demo</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/dark/main.css" />
+  <link rel="stylesheet" href="./css/main.css" />
+  <link rel="stylesheet" href="./css/buttons.css" />
+  <script src="https://js.arcgis.com/4.14/"></script>
+  <script src="./lib/cameraControl.js"></script>
+  <script src="./lib/loadModel.js"></script>
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
-    <title>udSDK Esri Demo</title>
-
-    <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/light/main.css" />
-    <script src="https://js.arcgis.com/4.14/"></script>
-
-    <style>
-      html,
-      body,
-      #viewDiv {
-        padding: 0;
-        margin: 0;
-        height: 100%;
-        width: 100%;
-      }
-
-      #loginBox {
-        position: absolute;
-        bottom: 18px;
-        right: 12px;
-        padding: 12px;
-        background-color: rgba(0, 0, 0, 0.5);
-        color: white;
-        display: none;
-      }
-    </style>
-
     <!-- A simple fragment shader -->
     <script id="shader-fs" type="x-shader/x-fragment">
       #extension GL_EXT_frag_depth : enable
@@ -136,10 +118,13 @@
     <!-- Our application -->
     <script>
       var udSDKJSReady = 0;
+      var viewer = null;
 
       require([
         "esri/core/declare",
         "esri/Map",
+        "esri/Viewpoint",
+        "esri/views/MapView",
         "esri/views/SceneView",
         "esri/views/3d/externalRenderers",
         "esri/widgets/Home",
@@ -147,6 +132,8 @@
       ], function(
         declare,
         Map,
+        Viewpoint,
+        MapView,
         SceneView,
         externalRenderers,
         Home,
@@ -349,7 +336,8 @@
             gl.shaderSource(shader, str);
             gl.compileShader(shader);
             if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-              alert(gl.getShaderInfoLog(shader));
+              alertUnsupported()
+              // alert(gl.getShaderInfoLog(shader));
               return null;
             }
 
@@ -388,7 +376,8 @@
             var vertexShader = this.getShader(gl, "shader-vs");
             this.program = this.linkProgram(gl, fragmentShader, vertexShader);
             if (!this.program) {
-              alert("Could not initialise shaders");
+              alertUnsupported()
+              // alert("Could not initialise shaders");
             }
 
             this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
@@ -409,18 +398,39 @@
           viewingMode: "global",
           camera: {
             position: {
-              x: 16136507.580070,
-              y: -4556368.260251,
-              z: 348.61,
-              spatialReference: { wkid: 102100 }
+              x: 0,
+              y: 0,
+              z: 30000000,
             },
-            heading: 20,
-            tilt: 85
+            heading: 359.47,
+            tilt: 0.2
           }
         });
 
+        // assign viewer with this view.
+        viewer = view;
+
+        moveCameraToAus(view);
+
+        const reportCamera = () => {
+          console.log("Camera: X: ", view.camera.position.x.toFixed(2)
+          , "Y: ", view.camera.position.y.toFixed(2)
+          , "Z: ", view.camera.position.z.toFixed(2)
+          , "Heading: ", view.camera.heading.toFixed(2)
+          , "Tilt: ", view.camera.tilt.toFixed(2)
+          , "wkid: ", view.camera.position.spatialReference.wkid
+          , "wkt: ", view.camera.position.spatialReference.wkt)
+        }
+
+        const reportView = () => {
+          console.log("View", view);
+        }
+
+        setInterval(reportCamera, 1000);
+
         var homeBtn = new Home({
-          view: view
+          view: view,
+          viewpoint: new Viewpoint(defaultViewpoint())
         });
 
         var search = new Search({
@@ -435,8 +445,8 @@
           document.getElementById("loginBtn").addEventListener("click", loginVDK);
 
           function loginVDK(ev) {
-            if (udSDKJSReady == 1)
-                LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
+            if(udSDKJSReady == 1)
+              LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
           }
         });
 
@@ -445,19 +455,111 @@
         externalRenderers.add(view, vaultSDKRenderer);
       });
     </script>
-    <script async src=udSDKjs.js></script>
-    <script async src=easyudSDKjs.js></script>
+    <div class="head-container">
+      <div class="title">
+        <img src="./img/EuclideonLogo_Std.svg" width="150px" alt="logo"/>
+        <h1>udSDK ESRI Demo</h1>
+      </div>
+      <br/>
+    </div>
   </head>
-
   <body>
-    <div id="viewDiv"></div>
-    <div id="loginBox">
-        <span id="errorMessage" style="color: red;"></span>
-        <label>Euclideon Login: <input id="usernameTxt" type="text" placeholder="Email" /></label>
-        <label><input id="passwordTxt" type="password" placeholder="Password" /></label>
-        <button id="loginBtn">Login!</login>
+    <script>
+      const udSDKjs = document.createElement('script');
+      udSDKjs.src = './udSDK/udSDKjs.js';
+      document.body.appendChild(udSDKjs);
+
+      const easyudSDKjs = document.createElement('script');
+      easyudSDKjs.src = './udSDK/easyudSDKjs.js';
+      document.body.appendChild(easyudSDKjs);
+    </script>
+    <div id="container">
+      <div id="left">
+        <div id="viewDiv" class="viewDiv"></div>
+      </div>
+      <div id="right">
+        <div id="navigator" class="navigator">
+          <div id="navBtn"></div>
+        </div>
+      </div>
+    </div>
+    <div class="loginBox" id="loginBox">
+      <table>
+        <h2>Euclideon Login</h2>
+        <tr><td><label for="usernameTxt">Email: </label></td>
+          <td><input id="usernameTxt" type="text" placeholder="Email" /></td></tr>
+        <tr><td><label for="passwordText">Password: </label></td>
+          <td><input id="passwordTxt" type="password" placeholder="Password" /></td></tr>
+      </table>
+      <button id="loginBtn">Login</button><br/>
+      <span class="errorMessage" id="errorMessage"></span>
+    </div>
+    <div class="descTextbox">
+      <h1 id="descTitle" class="descTitle">placeholder</h1>
+      <p id="descModelInfo" class="descModelInfo">placeholder</p>
+      <h4 id="descAttr" class="descAttr">placeholder</h4>
+      <div class="textImg">
+        <span id="introImg"></span>
+        <p id="descParagraph" class="descParagraph">placeholder</p>
+      </div>
+      <h4 id="descTextAttr" class="descTextAttr">placeholder</h4>
+    </div>
+    <div class="unsupportMsg" style="display: none;">
+      <h1>Sorry, this device is not supported.</h1>
+      <h2>
+        Viewing on a mobile or tablet device? This demo is a desktop application only. We support the latest versions of Google Chrome and Microsoft Edge on Windows, Mac, and Ubuntu.
+      </h2>
+      <a href="https://www.euclideon.com/udsdk/#udstream-nav-demo" rel="noopener noreferrer">Go Back</a>
     </div>
     <script>
+      // places in an object array...
+      const places = [
+        { name: "Great Barrier Reef", full: "Great Barrier Reef", css_class: "gbr" },
+        { name: "AusSeabed Marine Data", full: "AusSeabed Marine Data", css_class: "asmd" },
+        { name: "{3rd data}", full: "{3rd data}", css_class: "asmd" },
+      ];
+
+      const createBtn = (className, id, value) => {
+        let btn = document.createElement('button');
+        btn.className = "btn " + className;
+        btn.id = id;
+        btn.value = value;
+        btn.innerHTML = "<img src=\"./img/marker.png\" width=16px alt=\"" + value + "\"/> "+ value;
+        return btn;
+      }
+
+      function onClickMap(e) {
+        // If clicked on the image, return alt, if clicked on button, return value;
+        var val = e.target.value ? e.target.value : e.target.alt;
+        var full = "";
+        var name = ""
+        places.map((place) => {
+          if (val === place.name) {
+            full = place.full;
+            name = place.name;
+            return true;
+          }
+        });
+        // From loadModel.js
+        unload_LoadUDSModel(val);
+        // From cameraControl.js
+        flyCamera(viewer, val, 5.0);
+      }
+
+      function loadClickable() {
+        // Map the array only if login is successful
+        places.map((place, i) => {
+          // Create clickable buttons on the left hand side map.
+          var btn = createBtn(place.css_class, place.name, place.name);
+
+          // Attach the button to the container."
+          document.getElementById("navBtn").appendChild(btn);
+
+          // Add item event listener
+          btn.addEventListener('click', e => onClickMap(e));
+        })
+      }
+
       function CreateVDKPlugin()
       {
         udSDKJSReady = 1;
@@ -469,23 +571,13 @@
         if (udSDKJSReady != 1)
           Alert("Not ready to login!");
 
-        var status = udSDKJS(username, password, "Esri ArcScene");
+        var status = udSDKJS_Login(username, password, "Esri ArcScene");
 
         if (status == 0)
         {
           console.log("udSDKJS Logged in.");
 
-          // Photogrammetry model of the Gold Coast courtesy of [Aerometrex](https://aerometrex.com.au/).
-          udsAerometrixGoldCoast = udSDKJS_LoadModel("https://models.euclideon.com/GoldCoast_20mm.uds");
-          udSDKJS_RenderQueueAddModel(udsAerometrixGoldCoast, 140.0, -1);
-
-          // LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/).
-          udsMelb = udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds");
-          udSDKJS_RenderQueueAddModel(udsMelb, 150.0, -1);
-
-          // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
-          udsVancouver = udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds");
-          udSDKJS_RenderQueueAddModel(udsVancouver, 227.0, -1);
+          loadClickable();
 
           udSDKJSReady = 2;
           document.getElementById("loginBox").style.display = "none";
@@ -531,6 +623,87 @@
       };
 
       Module.setStatus('Downloading...');
+    </script>
+    <script>
+
+      // Calculate container's height
+      function calcContHeight(width) {
+        return (width >= 524 ? "16%" : width >= 397 ? "20%" : width >= 270? "24%" : "45%");
+      }
+    
+      // Listen on windows resize
+      function onWindowResize() {
+        // Get width and height of the window excluding scrollbars
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        // less than 1024 px define as mobile device
+        if(w <= 1024) {
+          // document.getElementById("left").style.height = (udSDKJSReady == 2) ? calcContHeight(w) : "3%";
+          document.getElementById("left").style.height = parseInt(h * 9 / 16)+"px";
+          document.getElementById("viewDiv").style.height = parseInt(h * 9 / 16)+"px";
+        }
+        else {
+          document.getElementById("left").style.height =  parseInt(w * 0.8 * 9 / 16)+"px"; // "690px";
+          // Change to 16:9 Aspect Ratio.
+          document.getElementById("viewDiv").style.height = parseInt(w * 0.8 * 9 / 16)+"px";
+          // Minimum size of the window must not smaller than 600px.
+          if(parseInt(document.getElementById("viewDiv").style.height) < 600) 
+            document.getElementById("viewDiv").style.height = "600px";
+
+          // Set the container size as well prevent text being hided by the cesium window.
+          document.getElementById("left").style.height = document.getElementById("viewDiv").style.height;
+        }
+      }
+
+      function isMobileDevice() {
+        // Mobile Devices
+        if(navigator.userAgent.toLowerCase().match(/mobile/i)) {
+          console.log("contains mobile: ", true);
+          return true;
+        }
+        // Tablet Devices
+        if(navigator.maxTouchPoints && navigator.maxTouchPoints > 2) {
+          console.log("max touch points: ", navigator.maxTouchPoints);
+          return true;
+        }
+        // console.log("Not mobile device!");
+        return false;
+      }
+
+      function isSupportSAB() {
+        try {
+          // Try creating a share array buffer object.
+          const buffer = new SharedArrayBuffer(8);
+        }
+        catch (e) {
+          console.log("Shared Array Buffer Unsupported!");
+          return false;
+        }
+        return true;
+      }
+
+      function hideApp() {
+        // Don't hide app directly as the the warning message will disappear as well.
+        document.getElementById("container").style.display = "none";
+        document.getElementsByClassName("descTextbox")[0].style.display = "none";
+        document.getElementsByClassName("unsupportMsg")[0].style.display = "block";
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("statusLoading").style.display = "none";
+      }
+
+      function alertUnsupported() {
+        if(isMobileDevice() || !isSupportSAB()) {
+          hideApp();
+          throw new Error("This device is unsupported!");
+        }
+      }
+
+      // Attaching the event listener function to window's resize event
+      window.addEventListener("resize", onWindowResize);
+      // A load event detects whether users are using unsupported devices.
+      window.addEventListener("load", alertUnsupported);
+      // Calling the function for the first time
+      onWindowResize();
     </script>
   </body>
 </html>
