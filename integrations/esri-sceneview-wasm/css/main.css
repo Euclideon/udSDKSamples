@@ -1,0 +1,125 @@
+/* Import font "source sans pro" */
+@import url("https://use.typekit.net/jzk0nzy.css");
+
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Font family */
+h1, h2, h3, h4, h5, h6, p {
+  font-family: "source-sans-pro";
+}
+
+h1 {
+  text-align: center;
+  font-size: 42px;
+}
+
+.head-container {
+  width: 80%;
+  margin-left: 10%;
+}
+
+.title {
+  margin-top: -15px;
+  margin-bottom: -25px; 
+  padding-bottom: 0;
+  letter-spacing: 1.8px;
+  display: flex;
+}
+
+.title img {
+  margin-top: 20px;
+  width: 150px;
+  vertical-align: middle;
+}
+
+.title h1 {
+  margin-top: 50px;
+  width: calc(80%);
+}
+
+body {
+  background-color: rgb(10, 14, 16);
+  color: white;
+}
+
+#navBtn {
+  height: 0px;
+}
+
+#left {
+  margin: auto;
+  width: 80%;
+  height: 80%;
+  border-radius: 5px;
+}
+
+#viewDiv {
+  width: 100%;
+  height: 600px;
+}
+
+#loginBox {
+  font-family: "source-sans-pro";
+  position: absolute;
+  top: 40%;
+  left: calc(50% - 140px);
+  padding: 10px;
+  border-radius: 5px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: none;
+}
+
+#loginBox h2 {
+  text-align: center;
+  padding: 0px;
+  margin: 0px;
+}
+
+#container {
+  margin: auto;
+  width: 100%;
+}
+
+.descTextbox {
+  width: 80%;
+  padding-top: 50px;
+  margin: auto;
+  text-align: left;
+}
+
+.descTitle {
+  text-align: left;
+  font-size: 30px;
+  letter-spacing: 1.8px;
+}
+
+.descAttr, .descTextAttr {
+  color: #c1e4e4;
+  font-style: italic;
+  font-weight: lighter;
+  letter-spacing: 1.8px;
+}
+
+.descTextAttr {
+  padding-bottom: 100px;
+}
+
+.descTextAttr a {
+  color: #8dc4c4;
+  text-decoration: none;
+}
+
+.descModelInfo {
+  color: #c1e4e4;
+  font-weight: lighter;
+}
