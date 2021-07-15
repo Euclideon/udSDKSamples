@@ -10,6 +10,7 @@
   <script src="https://js.arcgis.com/4.14/"></script>
   <script src="./lib/cameraControl.js"></script>
   <script src="./lib/loadModel.js"></script>
+  <script src="./lib/toggleChosen.js"></script>
   <head>
     <!-- A simple fragment shader -->
     <script id="shader-fs" type="x-shader/x-fragment">
@@ -544,6 +545,8 @@
         unload_LoadUDSModel(val);
         // From cameraControl.js
         flyCamera(viewer, val, 5.0);
+        // From toggleChosen.js
+        onToggleChosen(e);
       }
 
       function loadClickable() {
