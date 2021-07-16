@@ -126,7 +126,6 @@
         "esri/core/declare",
         "esri/Map",
         "esri/Viewpoint",
-        "esri/views/MapView",
         "esri/views/SceneView",
         "esri/views/3d/externalRenderers",
         "esri/widgets/Home",
@@ -135,7 +134,6 @@
         declare,
         Map,
         Viewpoint,
-        MapView,
         SceneView,
         externalRenderers,
         Home,
@@ -313,31 +311,40 @@
            */
           getShader: function(gl, id) {
             var shaderScript = document.getElementById(id);
-            if (!shaderScript) {
+            if (!shaderScript) 
+            {
               return null;
             }
 
             var str = "";
             var k = shaderScript.firstChild;
-            while (k) {
-              if (k.nodeType == 3) {
+            while (k) 
+            {
+              if (k.nodeType == 3) 
+              {
                 str += k.textContent;
               }
               k = k.nextSibling;
             }
 
             var shader;
-            if (shaderScript.type == "x-shader/x-fragment") {
+            if (shaderScript.type == "x-shader/x-fragment") 
+            {
               shader = gl.createShader(gl.FRAGMENT_SHADER);
-            } else if (shaderScript.type == "x-shader/x-vertex") {
+            } 
+            else if (shaderScript.type == "x-shader/x-vertex") 
+            {
               shader = gl.createShader(gl.VERTEX_SHADER);
-            } else {
+            } 
+            else 
+            {
               return null;
             }
 
             gl.shaderSource(shader, str);
             gl.compileShader(shader);
-            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) 
+            {
               alertUnsupported()
               // alert(gl.getShaderInfoLog(shader));
               return null;
@@ -356,10 +363,10 @@
             gl.attachShader(shaderProgram, fragmentShader);
             gl.linkProgram(shaderProgram);
 
-            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) 
+            {
               return null;
             }
-
             return shaderProgram;
           },
 
@@ -379,7 +386,6 @@
             this.program = this.linkProgram(gl, fragmentShader, vertexShader);
             if (!this.program) {
               alertUnsupported()
-              // alert("Could not initialise shaders");
             }
 
             this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
@@ -390,7 +396,6 @@
         // Create the map and view
         var map = new Map({
           basemap: "streets",
-          //basemap: "hybrid",
           ground: "world-elevation"
         });
 
@@ -411,24 +416,7 @@
 
         // assign viewer with this view.
         viewer = view;
-
         moveCameraToAus(view);
-
-        const reportCamera = () => {
-          console.log("Camera: X: ", view.camera.position.x.toFixed(2)
-          , "Y: ", view.camera.position.y.toFixed(2)
-          , "Z: ", view.camera.position.z.toFixed(2)
-          , "Heading: ", view.camera.heading.toFixed(2)
-          , "Tilt: ", view.camera.tilt.toFixed(2)
-          , "wkid: ", view.camera.position.spatialReference.wkid
-          , "wkt: ", view.camera.position.spatialReference.wkt)
-        }
-
-        const reportView = () => {
-          console.log("View", view);
-        }
-
-        setInterval(reportCamera, 1000);
 
         var homeBtn = new Home({
           view: view,
@@ -525,10 +513,10 @@
       const places = [
         { name: "Great Barrier Reef", full: "Great Barrier Reef", css_class: "gbr" },
         { name: "AusSeabed Marine Data", full: "AusSeabed Marine Data", css_class: "asmd" },
-        // { name: "{3rd data}", full: "{3rd data}", css_class: "asmd" },
       ];
 
-      const createBtn = (className, id, value) => {
+      function createBtn(className, id, value)
+      {
         let btn = document.createElement('button');
         btn.className = "btn " + className;
         btn.id = id;
@@ -537,7 +525,8 @@
         return btn;
       }
 
-      function onClickMap(e) {
+      function onClickMap(e) 
+      {
         // If clicked on the image, return alt, if clicked on button, return value;
         var val = e.target.value ? e.target.value : e.target.alt;
         var full = "";
@@ -559,7 +548,8 @@
         onToggleChosen(e);
       }
 
-      function loadClickable() {
+      function loadClickable() 
+      {
         // Map the array only if login is successful
         places.map((place, i) => {
           // Create clickable buttons on the left hand side map.
@@ -644,30 +634,35 @@
     <script>
 
       // Calculate container's height
-      function calcContHeight(width) {
+      function calcContHeight(width) 
+      {
         return (width >= 524 ? "16%" : width >= 397 ? "20%" : width >= 270? "24%" : "45%");
       }
     
       // Listen on windows resize
-      function onWindowResize() {
+      function onWindowResize() 
+      {
         // Get width and height of the window excluding scrollbars
         var w = window.innerWidth;
         var h = window.innerHeight;
         // less than 1024 px define as mobile device
-        if(w <= 1024) {
+        if(w <= 1024) 
+        {
           // document.getElementById("left").style.height = (udSDKJSReady == 2) ? calcContHeight(w) : "3%";
           document.getElementById("left").style.height = parseInt(h * 9 / 16)+"px";
           document.getElementById("viewDiv").style.height = parseInt(h * 9 / 16)+"px";
           document.getElementById("statusLoading").style.top = parseInt((h * 9 / 16) - 100)+"px";
         }
-        else {
+        else 
+        {
           document.getElementById("left").style.height =  parseInt(w * 0.8 * 9 / 16)+"px"; // "690px";
           // Change to 16:9 Aspect Ratio.
           document.getElementById("viewDiv").style.height = parseInt(w * 0.8 * 9 / 16)+"px";
           // Fix loading indicator pos
           document.getElementById("statusLoading").style.top = parseInt((w * 0.8 * 9 / 16) - 100)+"px";
           // Minimum size of the window must not smaller than 600px.
-          if(parseInt(document.getElementById("viewDiv").style.height) < 600) {
+          if(parseInt(document.getElementById("viewDiv").style.height) < 600) 
+          {
             document.getElementById("viewDiv").style.height = "600px";
             document.getElementById("statusLoading").style.top = "500px";
           }
@@ -678,14 +673,17 @@
         }
       }
 
-      function isMobileDevice() {
+      function isMobileDevice() 
+      {
         // Mobile Devices
-        if(navigator.userAgent.toLowerCase().match(/mobile/i)) {
+        if(navigator.userAgent.toLowerCase().match(/mobile/i)) 
+        {
           console.log("contains mobile: ", true);
           return true;
         }
         // Tablet Devices
-        if(navigator.maxTouchPoints && navigator.maxTouchPoints > 2) {
+        if(navigator.maxTouchPoints && navigator.maxTouchPoints > 2) 
+        {
           console.log("max touch points: ", navigator.maxTouchPoints);
           return true;
         }
@@ -693,19 +691,23 @@
         return false;
       }
 
-      function isSupportSAB() {
-        try {
+      function isSupportSAB() 
+      {
+        try 
+        {
           // Try creating a share array buffer object.
           const buffer = new SharedArrayBuffer(8);
         }
-        catch (e) {
+        catch (e) 
+        {
           console.log("Shared Array Buffer Unsupported!");
           return false;
         }
         return true;
       }
 
-      function hideApp() {
+      function hideApp() 
+      {
         // Don't hide app directly as the the warning message will disappear as well.
         document.getElementById("container").style.display = "none";
         document.getElementsByClassName("descTextbox")[0].style.display = "none";
@@ -714,8 +716,10 @@
         document.getElementById("statusLoading").style.display = "none";
       }
 
-      function alertUnsupported() {
-        if(isMobileDevice() || !isSupportSAB()) {
+      function alertUnsupported() 
+      {
+        if(isMobileDevice() || !isSupportSAB()) 
+        {
           hideApp();
           throw new Error("This device is unsupported!");
         }
