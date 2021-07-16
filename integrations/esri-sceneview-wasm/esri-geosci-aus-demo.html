@@ -10,6 +10,7 @@
   <script src="https://js.arcgis.com/4.14/"></script>
   <script src="./lib/cameraControl.js"></script>
   <script src="./lib/loadModel.js"></script>
+  <script src="./lib/loadText.js"></script>
   <script src="./lib/toggleChosen.js"></script>
   <head>
     <!-- A simple fragment shader -->
@@ -496,14 +497,14 @@
       <span class="errorMessage" id="errorMessage"></span>
     </div>
     <div class="descTextbox">
-      <h1 id="descTitle" class="descTitle">placeholder</h1>
-      <p id="descModelInfo" class="descModelInfo">placeholder</p>
-      <h4 id="descAttr" class="descAttr">placeholder</h4>
+      <h1 id="descTitle" class="descTitle"></h1>
+      <p id="descModelInfo" class="descModelInfo"></p>
+      <h4 id="descAttr" class="descAttr"></h4>
       <div class="textImg">
         <span id="introImg"></span>
-        <p id="descParagraph" class="descParagraph">placeholder</p>
+        <p id="descParagraph" class="descParagraph"></p>
       </div>
-      <h4 id="descTextAttr" class="descTextAttr">placeholder</h4>
+      <h4 id="descTextAttr" class="descTextAttr"></h4>
     </div>
     <div class="unsupportMsg" style="display: none;">
       <h1>Sorry, this device is not supported.</h1>
@@ -517,7 +518,7 @@
       const places = [
         { name: "Great Barrier Reef", full: "Great Barrier Reef", css_class: "gbr" },
         { name: "AusSeabed Marine Data", full: "AusSeabed Marine Data", css_class: "asmd" },
-        { name: "{3rd data}", full: "{3rd data}", css_class: "asmd" },
+        // { name: "{3rd data}", full: "{3rd data}", css_class: "asmd" },
       ];
 
       const createBtn = (className, id, value) => {
@@ -545,6 +546,8 @@
         unload_LoadUDSModel(val);
         // From cameraControl.js
         flyCamera(viewer, val, 5.0);
+        // From loadText.js
+        updateInnerText(name);
         // From toggleChosen.js
         onToggleChosen(e);
       }

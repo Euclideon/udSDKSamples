@@ -15,6 +15,7 @@
 /* Font family */
 h1, h2, h3, h4, h5, h6, p {
   font-family: "source-sans-pro";
+  letter-spacing: 1.8px;
 }
 
 h1 {
@@ -122,6 +123,32 @@ body {
 .descModelInfo {
   color: #c1e4e4;
   font-weight: lighter;
+}
+
+.textImg {
+  width: 100%;
+  max-width: inherit;
+}
+
+.textImg #introImg img {
+  margin-top: 50px;
+  text-align: left;
+  width: 60%;
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+.descParagraph {
+  padding-top: 50px;
+  padding-bottom: 50px;
+  font-weight: 300;
+  font-size: 20px;
+  line-height: 1.8;
+}
+
+.descParagraph a {
+  color: #c1e4e4;
+  text-decoration: none;
 }
 
 .unsupportMsg {
