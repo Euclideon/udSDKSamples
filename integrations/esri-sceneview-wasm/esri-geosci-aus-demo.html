@@ -448,7 +448,10 @@
 
           function loginVDK(ev) {
             if(udSDKJSReady == 1)
-              LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
+              document.getElementById("statusLoading").style.display = "block";
+              setTimeout(async() => {
+                LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
+              }, 100);
           }
         });
 
@@ -484,6 +487,10 @@
           <div id="navBtn"></div>
         </div>
       </div>
+    </div>
+    <div id="statusLoading" class="statusBox">
+      <div class="loader"></div>
+      <span>Loading...</span>
     </div>
     <div class="loginBox" id="loginBox">
       <table>
@@ -570,6 +577,9 @@
       {
         udSDKJSReady = 1;
         document.getElementById("loginBox").style.display = "block";
+        setTimeout(() => {
+          document.getElementById("statusLoading").style.display = "none";
+        }, 1000)
       };
 
       function LoginVDKPlugin(username, password)
@@ -587,6 +597,7 @@
 
           udSDKJSReady = 2;
           document.getElementById("loginBox").style.display = "none";
+          document.getElementById("statusLoading").style.display = "none";
         }
         else
         {
@@ -647,17 +658,23 @@
           // document.getElementById("left").style.height = (udSDKJSReady == 2) ? calcContHeight(w) : "3%";
           document.getElementById("left").style.height = parseInt(h * 9 / 16)+"px";
           document.getElementById("viewDiv").style.height = parseInt(h * 9 / 16)+"px";
+          document.getElementById("statusLoading").style.top = parseInt((h * 9 / 16) - 100)+"px";
         }
         else {
           document.getElementById("left").style.height =  parseInt(w * 0.8 * 9 / 16)+"px"; // "690px";
           // Change to 16:9 Aspect Ratio.
           document.getElementById("viewDiv").style.height = parseInt(w * 0.8 * 9 / 16)+"px";
+          // Fix loading indicator pos
+          document.getElementById("statusLoading").style.top = parseInt((w * 0.8 * 9 / 16) - 100)+"px";
           // Minimum size of the window must not smaller than 600px.
-          if(parseInt(document.getElementById("viewDiv").style.height) < 600) 
+          if(parseInt(document.getElementById("viewDiv").style.height) < 600) {
             document.getElementById("viewDiv").style.height = "600px";
-
+            document.getElementById("statusLoading").style.top = "500px";
+          }
+            
           // Set the container size as well prevent text being hided by the cesium window.
           document.getElementById("left").style.height = document.getElementById("viewDiv").style.height;
+          
         }
       }
 

@@ -12,6 +12,11 @@
   100% { opacity: 0; }
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* Font family */
 h1, h2, h3, h4, h5, h6, p {
   font-family: "source-sans-pro";
@@ -69,6 +74,7 @@ body {
 }
 
 #loginBox {
+  animation: fadeIn ease 2s;
   font-family: "source-sans-pro";
   position: absolute;
   top: 40%;
@@ -184,6 +190,33 @@ body {
   color: #ffffff;
   border: 1px solid #4b6969;
   background-color: #4b6969;
+}
+
+.statusBox {
+  font-family: "source-sans-pro";
+  position: absolute;
+  top: calc(80% - 100px);
+  left: calc(85% - 100px);
+  padding-top: 50px;
+  padding-bottom: 50px;
+  margin: auto;
+  margin-top: 25px;
+  max-width: 90%;
+  width: 200px;
+  font-size: x-large;
+  text-align: center;
+  color: white;
+  z-index: 5;
+}
+
+.loader {
+  margin: auto;
+  border: 10px solid #f3f3f3; /* Light grey */
+  border-top: 10px solid #3498db; /* Blue */
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
 }
 
 @media only screen and (max-width: 1024px) {
