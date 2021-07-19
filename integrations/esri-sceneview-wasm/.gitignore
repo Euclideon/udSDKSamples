@@ -1,2 +1,3 @@
-/udSDK/
+*.log
 *.py
+/.vscode/

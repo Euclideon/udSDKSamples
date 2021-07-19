@@ -9,6 +9,8 @@
     <script src="https://js.arcgis.com/4.14/"></script>
 
     <style>
+      @import url("https://use.typekit.net/jzk0nzy.css");
+      
       html,
       body,
       #viewDiv {
@@ -19,6 +21,7 @@
       }
 
       #loginBox {
+        font-family: "source-sans-pro";
         position: absolute;
         bottom: 18px;
         right: 12px;
@@ -29,6 +32,7 @@
       }
 
       #customUrl {
+        font-family: "source-sans-pro";
         position: absolute;
         bottom: 18px;
         right: 12px;
@@ -423,14 +427,6 @@
           viewingMode: "global",
           camera: {
             position: {
-              /**
-               *  latitude: -27.487588608667583
-                  longitude: 153.01706755091425
-                  type: "point"
-                  x: 17033782.04244772
-                  y: -3184522.696716787
-                  z: 383.6948535805568
-              */
               x: 17033782.042,
               y: -3184522.697,
               z: 383.694,
@@ -535,9 +531,9 @@
         <button id="loginBtn">Login!</login>
     </div>
     <div id="customUrl">
-      <span id="errorLoading" style="color: red;"></span><br/>
-      <label>Model URL: <input id="modelurl" type="text" placeholder="https://..." /></label>
-      <button id="loadModel">Load Model</login>
+      <label>Custom Model URL: <br/><input id="modelurl" type="text" placeholder="https://..." /></label>
+      <button id="loadModel">Load Model</button>
+      <span id="errorLoading" style="color: red;"></span>
     </div>
     <script>
       const udSDKjs = document.createElement('script');
