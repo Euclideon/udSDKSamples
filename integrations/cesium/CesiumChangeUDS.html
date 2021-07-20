@@ -12,8 +12,8 @@
     />
     <title>Cesium/Euclideon Integration</title>
     <script src="Cesium/Cesium.js"></script>
-    <script async src="euclideon/udsdkjs.js"></script>
-    <script async src="euclideon/easyudsdkjs.js"></script>
+    <!-- <script async src="euclideon/udsdkjs.js"></script>
+    <script async src="euclideon/easyudsdkjs.js"></script> -->
     <style>
       @import url(Cesium/Widgets/widgets.css);
       html,
@@ -63,13 +63,21 @@
         <button id="loginBtn">Login!</login>
     </div>
     <script>
+      const udSDKjs = document.createElement('script');
+      udSDKjs.src = './euclideon/udSDKjs.js';
+      document.body.appendChild(udSDKjs);
+
+      const easyudSDKjs = document.createElement('script');
+      easyudSDKjs.src = './euclideon/easyudSDKjs.js';
+      document.body.appendChild(easyudSDKjs);
+
       var udSDKReady = 0;
 
       var viewer = new Cesium.Viewer("cesiumContainer", {
         scene3DOnly: true,
         imageryProvider: new Cesium.UrlTemplateImageryProvider({
-          url: 'https://slippy.vault.euclideon.com/aerial/{z}/{x}/{y}.png',
-          credit: new Cesium.Credit(`© ${new Date().getFullYear()} TomTom, Microsoft`, true),
+          url: 'https://atlas.microsoft.com/map/tile?subscription-key=1JId2WktwcPRcrzINnyI5UkevloxpF-4GvS0ElCEe0k&api-version=2.0&tilesetId=microsoft.imagery&zoom={z}&x={x}&y={y}', // 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          credit: new Cesium.Credit(`© 1992 - ${new Date().getFullYear()} TomTom, Microsoft`, true),
           maximumLevel: 18,
           enablePickFeatures: false
         }),
