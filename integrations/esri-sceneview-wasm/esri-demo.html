@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html>
+  <meta http-equiv="origin-trial" content="AuIOI30TB29gw4buNQFFWNexGiDwI8ynu05FxU2JLMIXTBq4Xov54vbmoDP9eKTZCzJpays+49NNCVwGhASptAUAAABgeyJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjgwMDAiLCJmZWF0dXJlIjoiVW5yZXN0cmljdGVkU2hhcmVkQXJyYXlCdWZmZXIiLCJleHBpcnkiOjE2Mzk1MjYzOTl9">
   <meta charset="utf-8" />
-  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>udSDK Integrate with Esri Demo</title>
+  <meta name="viewport" content="initial-scale=1,width=device-width" />
+  <title>New udSDK Esri Demo</title>
 
-  <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/dark/main.css" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/dark/main.css" crossorigin />
+  <script src="https://js.arcgis.com/4.14/" crossorigin></script>
+
   <link rel="stylesheet" href="./css/main.css" />
   <link rel="stylesheet" href="./css/buttons.css" />
-  <script src="https://js.arcgis.com/4.14/"></script>
   <script src="./lib/cameraControl.js"></script>
   <script src="./lib/loadModel.js"></script>
   <script src="./lib/loadText.js"></script>
@@ -122,6 +124,14 @@
       var udSDKJSReady = 0;
       var viewer = null;
 
+      require(["esri/config"], 
+        function(esriConfig) { 
+          esriConfig.request.trustedServers.push("https://js.arcgis.com");
+          esriConfig.request.trustedServers.push("https://www.euclideon.com");
+          esriConfig.request.trustedServers.push("http://localhost:8000");
+        }
+      );
+      
       require([
         "esri/core/declare",
         "esri/Map",
@@ -395,7 +405,7 @@
 
         // Create the map and view
         var map = new Map({
-          basemap: "streets",
+          basemap: "satelite",
           ground: "world-elevation"
         });
 
@@ -403,6 +413,12 @@
           container: "viewDiv",
           map: map,
           viewingMode: "global",
+          qualityProfile: "high",
+          environment: {
+            lighting: {
+              directShadowsEnabled: true
+            }
+          },
           camera: {
             position: {
               x: 0,
@@ -413,7 +429,6 @@
             tilt: 0.2
           }
         });
-
         // assign viewer with this view.
         viewer = view;
         moveCameraToAus(view);
@@ -451,7 +466,7 @@
     <div class="head-container">
       <div class="title">
         <img src="./img/EuclideonLogo_Std.svg" width="150px" alt="logo"/>
-        <h1>udSDK ESRI Demo</h1>
+        <h1>New udSDK ESRI Demo</h1>
       </div>
       <br/>
     </div>
@@ -491,7 +506,7 @@
       <button id="loginBtn">Login</button><br/>
       <span class="errorMessage" id="errorMessage"></span>
     </div>
-    <div class="descTextbox">
+    <!-- <div class="descTextbox">
       <h1 id="descTitle" class="descTitle"></h1>
       <p id="descModelInfo" class="descModelInfo"></p>
       <h4 id="descAttr" class="descAttr"></h4>
@@ -500,7 +515,7 @@
         <p id="descParagraph" class="descParagraph"></p>
       </div>
       <h4 id="descTextAttr" class="descTextAttr"></h4>
-    </div>
+    </div> -->
     <div class="unsupportMsg" style="display: none;">
       <h1>Sorry, this device is not supported.</h1>
       <h2>
@@ -511,8 +526,8 @@
     <script>
       // places in an object array...
       const places = [
-        { name: "Great Barrier Reef", full: "Great Barrier Reef", css_class: "gbr" },
-        { name: "AusSeabed Marine Data", full: "AusSeabed Marine Data", css_class: "asmd" },
+        { name: "Melbourne", full: "Melbourne City", css_class: "mel" },
+        { name: "Bendigo", full: "Bendigo City", css_class: "bxg" },
       ];
 
       function createBtn(className, id, value)
@@ -542,8 +557,6 @@
         unload_LoadUDSModel(val);
         // From cameraControl.js
         flyCamera(viewer, val, 5.0);
-        // From loadText.js
-        updateInnerText(name);
         // From toggleChosen.js
         onToggleChosen(e);
       }

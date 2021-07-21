@@ -1,10 +1,8 @@
 const udsModels = [
-  // great barrier reef 100m
-  { key: "Great Barrier Reef", url: "https://esrigeoaus.blob.core.windows.net/demodata/Great-Barrier-Reef-100m-From-GeoTIFF-crop.uds", eval: [0.0, -1] },
+  // Melbourne Model
+  { key: "Melbourne", url: "https://models.euclideon.com/Melbourne_75mm.uds", eval: [170.0, -1] },
   // 50mm multibeam dataset 2018
-  { key: "AusSeabed Marine Data", url: "https://esrigeoaus.blob.core.windows.net/demodata/All%20Oz%2050m%202018_coloured.uds", eval: [0.0, -1] },
-  // 3rd data
-  { key: "AusSeabed Marine Data", url: "https://esrigeoaus.blob.core.windows.net/demodata/All%20Oz%2050m%202018_coloured.uds", eval: [0.0, -1] },
+  { key: "Bendigo", url: "https://cesiumdemo.blob.core.windows.net/models/Bendigo_nonPrimitive_HR.uds", eval: [280.0, -1] },
   // ...add more uds models here...
 ];
 

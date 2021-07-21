@@ -1,50 +1,34 @@
 const locations = [
   {
-    name: "Great Barrier Reef", 
-    description: "Great Barrier Reef", 
+    name: "Melbourne", 
+    description: "Melbourne City", 
     camera: {
       position: {
-        x: 16567794.97, 
-        y: -3402244.69,
-        z:  1010477.31,
+        x: 16134291.687088,
+        y: -4555398.704025,
+        z: 575.375238,
         spatialReference: { 
           wkid: 102100
         },
       },
-      heading: 14.48,
-      tilt: 35.54
+      heading: 43.7650864,
+      tilt: 64.840576
     }
   },
   {
-    name: "AusSeabed Marine Data", 
-    description: "AusSeabed Marine Data", 
+    name: "Bendigo", 
+    description: "Bendigo City", 
     camera: {
       position: {
-        x: 15168078.420351503,
-        y: -4967422.730831934,
-        z: 9789897.624646775,
+        x: 16061786.289466,
+        y: -4406420.012302,
+        z: 339.154327,
         spatialReference: { 
           wkid: 102100
         },
       },
-      heading: 358.208687,
-      tilt: 6.304827
-    }
-  },
-  {
-    name: "AusSeabed Marine Data", 
-    description: "AusSeabed Marine Data", 
-    camera: {
-      position: {
-        x: 15168078.420351503,
-        y: -4967422.730831934,
-        z: 9789897.624646775,
-        spatialReference: { 
-          wkid: 102100
-        },
-      },
-      heading: 358.208687,
-      tilt: 6.304827
+      heading: 320.817253,
+      tilt: 70.099063
     }
   }
 ];
@@ -65,7 +49,7 @@ const flyCamera = (view, place, duration) => {
     if(place === location.name) {
       // If the place is matched in the location array, we fly to camera.
       const options = {
-        speedFactor: 0.2, // animation is 5 times slower than default
+        speedFactor: 0.33, // animation is 3 times slower than default
         easing: "out-quint" // easing function to slow down when reaching the target
       };
     
