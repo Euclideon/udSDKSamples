@@ -139,7 +139,11 @@
         "esri/views/SceneView",
         "esri/views/3d/externalRenderers",
         "esri/widgets/Home",
-        "esri/widgets/Search"
+        "esri/widgets/Search",
+        "esri/layers/FeatureLayer",
+        "esri/layers/SceneLayer",
+        "esri/symbols/ExtrudeSymbol3DLayer",
+        "esri/symbols/WebStyleSymbol"
       ], function(
         declare,
         Map,
@@ -147,7 +151,11 @@
         SceneView,
         externalRenderers,
         Home,
-        Search
+        Search,
+        FeatureLayer,
+        SceneLayer,
+        ExtrudeSymbol3DLayer,
+        WebStyleSymbol
       ) {
         // Set up the external renderer
         var VaultSDKRenderer = declare(null, {
@@ -405,7 +413,7 @@
 
         // Create the map and view
         var map = new Map({
-          basemap: "satellite",
+          basemap: "streets",
           ground: "world-elevation"
         });
 
@@ -457,6 +465,107 @@
               }, 100);
           }
         });
+
+        // Extrude 3D Symbol for building footprint
+        const setSymbolColor = (color) => {
+          return {
+            // autocasts as new PolygonSymbol3D()
+            type: "polygon-3d",
+            symbolLayers: [{
+              // autocasts as new ExtrudeSymbol3DLayer()
+              type: "extrude", 
+              material: {
+                color: color
+              },
+              edges: {
+                // autocasts as new SolidEdges3D()
+                type: "solid",
+                color: [50, 50, 50, 0.5]
+              }
+            }]
+          };
+        }
+
+        // Color renderer for building footprint
+        const renderer = {
+          // autocasts as new UniqueValueRenderer()
+          type: "unique-value",
+          defaultSymbol: setSymbolColor("#FFFFFF"),
+          defaultLabel: "{footprint_type}",
+          field: "footprint_type",
+          uniqueValueInfos: [
+            {
+              value: "Structure",
+              symbol: setSymbolColor("#73DFFF"),
+              label: "Structure"
+            },
+            {
+              value: "Tram Stop",
+              symbol: setSymbolColor("#FC921F"),
+              label: "Tram Stop"
+            },
+            {
+              value: "Bridge",
+              symbol: setSymbolColor("#ED5151"),
+              label: "Bridge"
+            },
+            {
+              value: "Train Platform",
+              symbol: setSymbolColor("#149ECE"),
+              label: "Train Platform"
+            }
+          ],
+          visualVariables: [
+            {
+              type: "size",
+              field: "structure_extrusion"
+            }
+          ]
+        }
+
+        // Feature layer for building footprint
+        const buildingsLayer = new FeatureLayer({
+          url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/2020_building_footprints/FeatureServer/0",
+          copyright: "City of Melbourne Open Data Team",
+          renderer: renderer,
+          opacity: 0.8,
+          // refreshInterval: 0.05,
+          elevationInfo: {
+            mode: "relative-to-ground"
+          },
+          title: "Melbourne Build Footprint 2020",
+          popupEnabled: true,
+          popupTemplate: {
+            title: "Building #{ObjectId}",
+            content: [
+              {
+                type: "fields",
+                fieldInfos: [
+                  {
+                    fieldName: "footprint_type",
+                    label: "Type"
+                  },
+                  {
+                    fieldName: "roof_type",
+                    label: "Roof Type"
+                  },
+                  {
+                    fieldName: "structure_extrusion",
+                    label: "Height (m)"
+                  },
+                  {
+                    fieldName: "structure_id",
+                    label: "Structure ID"
+                  }
+                ]
+              }
+            ]
+          },
+          outFields: ["footprint_type", "roof_type"]
+        });
+
+        // Add features into the scene
+        map.add(buildingsLayer, 0);
 
         // Install our external renderer
         var vaultSDKRenderer = new VaultSDKRenderer(view);
