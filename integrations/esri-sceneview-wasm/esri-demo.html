@@ -573,8 +573,64 @@
           outFields: ["footprint_type", "roof_type"]
         });
 
+        // Get 3D Symbol for light posts
+        const lightsSymbol = {
+          type: "web-style",
+          name: "Light_On_Post_-_Light_on",
+          styleName: "EsriRealisticStreetSceneStyle"
+        }
+
+        // Renderer for light posts
+        const lightsRenderer = {
+          // autocasts as new SimpleRenderer()
+          type: "simple",
+          symbol: lightsSymbol
+        };
+
+        // Feature layer for light posts
+        const lightsLayer = new FeatureLayer({
+          url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/feature_lighting_in_city_of_melbourne/FeatureServer/0",
+          copyright: "City of Melbourne Open Data Team",
+          renderer: lightsRenderer,
+          opacity: 1,
+          refreshInterval: 0.05,
+          elevationInfo: {
+            mode: "relative-to-ground"
+          },
+          title: "Feature Lighting in City of Melbourne",
+          popupEnabled: true,
+          popupTemplate: {
+            title: "Light #{asset_number}",
+            content: [
+              {
+                type: "fields",
+                fieldInfos: [
+                  {
+                    fieldName: "asset_description",
+                    label: "Description"
+                  },
+                  {
+                    fieldName: "lamp_rating_w",
+                    label: "Lamp Rating (Watt)"
+                  },
+                  {
+                    fieldName: "lat",
+                    label: "Latitude"
+                  },
+                  {
+                    fieldName: "lon",
+                    label: "Longtitude"
+                  }
+                ]
+              }
+            ]
+          },
+          outFields: ["asset_description", "lamp_rating_w", "lat", "lon"]
+        });
+
         // Add features into the scene
         map.add(buildingsLayer, 0);
+        map.add(lightsLayer, 0);
 
         // Install our external renderer
         var vaultSDKRenderer = new VaultSDKRenderer(view);
