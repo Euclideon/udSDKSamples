@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>udSDK Esri Demo</title>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.14/"></script>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+
+      #loginBox {
+        position: absolute;
+        bottom: 18px;
+        right: 12px;
+        padding: 12px;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        display: none;
+      }
+    </style>
+
+    <!-- A simple fragment shader -->
+    <script id="shader-fs" type="x-shader/x-fragment">
+      #extension GL_EXT_frag_depth : enable
+      precision highp float;
+
+      //RGBA to Float from https://github.com/ihmeuw/glsl-rgba-to-float/blob/master/index.glsl
+      // Denormalize 8-bit color channels to integers in the range 0 to 255.
+      ivec4 floatsToBytes(vec4 inputFloats, bool littleEndian) {
+        ivec4 bytes = ivec4(inputFloats * 255.0);
+        return (
+          littleEndian
+          ? bytes.abgr
+          : bytes
+        );
+      }
+
+      // Break the four bytes down into an array of 32 bits.
+      void bytesToBits(const in ivec4 bytes, out bool bits[32]) {
+        for (int channelIndex = 0; channelIndex < 4; ++channelIndex) {
+          float acc = float(bytes[channelIndex]);
+          for (int indexInByte = 7; indexInByte >= 0; --indexInByte) {
+            float powerOfTwo = exp2(float(indexInByte));
+            bool bit = acc >= powerOfTwo;
+            bits[channelIndex * 8 + (7 - indexInByte)] = bit;
+            acc = mod(acc, powerOfTwo);
+          }
+        }
+      }
+
+      // Compute the exponent of the 32-bit float.
+      float getExponent(bool bits[32]) {
+        const int startIndex = 1;
+        const int bitStringLength = 8;
+        const int endBeforeIndex = startIndex + bitStringLength;
+        float acc = 0.0;
+        int pow2 = bitStringLength - 1;
+        for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
+          acc += float(bits[bitIndex]) * exp2(float(pow2--));
+        }
+        return acc;
+      }
+
+      // Compute the mantissa of the 32-bit float.
+      float getMantissa(bool bits[32], bool subnormal) {
+        const int startIndex = 9;
+        const int bitStringLength = 23;
+        const int endBeforeIndex = startIndex + bitStringLength;
+        // Leading/implicit/hidden bit convention:
+        // If the number is not subnormal (with exponent 0), we add a leading 1 digit.
+        float acc = float(!subnormal) * exp2(float(bitStringLength));
+        int pow2 = bitStringLength - 1;
+        for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
+          acc += float(bits[bitIndex]) * exp2(float(pow2--));
+        }
+        return acc;
+      }
+
+      // Parse the float from its 32 bits.
+      float bitsToFloat(bool bits[32]) {
+        float signBit = float(bits[0]) * -2.0 + 1.0;
+        float exponent = getExponent(bits);
+        bool subnormal = abs(exponent - 0.0) < 0.01;
+        float mantissa = getMantissa(bits, subnormal);
+        float exponentBias = 127.0;
+        return signBit * mantissa * exp2(exponent - exponentBias - 23.0);
+      }
+
+      // Decode a 32-bit float from the RGBA color channels of a texel.
+      float rgbaToFloat(vec4 texelRGBA, bool littleEndian) {
+        ivec4 rgbaBytes = floatsToBytes(texelRGBA, littleEndian);
+        bool bits[32];
+        bytesToBits(rgbaBytes, bits);
+        return bitsToFloat(bits);
+      }
+
+      //Input Format
+      varying vec2 v_uv;
+
+      uniform sampler2D u_texture;
+      uniform sampler2D u_depth;
+
+      void main()
+      {
+        vec4 col = texture2D(u_texture, v_uv);
+        float depth = rgbaToFloat(texture2D(u_depth, v_uv), true);
+
+        gl_FragColor = vec4(col.zyx, 1.0);
+        gl_FragDepthEXT = depth * 0.5 + 0.5;
+      }
+    </script>
+
+    <!-- A simple vertex shader -->
+    <script id="shader-vs" type="x-shader/x-vertex">
+      attribute vec2 aVertexPosition;
+      attribute vec2 aVertexUVs;
+
+      varying vec2 v_uv;
+
+      void main(void) {
+        gl_Position = vec4(aVertexPosition.xy, 0.0, 1.0);
+        v_uv = vec2(aVertexUVs.x, 1.0 - aVertexUVs.y);
+      }
+    </script>
+
+    <!-- Our application -->
+    <script>
+      var udSDKJSReady = 0;
+
+      require([
+        "esri/core/declare",
+        "esri/Map",
+        "esri/views/SceneView",
+        "esri/views/3d/externalRenderers",
+        "esri/widgets/Home",
+        "esri/widgets/Search"
+      ], function(
+        declare,
+        Map,
+        SceneView,
+        externalRenderers,
+        Home,
+        Search
+      ) {
+        // Set up the external renderer
+        var VaultSDKRenderer = declare(null, {
+          // Input data
+          view: null,
+          prevWidth: 0,
+          prevHeight: 0,
+
+          // Vertex and index buffers
+          vbo: null,
+          texture: null,
+          textureDepth: null,
+
+          // Shader
+          program: null,
+
+          // Shader attribute and uniform locations
+          programAttribVertexPosition: null,
+          programAttribVertexTexture: null,
+
+          textureLocation: null,
+          textureLocationDepth: null,
+
+          // Temporary matrices and vectors,
+          // used to avoid allocating objects in each frame.
+          tempMatrix4: new Float32Array(16),
+          tempMatrix3: new Float32Array(9),
+          tempVec3: new Float32Array(3),
+
+          /**
+           * Constructor
+           */
+          constructor: function(view) {
+            this.view = view;
+          },
+
+          /**
+           * Called once after this external renderer is added to the scene.
+           * This is part of the external renderer interface.
+           */
+          setup: function(context) {
+            this.initShaders(context);
+
+            this.prevWidth = context.camera.width;
+            this.prevHeight = context.camera.height;
+
+            var gl = context.gl;
+
+            this.vbo = context.gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+
+            var vertData = new Float32Array([-1,-1,0,1,  1,-1,1,1,  1,1,1,0, -1,-1,0,1,  1,1,1,0,  -1,1,0,0]);
+            gl.bufferData(gl.ARRAY_BUFFER, vertData, gl.STATIC_DRAW);
+
+            var position = gl.getAttribLocation(this.program, "aVertexPosition");
+            gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
+            gl.enableVertexAttribArray(position);
+
+            var texCoord = gl.getAttribLocation(this.program, "aVertexUVs");
+            gl.vertexAttribPointer(texCoord, 2, gl.FLOAT, false, 16, 8);
+            gl.enableVertexAttribArray(texCoord);
+
+            data = new Uint8Array(4);
+            data[0] = data[1] = data[2] = data[3] = 255;
+
+            this.texture = gl.createTexture();
+            gl.bindTexture (gl.TEXTURE_2D, this.texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+            this.textureDepth = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+          },
+
+          /**
+           * Called each time the scene is rendered.
+           * This is part of the external renderer interface.
+           */
+          render: function(context) {
+            var gl = context.gl;
+
+            gl.enable(gl.DEPTH_TEST);
+            gl.disable(gl.CULL_FACE);
+            gl.disable(gl.BLEND);
+
+            gl.useProgram(this.program);
+            gl.uniform1i(this.textureLocation, 0);
+            gl.uniform1i(this.textureLocationDepth, 1);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, this.texture);
+
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
+
+            var width = context.camera.width;
+            var height = context.camera.height;
+
+            if (udSDKJSReady == 2)
+            {
+              if (width != this.prevWidth || height != this.prevHeight)
+              {
+                this.prevWidth = width;
+                this.prevHeight = height;
+
+                var data = new Uint8Array(width*height*4);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, this.texture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+                udSDKJS_ResizeScene(width, height, 0, 0);
+              }
+
+              var v = context.camera.viewMatrix;
+              udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+              var v = context.camera.projectionMatrix;
+              udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+              udSDKJS_RenderQueue();
+
+              var ptr = udSDKJS_GetColourBuffer();
+              var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+
+              gl.activeTexture(gl.TEXTURE0);
+              gl.bindTexture(gl.TEXTURE_2D, this.texture);
+              gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+              var ptr = udSDKJS_GetDepthBuffer();
+              var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+
+              gl.activeTexture(gl.TEXTURE1);
+              gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
+              gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dataHeap);
+
+              gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+
+              var position = gl.getAttribLocation(this.program, "aVertexPosition");
+              gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
+              gl.enableVertexAttribArray(position);
+
+              var texCoord = gl.getAttribLocation(this.program, "aVertexUVs");
+              gl.vertexAttribPointer(texCoord, 2, gl.FLOAT, false, 16, 8);
+              gl.enableVertexAttribArray(texCoord);
+
+              gl.drawArrays(gl.TRIANGLES, 0, 6);
+            }
+
+            // Draw continuously
+            externalRenderers.requestRender(view);
+
+            // cleanup
+            context.resetWebGLState();
+          },
+
+          /**
+           * Loads a shader from a <script> html tag
+           */
+          getShader: function(gl, id) {
+            var shaderScript = document.getElementById(id);
+            if (!shaderScript) {
+              return null;
+            }
+
+            var str = "";
+            var k = shaderScript.firstChild;
+            while (k) {
+              if (k.nodeType == 3) {
+                str += k.textContent;
+              }
+              k = k.nextSibling;
+            }
+
+            var shader;
+            if (shaderScript.type == "x-shader/x-fragment") {
+              shader = gl.createShader(gl.FRAGMENT_SHADER);
+            } else if (shaderScript.type == "x-shader/x-vertex") {
+              shader = gl.createShader(gl.VERTEX_SHADER);
+            } else {
+              return null;
+            }
+
+            gl.shaderSource(shader, str);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+              alert(gl.getShaderInfoLog(shader));
+              return null;
+            }
+
+            return shader;
+          },
+
+          /**
+           * Links vertex and fragment shaders into a GLSL program
+           */
+          linkProgram: function(gl, fragmentShader, vertexShader) {
+            var shaderProgram = gl.createProgram();
+
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+              return null;
+            }
+
+            return shaderProgram;
+          },
+
+          /**
+           * Initializes all shaders requried by the application
+           */
+          initShaders: function(context) {
+            var gl = context.gl;
+
+            console.log("Loading Shaders!");
+            gl.getExtension("EXT_frag_depth");
+
+            console.log("Has fragdepth=" + (gl.getSupportedExtensions().indexOf("EXT_frag_depth") >= 0));
+
+            var fragmentShader = this.getShader(gl, "shader-fs");
+            var vertexShader = this.getShader(gl, "shader-vs");
+            this.program = this.linkProgram(gl, fragmentShader, vertexShader);
+            if (!this.program) {
+              alert("Could not initialise shaders");
+            }
+
+            this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
+            this.textureLocationDepth = gl.getUniformLocation(this.program, "u_depth");
+          }
+        });
+
+        // Create the map and view
+        var map = new Map({
+          basemap: "streets",
+          //basemap: "hybrid",
+          ground: "world-elevation"
+        });
+
+        var view = new SceneView({
+          container: "viewDiv",
+          map: map,
+          viewingMode: "global",
+          camera: {
+            position: {
+              x: 16136507.580070,
+              y: -4556368.260251,
+              z: 348.61,
+              spatialReference: { wkid: 102100 }
+            },
+            heading: 20,
+            tilt: 85
+          }
+        });
+
+        var homeBtn = new Home({
+          view: view
+        });
+
+        var search = new Search({
+          view: view
+        });
+
+        // Add the home button to the top left corner of the view
+        view.ui.add(homeBtn, "top-left");
+        view.ui.add(search, "top-right");
+
+        view.when(function() {
+          document.getElementById("loginBtn").addEventListener("click", loginVDK);
+
+          function loginVDK(ev) {
+            if (udSDKJSReady == 1)
+                LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
+          }
+        });
+
+        // Install our external renderer
+        var vaultSDKRenderer = new VaultSDKRenderer(view);
+        externalRenderers.add(view, vaultSDKRenderer);
+      });
+    </script>
+    <script async src=udSDKjs.js></script>
+    <script async src=easyudSDKjs.js></script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+    <div id="loginBox">
+        <span id="errorMessage" style="color: red;"></span>
+        <label>Euclideon Login: <input id="usernameTxt" type="text" placeholder="Email" /></label>
+        <label><input id="passwordTxt" type="password" placeholder="Password" /></label>
+        <button id="loginBtn">Login!</login>
+    </div>
+    <script>
+      function CreateVDKPlugin()
+      {
+        udSDKJSReady = 1;
+        document.getElementById("loginBox").style.display = "block";
+      };
+
+      function LoginVDKPlugin(username, password)
+      {
+        if (udSDKJSReady != 1)
+          Alert("Not ready to login!");
+
+        var status = udSDKJS(username, password, "Esri ArcScene");
+
+        if (status == 0)
+        {
+          console.log("udSDKJS Logged in.");
+
+          // Photogrammetry model of the Gold Coast courtesy of [Aerometrex](https://aerometrex.com.au/).
+          udsAerometrixGoldCoast = udSDKJS_LoadModel("https://models.euclideon.com/GoldCoast_20mm.uds");
+          udSDKJS_RenderQueueAddModel(udsAerometrixGoldCoast, 140.0, -1);
+
+          // LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/).
+          udsMelb = udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds");
+          udSDKJS_RenderQueueAddModel(udsMelb, 150.0, -1);
+
+          // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
+          udsVancouver = udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds");
+          udSDKJS_RenderQueueAddModel(udsVancouver, 227.0, -1);
+
+          udSDKJSReady = 2;
+          document.getElementById("loginBox").style.display = "none";
+        }
+        else
+        {
+          if (status == 13)
+            document.getElementById("errorMessage").innerText = "udSDKJS Error / Email or Password Wrong";
+          else
+            document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + status;
+        }
+      }
+
+      var Module = {
+        noExitRuntime: true,
+        preRun: [],
+        postRun: CreateVDKPlugin,
+        setStatus: function(text) {
+          if (!Module.setStatus.last)
+            Module.setStatus.last = { time: Date.now(), text: '' };
+
+          if (text === Module.setStatus.last.text)
+            return;
+
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30)
+            return; // if this is a progress update, skip it if too soon
+
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+          if (m) {
+            text = m[1];
+          }
+
+          console.log(text);
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function(left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+
+      Module.setStatus('Downloading...');
+    </script>
+  </body>
+</html>
