@@ -5,8 +5,8 @@
   <meta name="viewport" content="initial-scale=1,width=device-width" />
   <title>New udSDK Esri Demo</title>
 
-  <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/dark/main.css" crossorigin />
-  <script src="https://js.arcgis.com/4.14/" crossorigin></script>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/dark/main.css" crossorigin/>
+  <script src="https://js.arcgis.com/4.20/" crossorigin></script>
 
   <link rel="stylesheet" href="./css/main.css" />
   <link rel="stylesheet" href="./css/buttons.css" />
@@ -125,15 +125,15 @@
       var viewer = null;
 
       require(["esri/config"], 
-        function(esriConfig) { 
-          esriConfig.request.trustedServers.push("https://js.arcgis.com");
+        function(esriConfig) {
+          // esriConfig.apiKey = "AAPK354e42392ee54124b9ae95596b457633LgZlrhexVdoPtOKHCAzeQAyPO5d7RNZFK6pYGFS2vGFzdAzdZiLH5aFxvSfPref8";
+          esriConfig.request.trustedServers.push("https://www.arcgis.com");
           esriConfig.request.trustedServers.push("https://www.euclideon.com");
           esriConfig.request.trustedServers.push("http://localhost:8000");
         }
       );
       
       require([
-        "esri/core/declare",
         "esri/Map",
         "esri/Viewpoint",
         "esri/views/SceneView",
@@ -145,7 +145,6 @@
         "esri/symbols/ExtrudeSymbol3DLayer",
         "esri/symbols/WebStyleSymbol"
       ], function(
-        declare,
         Map,
         Viewpoint,
         SceneView,
@@ -158,7 +157,7 @@
         WebStyleSymbol
       ) {
         // Set up the external renderer
-        var VaultSDKRenderer = declare(null, {
+        var udSDKRenderer = {
           // Input data
           view: null,
           prevWidth: 0,
@@ -409,7 +408,7 @@
             this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
             this.textureLocationDepth = gl.getUniformLocation(this.program, "u_depth");
           }
-        });
+        };
 
         // Create the map and view
         var map = new Map({
@@ -448,7 +447,7 @@
         });
         // assign viewer with this view.
         viewer = view;
-        moveCameraToAus(view);
+        
 
         var homeBtn = new Home({
           view: view,
@@ -464,6 +463,7 @@
         view.ui.add(search, "top-right");
 
         view.when(function() {
+          moveCameraToAus(view);
           document.getElementById("loginBtn").addEventListener("click", loginVDK);
 
           function loginVDK(ev) {
@@ -538,7 +538,8 @@
           copyright: "City of Melbourne Open Data Team",
           renderer: renderer,
           opacity: 0.8,
-          // refreshInterval: 0.05,
+          refreshInterval: 0.05,
+          maximumNumberOfFeatures: 25000,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -594,6 +595,7 @@
           renderer: lightsRenderer,
           opacity: 1,
           refreshInterval: 0.05,
+          maximumNumberOfFeatures: 5000,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -633,8 +635,18 @@
         map.add(lightsLayer, 0);
 
         // Install our external renderer
-        var vaultSDKRenderer = new VaultSDKRenderer(view);
-        externalRenderers.add(view, vaultSDKRenderer);
+        externalRenderers.add(view, udSDKRenderer);
+
+        const getMegaByte = (byte) => {
+          let kilo = 1024;
+          let mega = kilo * 1024;
+          return Math.round(byte / mega);
+        }
+
+        setInterval(() => {
+          var perf = view.performanceInfo;
+          console.log("Used: ", getMegaByte(perf.usedMemory), "MB /", getMegaByte(perf.totalMemory), " MB, Quality: ", perf.quality)
+        }, 1000);
       });
     </script>
     <div class="head-container">
