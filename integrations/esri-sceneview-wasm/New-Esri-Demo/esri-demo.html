@@ -140,6 +140,8 @@
         "esri/views/3d/externalRenderers",
         "esri/widgets/Home",
         "esri/widgets/Search",
+        "esri/widgets/Legend",
+        "esri/widgets/Expand",
         "esri/layers/FeatureLayer",
         "esri/layers/SceneLayer",
         "esri/symbols/ExtrudeSymbol3DLayer",
@@ -151,6 +153,8 @@
         externalRenderers,
         Home,
         Search,
+        Legend,
+        Expand,
         FeatureLayer,
         SceneLayer,
         ExtrudeSymbol3DLayer,
@@ -460,24 +464,6 @@
           view: view
         });
 
-        // Add the home button to the top left corner of the view
-        view.ui.add(homeBtn, "top-left");
-        view.ui.add(search, "top-right");
-
-        view.when(function() {
-          // Move the camera to view Australia.
-          moveCameraToAus(view);
-
-          document.getElementById("loginBtn").addEventListener("click", loginVDK);
-          function loginVDK(ev) {
-            if(udSDKJSReady == 1)
-              document.getElementById("statusLoading").style.display = "block";
-              setTimeout(async() => {
-                LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
-              }, 100);
-          }
-        });
-
         // Extrude 3D Symbol for building footprint
         const setSymbolColor = (color) => {
           return {
@@ -503,7 +489,7 @@
           // autocasts as new UniqueValueRenderer()
           type: "unique-value",
           defaultSymbol: setSymbolColor("#FFFFFF"),
-          defaultLabel: "{footprint_type}",
+          defaultLabel: "Other",
           field: "footprint_type",
           uniqueValueInfos: [
           {
@@ -584,7 +570,8 @@
         const lightsRenderer = {
           // autocasts as new SimpleRenderer()
           type: "simple",
-          symbol: lightsSymbol
+          symbol: lightsSymbol,
+          label: "Feature lights"
         };
 
         // Feature layer for light posts
@@ -640,7 +627,8 @@
         const treeRenderer = {
           // autocasts as new SimpleRenderer()
           type: "simple",
-          symbol: treeSymbol
+          symbol: treeSymbol,
+          label: "Tree areas"
         };
 
         // Feature Layer for Tree Canopies
@@ -662,8 +650,55 @@
 
         // Add features into the scene
         map.add(buildingsLayer);
-        // map.add(lightsLayer);
+        map.add(lightsLayer);
         map.add(treesLayer);
+
+        var legend = new Legend({
+          view: view,
+          layerInfos: [
+            {
+              layer: map.layers.getItemAt(0),
+              title: "Footprint Type"
+            },
+            {
+              layer: map.layers.getItemAt(1),
+              title: "Lights"
+            },
+            {
+              layer: map.layers.getItemAt(2),
+              title: "Tree Canopies"
+            },
+          ],
+
+        });
+
+        var lgExpand = new Expand({
+          view: view,
+          content: legend
+        });
+
+        view.when(function() {
+          // Add the home button to the top left corner of the view
+          view.ui.add(homeBtn, "top-left");
+
+          // Add the home button to the top right corner of the view
+          view.ui.add(search, "top-right");
+
+          // Add the home button to the bottom right corner of the view
+          view.ui.add(lgExpand, "top-right");
+
+          // Move the camera to view Australia.
+          moveCameraToAus(view);
+
+          document.getElementById("loginBtn").addEventListener("click", loginVDK);
+          function loginVDK(ev) {
+            if(udSDKJSReady == 1)
+              document.getElementById("statusLoading").style.display = "block";
+              setTimeout(async() => {
+                LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
+              }, 100);
+          }
+        });
 
         // Install our external renderer
         externalRenderers.add(view, udSDKRenderer);
