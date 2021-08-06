@@ -420,7 +420,9 @@
           container: "viewDiv",
           map: map,
           viewingMode: "global",
-          qualityProfile: "high",
+          qualityProfile: "medium",
+          maximumNumberOfFeatures: 20000,
+          maximumNumberOfFeaturesExceeded: true,
           environment: {
             lighting: {
               directShadowsEnabled: true
@@ -463,9 +465,10 @@
         view.ui.add(search, "top-right");
 
         view.when(function() {
+          // Move the camera to view Australia.
           moveCameraToAus(view);
-          document.getElementById("loginBtn").addEventListener("click", loginVDK);
 
+          document.getElementById("loginBtn").addEventListener("click", loginVDK);
           function loginVDK(ev) {
             if(udSDKJSReady == 1)
               document.getElementById("statusLoading").style.display = "block";
@@ -503,27 +506,26 @@
           defaultLabel: "{footprint_type}",
           field: "footprint_type",
           uniqueValueInfos: [
-            {
-              value: "Structure",
-              symbol: setSymbolColor("#73DFFF"),
-              label: "Structure"
-            },
-            {
-              value: "Tram Stop",
-              symbol: setSymbolColor("#FC921F"),
-              label: "Tram Stop"
-            },
-            {
-              value: "Bridge",
-              symbol: setSymbolColor("#ED5151"),
-              label: "Bridge"
-            },
-            {
-              value: "Train Platform",
-              symbol: setSymbolColor("#149ECE"),
-              label: "Train Platform"
-            }
-          ],
+          {
+            value: "Structure",
+            symbol: setSymbolColor("#73DFFF"),
+            label: "Structure"
+          },
+          {
+            value: "Tram Stop",
+            symbol: setSymbolColor("#FC921F"),
+            label: "Tram Stop"
+          },
+          {
+            value: "Bridge",
+            symbol: setSymbolColor("#ED5151"),
+            label: "Bridge"
+          },
+          {
+            value: "Train Platform",
+            symbol: setSymbolColor("#149ECE"),
+            label: "Train Platform"
+          }],
           visualVariables: [
             {
               type: "size",
@@ -537,9 +539,9 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/2020_building_footprints/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: renderer,
-          opacity: 0.8,
-          refreshInterval: 0.05,
-          maximumNumberOfFeatures: 25000,
+          opacity: 0.9,
+          refreshInterval: 0.1,
+          // maximumNumberOfFeatures: 10000,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -548,30 +550,27 @@
           popupTemplate: {
             title: "Building #{ObjectId}",
             content: [
+            {
+              type: "fields",
+              fieldInfos: [
               {
-                type: "fields",
-                fieldInfos: [
-                  {
-                    fieldName: "footprint_type",
-                    label: "Type"
-                  },
-                  {
-                    fieldName: "roof_type",
-                    label: "Roof Type"
-                  },
-                  {
-                    fieldName: "structure_extrusion",
-                    label: "Height (m)"
-                  },
-                  {
-                    fieldName: "structure_id",
-                    label: "Structure ID"
-                  }
-                ]
-              }
-            ]
-          },
-          outFields: ["footprint_type", "roof_type"]
+                fieldName: "footprint_type",
+                label: "Type"
+              },
+              {
+                fieldName: "roof_type",
+                label: "Roof Type"
+              },
+              {
+                fieldName: "structure_extrusion",
+                label: "Height (m)"
+              },
+              {
+                fieldName: "structure_id",
+                label: "Structure ID"
+              }]
+            }]
+          }
         });
 
         // Get 3D Symbol for light posts
@@ -593,9 +592,8 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/feature_lighting_in_city_of_melbourne/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: lightsRenderer,
-          opacity: 1,
-          refreshInterval: 0.05,
-          maximumNumberOfFeatures: 5000,
+          refreshInterval: 0.1,
+          // maximumNumberOfFeatures: 2000,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -604,40 +602,73 @@
           popupTemplate: {
             title: "Light #{asset_number}",
             content: [
-              {
-                type: "fields",
-                fieldInfos: [
-                  {
-                    fieldName: "asset_description",
-                    label: "Description"
-                  },
-                  {
-                    fieldName: "lamp_rating_w",
-                    label: "Lamp Rating (Watt)"
-                  },
-                  {
-                    fieldName: "lat",
-                    label: "Latitude"
-                  },
-                  {
-                    fieldName: "lon",
-                    label: "Longtitude"
-                  }
-                ]
-              }
-            ]
+            {
+              type: "fields",
+              fieldInfos: [
+                {
+                  fieldName: "asset_description",
+                  label: "Description"
+                },
+                {
+                  fieldName: "lamp_rating_w",
+                  label: "Lamp Rating (Watt)"
+                },
+                {
+                  fieldName: "lat",
+                  label: "Latitude"
+                },
+                {
+                  fieldName: "lon",
+                  label: "Longtitude"
+                }
+              ]
+            }]
           },
-          outFields: ["asset_description", "lamp_rating_w", "lat", "lon"]
+        });
+
+        // Get Symbol for light posts - Render 2D
+        const treeSymbol = {
+          type: "simple-fill",  // autocasts as new SimpleFillSymbol()
+          color: "green",
+          outline: {  // autocasts as new SimpleLineSymbol()
+            color: [128, 128, 128, 0.5],
+            width: "0.5px"
+          }
+        }
+
+        // Renderer for ree canopies
+        const treeRenderer = {
+          // autocasts as new SimpleRenderer()
+          type: "simple",
+          symbol: treeSymbol
+        };
+
+        // Feature Layer for Tree Canopies
+        const treesLayer = new FeatureLayer({
+          url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/tree_canopies_2016_urban_forest/FeatureServer/0",
+          copyright: "City of Melbourne Open Data Team",
+          renderer: treeRenderer,
+          refreshInterval: 0.1,
+          // maximumNumberOfFeatures: 5000,
+          elevationInfo: {
+            mode: "on-the-ground"
+          },
+          title: "Tree Canopies 2016 in City of Melbourne",
+          popupEnabled: true,
+          popupTemplate: {
+            title: "Area #{ID}"
+          },
         });
 
         // Add features into the scene
-        map.add(buildingsLayer, 0);
-        map.add(lightsLayer, 0);
+        map.add(buildingsLayer);
+        // map.add(lightsLayer);
+        map.add(treesLayer);
 
         // Install our external renderer
         externalRenderers.add(view, udSDKRenderer);
 
-        const getMegaByte = (byte) => {
+        const getMB = (byte) => {
           let kilo = 1024;
           let mega = kilo * 1024;
           return Math.round(byte / mega);
@@ -645,8 +676,10 @@
 
         setInterval(() => {
           var perf = view.performanceInfo;
-          console.log("Used: ", getMegaByte(perf.usedMemory), "MB /", getMegaByte(perf.totalMemory), " MB, Quality: ", perf.quality)
-        }, 1000);
+          console.log("Used: ", getMB(perf.usedMemory), "/", getMB(perf.totalMemory), "MB", 
+          "\nQuality: ", Math.round(perf.quality * 100), "%",
+          "\nFeature (Building): ")
+        }, 5000);
       });
     </script>
     <div class="head-container">
