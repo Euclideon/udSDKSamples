@@ -285,11 +285,14 @@
                 udSDKJS_ResizeScene(width, height, 0, 0);
               }
 
-              var v = context.camera.viewMatrix;
-              udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+              // Hack - I don't know what I'm doing but this slows down the udSDK and flipping happens less
+              for(let i = 0; i < 5; i++) {
+                v = context.camera.viewMatrix;
+                udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
-              var v = context.camera.projectionMatrix;
-              udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+                v = context.camera.projectionMatrix;
+                udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+              }
               
               udSDKJS_RenderQueue();
 
