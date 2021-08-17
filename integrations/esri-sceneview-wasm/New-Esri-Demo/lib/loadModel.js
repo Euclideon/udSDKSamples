@@ -1,6 +1,6 @@
 const udsModels = [
   // Melbourne Model
-  { key: "Melbourne", url: "https://models.euclideon.com/Melbourne_75mm.uds", eval: [150.0, -1] },
+  { key: "Melbourne", url: "https://models.euclideon.com/Melbourne_75mm.uds", eval: [145.0, -1] },
   // 50mm multibeam dataset 2018
   { key: "Bendigo", url: "https://cesiumdemo.blob.core.windows.net/models/Bendigo_nonPrimitive_HR.uds", eval: [280.0, -1] },
   // ...add more uds models here...

@@ -12,7 +12,6 @@
   <link rel="stylesheet" href="./css/buttons.css" />
   <script src="./lib/cameraControl.js"></script>
   <script src="./lib/loadModel.js"></script>
-  <script src="./lib/loadText.js"></script>
   <script src="./lib/toggleChosen.js"></script>
   <head>
     <!-- A simple fragment shader -->
@@ -161,7 +160,7 @@
         WebStyleSymbol
       ) {
         // Set up the external renderer
-        var udSDKRenderer = {
+        const udSDKRenderer = {
           // Input data
           view: null,
           prevWidth: 0,
@@ -184,9 +183,9 @@
 
           // Temporary matrices and vectors,
           // used to avoid allocating objects in each frame.
-          tempMatrix4: new Float32Array(16),
-          tempMatrix3: new Float32Array(9),
-          tempVec3: new Float32Array(3),
+          // tempMatrix4: new Float32Array(16),
+          // tempMatrix3: new Float32Array(9),
+          // tempVec3: new Float32Array(3),
 
           /**
            * Constructor
@@ -207,7 +206,7 @@
 
             var gl = context.gl;
 
-            this.vbo = context.gl.createBuffer();
+            this.vbo = gl.createBuffer();
             gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 
             var vertData = new Float32Array([-1,-1,0,1,  1,-1,1,1,  1,1,1,0, -1,-1,0,1,  1,1,1,0,  -1,1,0,0]);
@@ -221,11 +220,11 @@
             gl.vertexAttribPointer(texCoord, 2, gl.FLOAT, false, 16, 8);
             gl.enableVertexAttribArray(texCoord);
 
-            data = new Uint8Array(4);
-            data[0] = data[1] = data[2] = data[3] = 255;
+            data = new Uint8Array([255, 255, 255, 255]);
+            // data[0] = data[1] = data[2] = data[3] = 255;
 
             this.texture = gl.createTexture();
-            gl.bindTexture (gl.TEXTURE_2D, this.texture);
+            gl.bindTexture(gl.TEXTURE_2D, this.texture);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -262,17 +261,18 @@
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
 
-            var width = context.camera.width;
-            var height = context.camera.height;
+            var width = context.camera.width / 2; // 1024
+            var height = context.camera.height / 2; // 1024
 
             if (udSDKJSReady == 2)
             {
+              // If the window's size has changed.
               if (width != this.prevWidth || height != this.prevHeight)
               {
                 this.prevWidth = width;
                 this.prevHeight = height;
-
-                var data = new Uint8Array(width*height*4);
+                // We need width x height x 4 byte data for color buffer (RGBA)
+                var data = new Uint8Array(width * height * 4);
 
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -290,9 +290,10 @@
 
               var v = context.camera.projectionMatrix;
               udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
-
+              
               udSDKJS_RenderQueue();
 
+              // Get memory address from the color buffer
               var ptr = udSDKJS_GetColourBuffer();
               var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
 
@@ -325,6 +326,11 @@
 
             // cleanup
             context.resetWebGLState();
+
+            // garbage collect
+            v = null;
+            data = null;
+            dataHeap = null;
           },
 
           /**
@@ -424,7 +430,7 @@
           container: "viewDiv",
           map: map,
           viewingMode: "global",
-          qualityProfile: "medium",
+          qualityProfile: "high",
           maximumNumberOfFeatures: 20000,
           maximumNumberOfFeaturesExceeded: true,
           environment: {
@@ -526,8 +532,7 @@
           copyright: "City of Melbourne Open Data Team",
           renderer: renderer,
           opacity: 0.9,
-          refreshInterval: 0.1,
-          // maximumNumberOfFeatures: 10000,
+          refreshInterval: 0.2,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -579,8 +584,7 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/feature_lighting_in_city_of_melbourne/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: lightsRenderer,
-          refreshInterval: 0.1,
-          // maximumNumberOfFeatures: 2000,
+          refreshInterval: 0.2,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -636,20 +640,33 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/tree_canopies_2016_urban_forest/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: treeRenderer,
-          refreshInterval: 0.1,
-          // maximumNumberOfFeatures: 5000,
+          refreshInterval: 0.2,
           elevationInfo: {
             mode: "on-the-ground"
           },
           title: "Tree Canopies 2016 in City of Melbourne",
           popupEnabled: true,
           popupTemplate: {
-            title: "Area #{ID}"
+            title: "Area #{area}",
+            content: [
+            {
+              type: "fields",
+              fieldInfos: [
+                {
+                  fieldName: "Shape__Area",
+                  label: "Area (m²)"
+                },
+                {
+                  fieldName: "Shape__Length",
+                  label: "Length (m)"
+                },
+              ]
+            }]
           },
         });
 
         // Add features into the scene
-        map.add(buildingsLayer);
+        // map.add(buildingsLayer);
         map.add(lightsLayer);
         map.add(treesLayer);
 
@@ -677,12 +694,17 @@
           content: legend
         });
 
+        var shExpand = new Expand({
+          view: view,
+          content: search
+        });
+
         view.when(function() {
           // Add the home button to the top left corner of the view
           view.ui.add(homeBtn, "top-left");
 
           // Add the home button to the top right corner of the view
-          view.ui.add(search, "top-right");
+          view.ui.add(shExpand, "top-right");
 
           // Add the home button to the bottom right corner of the view
           view.ui.add(lgExpand, "top-right");
@@ -703,18 +725,18 @@
         // Install our external renderer
         externalRenderers.add(view, udSDKRenderer);
 
-        const getMB = (byte) => {
-          let kilo = 1024;
-          let mega = kilo * 1024;
-          return Math.round(byte / mega);
-        }
+        // const getMB = (byte) => {
+        //   let kilo = 1024;
+        //   let mega = kilo * 1024;
+        //   return Math.round(byte / mega);
+        // }
 
-        setInterval(() => {
-          var perf = view.performanceInfo;
-          console.log("Used: ", getMB(perf.usedMemory), "/", getMB(perf.totalMemory), "MB", 
-          "\nQuality: ", Math.round(perf.quality * 100), "%",
-          "\nFeature (Building): ")
-        }, 5000);
+        // setInterval(() => {
+        //   var perf = view.performanceInfo;
+        //   console.log("Used: ", getMB(perf.usedMemory), "/", getMB(perf.totalMemory), "MB", 
+        //   "\nQuality: ", Math.round(perf.quality * 100), "%",
+        //   "\nFeature (Building): ")
+        // }, 5000);
       });
     </script>
     <div class="head-container">
@@ -760,16 +782,6 @@
       <button id="loginBtn">Login</button><br/>
       <span class="errorMessage" id="errorMessage"></span>
     </div>
-    <!-- <div class="descTextbox">
-      <h1 id="descTitle" class="descTitle"></h1>
-      <p id="descModelInfo" class="descModelInfo"></p>
-      <h4 id="descAttr" class="descAttr"></h4>
-      <div class="textImg">
-        <span id="introImg"></span>
-        <p id="descParagraph" class="descParagraph"></p>
-      </div>
-      <h4 id="descTextAttr" class="descTextAttr"></h4>
-    </div> -->
     <div class="unsupportMsg">
       <h1>Sorry, this device is not supported.</h1>
       <h2>
