@@ -112,7 +112,8 @@
 
       varying vec2 v_uv;
 
-      void main(void) {
+      void main(void) 
+      {
         gl_Position = vec4(aVertexPosition.xy, 0.0, 1.0);
         v_uv = vec2(aVertexUVs.x, 1.0 - aVertexUVs.y);
       }
@@ -220,8 +221,10 @@
             gl.vertexAttribPointer(texCoord, 2, gl.FLOAT, false, 16, 8);
             gl.enableVertexAttribArray(texCoord);
 
-            data = new Uint8Array([255, 255, 255, 255]);
+            data = new Uint8Array(4);
             // data[0] = data[1] = data[2] = data[3] = 255;
+            for(let i = 0; i < data.length; data[i] = 255, i++);
+              
 
             this.texture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -261,18 +264,22 @@
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
 
-            var width = context.camera.width / 2; // 1024
-            var height = context.camera.height / 2; // 1024
+            var width = context.camera.width; // 1024
+            var height = context.camera.height; // 1024
+
+            // We need width x height x 4 byte data for color buffer (RGBA)
+            var data = new Uint8Array(width * height * 4);
+            var dataHeap;
+            var ptr;
 
             if (udSDKJSReady == 2)
             {
               // If the window's size has changed.
               if (width != this.prevWidth || height != this.prevHeight)
               {
+                // Update width & height
                 this.prevWidth = width;
                 this.prevHeight = height;
-                // We need width x height x 4 byte data for color buffer (RGBA)
-                var data = new Uint8Array(width * height * 4);
 
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -285,24 +292,36 @@
                 udSDKJS_ResizeScene(width, height, 0, 0);
               }
 
+              console.log("textureLocation object: ", this.textureLocation);
+              console.log("textureLocationDepth object: ", this.textureLocationDepth);
+              console.log("texture object: ", this.texture);
+              console.log("textureDepth object: ", this.textureDepth);
+
               var v = context.camera.viewMatrix;
               udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
               var v = context.camera.projectionMatrix;
               udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
-              
+
               udSDKJS_RenderQueue();
 
               // Get memory address from the color buffer
-              var ptr = udSDKJS_GetColourBuffer();
-              var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+              ptr = udSDKJS_GetColourBuffer();
+              data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+
+              // Print first data element in R G B A
+              console.log("First data element: ", data[0], data[1], data[2], data[3]);
 
               gl.activeTexture(gl.TEXTURE0);
               gl.bindTexture(gl.TEXTURE_2D, this.texture);
               gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
 
-              var ptr = udSDKJS_GetDepthBuffer();
-              var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+
+              ptr = udSDKJS_GetDepthBuffer();
+              dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+
+              // Print first data element in R G B A
+              console.log("First dataHeap element: ", dataHeap[0], dataHeap[1], dataHeap[2], dataHeap[3]);
 
               gl.activeTexture(gl.TEXTURE1);
               gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
