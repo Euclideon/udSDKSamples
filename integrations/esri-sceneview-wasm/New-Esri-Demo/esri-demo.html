@@ -100,6 +100,7 @@
         vec4 col = texture2D(u_texture, v_uv);
         float depth = rgbaToFloat(texture2D(u_depth, v_uv), true);
 
+        // Setting pixel colors. R G B A
         gl_FragColor = vec4(col.zyx, 1.0);
         gl_FragDepthEXT = depth * 0.5 + 0.5;
       }
@@ -109,12 +110,25 @@
     <script id="shader-vs" type="x-shader/x-vertex">
       attribute vec2 aVertexPosition;
       attribute vec2 aVertexUVs;
-
+      uniform sampler2D u_texture;
       varying vec2 v_uv;
 
+      // A magenta color for referencing
+      // Refer to line 311 to 315, we set a point to magenta color.
+      // And we will compare the magenta point with this vec4 magenta.
+      vec4 magenta = vec4(1.0, 0.0, 1.0, 1.0);
+      vec4 topLeft;
+
       void main(void) {
+        // Correction work
+        topLeft = texture2D(u_texture, vec2(0.0, 0.0));
+        // We want to check if the magenta point is rendered in top left corner
+        // If not, flip it
+        if (topLeft == magenta)
+          v_uv = vec2(aVertexUVs.x, aVertexUVs.y);
+        else
+          v_uv = vec2(aVertexUVs.x, 1.0 - aVertexUVs.y);
         gl_Position = vec4(aVertexPosition.xy, 0.0, 1.0);
-        v_uv = vec2(aVertexUVs.x, 1.0 - aVertexUVs.y);
       }
     </script>
 
@@ -221,7 +235,6 @@
             gl.enableVertexAttribArray(texCoord);
 
             data = new Uint8Array([255, 255, 255, 255]);
-            // data[0] = data[1] = data[2] = data[3] = 255;
 
             this.texture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -261,9 +274,8 @@
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
 
-            var width = context.camera.width / 2; // 1024
-            var height = context.camera.height / 2; // 1024
-
+            var width = context.camera.height; // 1024
+            var height = context.camera.height; // 1024
             if (udSDKJSReady == 2)
             {
               // If the window's size has changed.
@@ -284,11 +296,11 @@
 
                 udSDKJS_ResizeScene(width, height, 0, 0);
               }
-
+              
               var v = context.camera.viewMatrix;
               udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
-              var v = context.camera.projectionMatrix;
+              v = context.camera.projectionMatrix;
               udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
               
               udSDKJS_RenderQueue();
@@ -296,6 +308,11 @@
               // Get memory address from the color buffer
               var ptr = udSDKJS_GetColourBuffer();
               var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+              // Magenta point
+              data[0] = 255;
+              data[1] = 0;
+              data[2] = 255;
+              data[3] = 255;
 
               gl.activeTexture(gl.TEXTURE0);
               gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -317,6 +334,9 @@
               var texCoord = gl.getAttribLocation(this.program, "aVertexUVs");
               gl.vertexAttribPointer(texCoord, 2, gl.FLOAT, false, 16, 8);
               gl.enableVertexAttribArray(texCoord);
+
+              // WebGL expects renders from bottom right corner to top left corner
+              gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
               gl.drawArrays(gl.TRIANGLES, 0, 6);
             }
@@ -422,7 +442,7 @@
 
         // Create the map and view
         var map = new Map({
-          basemap: "streets",
+          basemap: "hybrid",
           ground: "world-elevation"
         });
 
@@ -431,7 +451,7 @@
           map: map,
           viewingMode: "global",
           qualityProfile: "high",
-          maximumNumberOfFeatures: 20000,
+          maximumNumberOfFeatures: 70000,
           maximumNumberOfFeaturesExceeded: true,
           environment: {
             lighting: {
@@ -532,7 +552,7 @@
           copyright: "City of Melbourne Open Data Team",
           renderer: renderer,
           opacity: 0.9,
-          refreshInterval: 0.2,
+          refreshInterval: 0.1,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -584,7 +604,7 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/feature_lighting_in_city_of_melbourne/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: lightsRenderer,
-          refreshInterval: 0.2,
+          refreshInterval: 0.1,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -640,7 +660,7 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/tree_canopies_2016_urban_forest/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: treeRenderer,
-          refreshInterval: 0.2,
+          refreshInterval: 0.1,
           elevationInfo: {
             mode: "on-the-ground"
           },
@@ -666,7 +686,7 @@
         });
 
         // Add features into the scene
-        // map.add(buildingsLayer);
+        map.add(buildingsLayer);
         map.add(lightsLayer);
         map.add(treesLayer);
 
