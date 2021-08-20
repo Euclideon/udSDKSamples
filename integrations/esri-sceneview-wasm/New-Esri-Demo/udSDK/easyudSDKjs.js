@@ -56,7 +56,6 @@ function udSDKJS_RegisterShared()
 function udSDKJS_Login(username, password, application)
 {
 	udSDKJS_RegisterShared();
-	udSDKJS_SetServerAddress("https://stg-ubu18.euclideon.com")
 	return udSDKJS_CreateShared(username, password, application)
 }
 
