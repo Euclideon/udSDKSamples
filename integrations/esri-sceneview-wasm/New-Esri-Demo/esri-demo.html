@@ -95,21 +95,49 @@
       uniform sampler2D u_texture;
       uniform sampler2D u_depth;
 
+      // void main()
+      // {
+      //  vec4 col = texture2D(u_texture, v_uv);
+      //  float depth = rgbaToFloat(texture2D(u_depth, v_uv), true);
+
+      //  // Setting pixel colors. R G B A
+      //  gl_FragColor = vec4(col.zyx, 1.0);
+      //  gl_FragDepthEXT = depth * 0.5 + 0.5;
+      // }
+      
       void main()
       {
-        vec4 col = texture2D(u_texture, v_uv);
-        float depth = rgbaToFloat(texture2D(u_depth, v_uv), true);
-
+        vec4 topLeft = texture2D(u_texture, vec2(0.0, 0.0));
+        vec4 col;
+        float depth;
+        
+        // Test to see if the top left pixel is magenta
+        // We trying to fix random frame randomly flips up side down.
+        // It's an known issue in Chromium & WebGL.
+        // This code queries a pixel to determine which way it's going to be rendered.
+        // This code should exist in Fragment shader
+        if (!(topLeft.x == 1.0 && topLeft.z == 1.0))
+        {
+          col = texture2D(u_texture, v_uv);
+          depth = rgbaToFloat(texture2D(u_depth, v_uv), true);
+        }
+        else
+        {
+          // We flip along y-axis
+          vec2 uvFlipped = vec2(v_uv.x, 1.0 - v_uv.y);
+          col = texture2D(u_texture, uvFlipped);
+          depth = rgbaToFloat(texture2D(u_depth, uvFlipped), true);
+        }
         gl_FragColor = vec4(col.zyx, 1.0);
         gl_FragDepthEXT = depth * 0.5 + 0.5;
       }
+      
     </script>
 
     <!-- A simple vertex shader -->
     <script id="shader-vs" type="x-shader/x-vertex">
       attribute vec2 aVertexPosition;
       attribute vec2 aVertexUVs;
-
       varying vec2 v_uv;
 
       void main(void) {
@@ -221,7 +249,6 @@
             gl.enableVertexAttribArray(texCoord);
 
             data = new Uint8Array([255, 255, 255, 255]);
-            // data[0] = data[1] = data[2] = data[3] = 255;
 
             this.texture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -261,9 +288,8 @@
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
 
-            var width = context.camera.width / 2; // 1024
-            var height = context.camera.height / 2; // 1024
-
+            var width = context.camera.height; // 1024
+            var height = context.camera.height; // 1024
             if (udSDKJSReady == 2)
             {
               // If the window's size has changed.
@@ -284,11 +310,11 @@
 
                 udSDKJS_ResizeScene(width, height, 0, 0);
               }
-
+              
               var v = context.camera.viewMatrix;
               udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
-              var v = context.camera.projectionMatrix;
+              v = context.camera.projectionMatrix;
               udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
               
               udSDKJS_RenderQueue();
@@ -296,6 +322,11 @@
               // Get memory address from the color buffer
               var ptr = udSDKJS_GetColourBuffer();
               var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+              // Magenta point
+              data[0] = 255;
+              data[1] = 0;
+              data[2] = 255;
+              data[3] = 255;
 
               gl.activeTexture(gl.TEXTURE0);
               gl.bindTexture(gl.TEXTURE_2D, this.texture);
@@ -317,6 +348,8 @@
               var texCoord = gl.getAttribLocation(this.program, "aVertexUVs");
               gl.vertexAttribPointer(texCoord, 2, gl.FLOAT, false, 16, 8);
               gl.enableVertexAttribArray(texCoord);
+
+              // gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
               gl.drawArrays(gl.TRIANGLES, 0, 6);
             }
@@ -666,7 +699,7 @@
         });
 
         // Add features into the scene
-        // map.add(buildingsLayer);
+        map.add(buildingsLayer);
         map.add(lightsLayer);
         map.add(treesLayer);
 
