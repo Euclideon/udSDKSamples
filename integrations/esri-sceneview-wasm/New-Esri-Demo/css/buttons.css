@@ -1,0 +1,38 @@
+.btn {
+  font-family: "source-sans-pro";
+  animation: fadeIn ease 2s;
+  background-color: rgba(10, 14, 16, 0.9);
+  width: 125px;
+  height: 36px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  text-align: left;
+  color: white;
+  font-size: 18px;
+  border: none;
+  display: block;
+  padding-top: 5px;
+}
+
+.chosen {
+  outline: none;
+  font-weight: 700;
+  color: #c1e4e4;
+}
+
+.btn:hover {
+  font-weight: 700;
+  color: #c1e4e4;
+}
+
+/* Button position */
+.btn.mel {
+  top: -100px; 
+  left: calc(10% + 15px); 
+}
+
+.btn.bxg {
+  top: -100px;
+  left: calc(10% + 15px);
+}

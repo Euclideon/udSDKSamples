@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <meta http-equiv="origin-trial" content="AuIOI30TB29gw4buNQFFWNexGiDwI8ynu05FxU2JLMIXTBq4Xov54vbmoDP9eKTZCzJpays+49NNCVwGhASptAUAAABgeyJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjgwMDAiLCJmZWF0dXJlIjoiVW5yZXN0cmljdGVkU2hhcmVkQXJyYXlCdWZmZXIiLCJleHBpcnkiOjE2Mzk1MjYzOTl9">
+  <meta name="viewport" content="initial-scale=1,width=device-width" />
+  <title>New udSDK Esri Demo</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/dark/main.css" crossorigin/>
+  <script src="https://js.arcgis.com/4.20/" crossorigin></script>
+
+  <link rel="stylesheet" href="./css/main.css" />
+  <link rel="stylesheet" href="./css/buttons.css" />
+  <script src="./lib/cameraControl.js"></script>
+  <script src="./lib/loadModel.js"></script>
+  <script src="./lib/toggleChosen.js"></script>
+  <head>
+    <!-- A simple fragment shader -->
+    <script id="shader-fs" type="x-shader/x-fragment">
+      #extension GL_EXT_frag_depth : enable
+      precision highp float;
+
+      //RGBA to Float from https://github.com/ihmeuw/glsl-rgba-to-float/blob/master/index.glsl
+      // Denormalize 8-bit color channels to integers in the range 0 to 255.
+      ivec4 floatsToBytes(vec4 inputFloats, bool littleEndian) {
+        ivec4 bytes = ivec4(inputFloats * 255.0);
+        return (
+          littleEndian
+          ? bytes.abgr
+          : bytes
+        );
+      }
+
+      // Break the four bytes down into an array of 32 bits.
+      void bytesToBits(const in ivec4 bytes, out bool bits[32]) {
+        for (int channelIndex = 0; channelIndex < 4; ++channelIndex) {
+          float acc = float(bytes[channelIndex]);
+          for (int indexInByte = 7; indexInByte >= 0; --indexInByte) {
+            float powerOfTwo = exp2(float(indexInByte));
+            bool bit = acc >= powerOfTwo;
+            bits[channelIndex * 8 + (7 - indexInByte)] = bit;
+            acc = mod(acc, powerOfTwo);
+          }
+        }
+      }
+
+      // Compute the exponent of the 32-bit float.
+      float getExponent(bool bits[32]) {
+        const int startIndex = 1;
+        const int bitStringLength = 8;
+        const int endBeforeIndex = startIndex + bitStringLength;
+        float acc = 0.0;
+        int pow2 = bitStringLength - 1;
+        for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
+          acc += float(bits[bitIndex]) * exp2(float(pow2--));
+        }
+        return acc;
+      }
+
+      // Compute the mantissa of the 32-bit float.
+      float getMantissa(bool bits[32], bool subnormal) {
+        const int startIndex = 9;
+        const int bitStringLength = 23;
+        const int endBeforeIndex = startIndex + bitStringLength;
+        // Leading/implicit/hidden bit convention:
+        // If the number is not subnormal (with exponent 0), we add a leading 1 digit.
+        float acc = float(!subnormal) * exp2(float(bitStringLength));
+        int pow2 = bitStringLength - 1;
+        for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
+          acc += float(bits[bitIndex]) * exp2(float(pow2--));
+        }
+        return acc;
+      }
+
+      // Parse the float from its 32 bits.
+      float bitsToFloat(bool bits[32]) {
+        float signBit = float(bits[0]) * -2.0 + 1.0;
+        float exponent = getExponent(bits);
+        bool subnormal = abs(exponent - 0.0) < 0.01;
+        float mantissa = getMantissa(bits, subnormal);
+        float exponentBias = 127.0;
+        return signBit * mantissa * exp2(exponent - exponentBias - 23.0);
+      }
+
+      // Decode a 32-bit float from the RGBA color channels of a texel.
+      float rgbaToFloat(vec4 texelRGBA, bool littleEndian) {
+        ivec4 rgbaBytes = floatsToBytes(texelRGBA, littleEndian);
+        bool bits[32];
+        bytesToBits(rgbaBytes, bits);
+        return bitsToFloat(bits);
+      }
+
+      //Input Format
+      varying vec2 v_uv;
+
+      uniform sampler2D u_texture;
+      uniform sampler2D u_depth;
+
+      void main()
+      {
+        vec4 col = texture2D(u_texture, v_uv);
+        float depth = rgbaToFloat(texture2D(u_depth, v_uv), true);
+
+        gl_FragColor = vec4(col.zyx, 1.0);
+        gl_FragDepthEXT = depth * 0.5 + 0.5;
+      }
+    </script>
+
+    <!-- A simple vertex shader -->
+    <script id="shader-vs" type="x-shader/x-vertex">
+      attribute vec2 aVertexPosition;
+      attribute vec2 aVertexUVs;
+
+      varying vec2 v_uv;
+
+      void main(void) {
+        gl_Position = vec4(aVertexPosition.xy, 0.0, 1.0);
+        v_uv = vec2(aVertexUVs.x, 1.0 - aVertexUVs.y);
+      }
+    </script>
+
+    <!-- Our application -->
+    <script>
+      var udSDKJSReady = 0;
+      var viewer = null;
+
+      require(["esri/config"], 
+        function(esriConfig) {
+          // esriConfig.apiKey = "AAPK354e42392ee54124b9ae95596b457633LgZlrhexVdoPtOKHCAzeQAyPO5d7RNZFK6pYGFS2vGFzdAzdZiLH5aFxvSfPref8";
+          esriConfig.request.trustedServers.push("https://www.arcgis.com");
+          esriConfig.request.trustedServers.push("https://www.euclideon.com");
+          esriConfig.request.trustedServers.push("http://localhost:8000");
+        }
+      );
+      
+      require([
+        "esri/Map",
+        "esri/Viewpoint",
+        "esri/views/SceneView",
+        "esri/views/3d/externalRenderers",
+        "esri/widgets/Home",
+        "esri/widgets/Search",
+        "esri/widgets/Legend",
+        "esri/widgets/Expand",
+        "esri/layers/FeatureLayer",
+        "esri/layers/SceneLayer",
+        "esri/symbols/ExtrudeSymbol3DLayer",
+        "esri/symbols/WebStyleSymbol"
+      ], function(
+        Map,
+        Viewpoint,
+        SceneView,
+        externalRenderers,
+        Home,
+        Search,
+        Legend,
+        Expand,
+        FeatureLayer,
+        SceneLayer,
+        ExtrudeSymbol3DLayer,
+        WebStyleSymbol
+      ) {
+        // Set up the external renderer
+        const udSDKRenderer = {
+          // Input data
+          view: null,
+          prevWidth: 0,
+          prevHeight: 0,
+
+          // Vertex and index buffers
+          vbo: null,
+          texture: null,
+          textureDepth: null,
+
+          // Shader
+          program: null,
+
+          // Shader attribute and uniform locations
+          programAttribVertexPosition: null,
+          programAttribVertexTexture: null,
+
+          textureLocation: null,
+          textureLocationDepth: null,
+
+          // Temporary matrices and vectors,
+          // used to avoid allocating objects in each frame.
+          // tempMatrix4: new Float32Array(16),
+          // tempMatrix3: new Float32Array(9),
+          // tempVec3: new Float32Array(3),
+
+          /**
+           * Constructor
+           */
+          constructor: function(view) {
+            this.view = view;
+          },
+
+          /**
+           * Called once after this external renderer is added to the scene.
+           * This is part of the external renderer interface.
+           */
+          setup: function(context) {
+            this.initShaders(context);
+
+            this.prevWidth = context.camera.width;
+            this.prevHeight = context.camera.height;
+
+            var gl = context.gl;
+
+            this.vbo = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+
+            var vertData = new Float32Array([-1,-1,0,1,  1,-1,1,1,  1,1,1,0, -1,-1,0,1,  1,1,1,0,  -1,1,0,0]);
+            gl.bufferData(gl.ARRAY_BUFFER, vertData, gl.STATIC_DRAW);
+
+            var position = gl.getAttribLocation(this.program, "aVertexPosition");
+            gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
+            gl.enableVertexAttribArray(position);
+
+            var texCoord = gl.getAttribLocation(this.program, "aVertexUVs");
+            gl.vertexAttribPointer(texCoord, 2, gl.FLOAT, false, 16, 8);
+            gl.enableVertexAttribArray(texCoord);
+
+            data = new Uint8Array([255, 255, 255, 255]);
+            // data[0] = data[1] = data[2] = data[3] = 255;
+
+            this.texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, this.texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+            this.textureDepth = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+          },
+
+          /**
+           * Called each time the scene is rendered.
+           * This is part of the external renderer interface.
+           */
+          render: function(context) {
+            var gl = context.gl;
+
+            gl.enable(gl.DEPTH_TEST);
+            gl.disable(gl.CULL_FACE);
+            gl.disable(gl.BLEND);
+
+            gl.useProgram(this.program);
+            gl.uniform1i(this.textureLocation, 0);
+            gl.uniform1i(this.textureLocationDepth, 1);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, this.texture);
+
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
+
+            var width = context.camera.width / 2; // 1024
+            var height = context.camera.height / 2; // 1024
+
+            if (udSDKJSReady == 2)
+            {
+              // If the window's size has changed.
+              if (width != this.prevWidth || height != this.prevHeight)
+              {
+                this.prevWidth = width;
+                this.prevHeight = height;
+                // We need width x height x 4 byte data for color buffer (RGBA)
+                var data = new Uint8Array(width * height * 4);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, this.texture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+                udSDKJS_ResizeScene(width, height, 0, 0);
+              }
+
+              var v = context.camera.viewMatrix;
+              udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+              var v = context.camera.projectionMatrix;
+              udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+              
+              udSDKJS_RenderQueue();
+
+              // Get memory address from the color buffer
+              var ptr = udSDKJS_GetColourBuffer();
+              var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+
+              gl.activeTexture(gl.TEXTURE0);
+              gl.bindTexture(gl.TEXTURE_2D, this.texture);
+              gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
+
+              var ptr = udSDKJS_GetDepthBuffer();
+              var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+
+              gl.activeTexture(gl.TEXTURE1);
+              gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
+              gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dataHeap);
+
+              gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
+
+              var position = gl.getAttribLocation(this.program, "aVertexPosition");
+              gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 16, 0);
+              gl.enableVertexAttribArray(position);
+
+              var texCoord = gl.getAttribLocation(this.program, "aVertexUVs");
+              gl.vertexAttribPointer(texCoord, 2, gl.FLOAT, false, 16, 8);
+              gl.enableVertexAttribArray(texCoord);
+
+              gl.drawArrays(gl.TRIANGLES, 0, 6);
+            }
+
+            // Draw continuously
+            externalRenderers.requestRender(view);
+
+            // cleanup
+            context.resetWebGLState();
+
+            // garbage collect
+            v = null;
+            data = null;
+            dataHeap = null;
+          },
+
+          /**
+           * Loads a shader from a <script> html tag
+           */
+          getShader: function(gl, id) {
+            var shaderScript = document.getElementById(id);
+            if (!shaderScript) 
+            {
+              return null;
+            }
+
+            var str = "";
+            var k = shaderScript.firstChild;
+            while (k) 
+            {
+              if (k.nodeType == 3) 
+              {
+                str += k.textContent;
+              }
+              k = k.nextSibling;
+            }
+
+            var shader;
+            if (shaderScript.type == "x-shader/x-fragment") 
+            {
+              shader = gl.createShader(gl.FRAGMENT_SHADER);
+            } 
+            else if (shaderScript.type == "x-shader/x-vertex") 
+            {
+              shader = gl.createShader(gl.VERTEX_SHADER);
+            } 
+            else 
+            {
+              return null;
+            }
+
+            gl.shaderSource(shader, str);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) 
+            {
+              alertUnsupported()
+              // alert(gl.getShaderInfoLog(shader));
+              return null;
+            }
+
+            return shader;
+          },
+
+          /**
+           * Links vertex and fragment shaders into a GLSL program
+           */
+          linkProgram: function(gl, fragmentShader, vertexShader) {
+            var shaderProgram = gl.createProgram();
+
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) 
+            {
+              return null;
+            }
+            return shaderProgram;
+          },
+
+          /**
+           * Initializes all shaders requried by the application
+           */
+          initShaders: function(context) {
+            var gl = context.gl;
+
+            console.log("Loading Shaders!");
+            gl.getExtension("EXT_frag_depth");
+
+            console.log("Has fragdepth=" + (gl.getSupportedExtensions().indexOf("EXT_frag_depth") >= 0));
+
+            var fragmentShader = this.getShader(gl, "shader-fs");
+            var vertexShader = this.getShader(gl, "shader-vs");
+            this.program = this.linkProgram(gl, fragmentShader, vertexShader);
+            if (!this.program) {
+              alertUnsupported()
+            }
+
+            this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
+            this.textureLocationDepth = gl.getUniformLocation(this.program, "u_depth");
+          }
+        };
+
+        // Create the map and view
+        var map = new Map({
+          basemap: "streets",
+          ground: "world-elevation"
+        });
+
+        var view = new SceneView({
+          container: "viewDiv",
+          map: map,
+          viewingMode: "global",
+          qualityProfile: "high",
+          maximumNumberOfFeatures: 20000,
+          maximumNumberOfFeaturesExceeded: true,
+          environment: {
+            lighting: {
+              directShadowsEnabled: true
+            }
+          },
+          camera: {
+            position: {
+              x: 0,
+              y: 0,
+              z: 30000000,
+            },
+            heading: 359.47,
+            tilt: 0.2
+          },
+          // Pop-up configureation
+          popup: {
+            dockEnabled: true,
+            dockOptions: {
+              // buttonEnabled: false,
+              breakpoint: false,
+              position: "top-right"
+            }
+          }
+        });
+        // assign viewer with this view.
+        viewer = view;
+        
+
+        var homeBtn = new Home({
+          view: view,
+          viewpoint: new Viewpoint(defaultViewpoint())
+        });
+
+        var search = new Search({
+          view: view
+        });
+
+        // Extrude 3D Symbol for building footprint
+        const setSymbolColor = (color) => {
+          return {
+            // autocasts as new PolygonSymbol3D()
+            type: "polygon-3d",
+            symbolLayers: [{
+              // autocasts as new ExtrudeSymbol3DLayer()
+              type: "extrude", 
+              material: {
+                color: color
+              },
+              edges: {
+                // autocasts as new SolidEdges3D()
+                type: "solid",
+                color: [50, 50, 50, 0.5]
+              }
+            }]
+          };
+        }
+
+        // Color renderer for building footprint
+        const renderer = {
+          // autocasts as new UniqueValueRenderer()
+          type: "unique-value",
+          defaultSymbol: setSymbolColor("#FFFFFF"),
+          defaultLabel: "Other",
+          field: "footprint_type",
+          uniqueValueInfos: [
+          {
+            value: "Structure",
+            symbol: setSymbolColor("#73DFFF"),
+            label: "Structure"
+          },
+          {
+            value: "Tram Stop",
+            symbol: setSymbolColor("#FC921F"),
+            label: "Tram Stop"
+          },
+          {
+            value: "Bridge",
+            symbol: setSymbolColor("#ED5151"),
+            label: "Bridge"
+          },
+          {
+            value: "Train Platform",
+            symbol: setSymbolColor("#149ECE"),
+            label: "Train Platform"
+          }],
+          visualVariables: [
+            {
+              type: "size",
+              field: "structure_extrusion"
+            }
+          ]
+        }
+
+        // Feature layer for building footprint
+        const buildingsLayer = new FeatureLayer({
+          url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/2020_building_footprints/FeatureServer/0",
+          copyright: "City of Melbourne Open Data Team",
+          renderer: renderer,
+          opacity: 0.9,
+          refreshInterval: 0.2,
+          elevationInfo: {
+            mode: "relative-to-ground"
+          },
+          title: "Melbourne Build Footprint 2020",
+          popupEnabled: true,
+          popupTemplate: {
+            title: "Building #{ObjectId}",
+            content: [
+            {
+              type: "fields",
+              fieldInfos: [
+              {
+                fieldName: "footprint_type",
+                label: "Type"
+              },
+              {
+                fieldName: "roof_type",
+                label: "Roof Type"
+              },
+              {
+                fieldName: "structure_extrusion",
+                label: "Height (m)"
+              },
+              {
+                fieldName: "structure_id",
+                label: "Structure ID"
+              }]
+            }]
+          }
+        });
+
+        // Get 3D Symbol for light posts
+        const lightsSymbol = {
+          type: "web-style",
+          name: "Light_On_Post_-_Light_on",
+          styleName: "EsriRealisticStreetSceneStyle"
+        }
+
+        // Renderer for light posts
+        const lightsRenderer = {
+          // autocasts as new SimpleRenderer()
+          type: "simple",
+          symbol: lightsSymbol,
+          label: "Feature lights"
+        };
+
+        // Feature layer for light posts
+        const lightsLayer = new FeatureLayer({
+          url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/feature_lighting_in_city_of_melbourne/FeatureServer/0",
+          copyright: "City of Melbourne Open Data Team",
+          renderer: lightsRenderer,
+          refreshInterval: 0.2,
+          elevationInfo: {
+            mode: "relative-to-ground"
+          },
+          title: "Feature Lighting in City of Melbourne",
+          popupEnabled: true,
+          popupTemplate: {
+            title: "Light #{asset_number}",
+            content: [
+            {
+              type: "fields",
+              fieldInfos: [
+                {
+                  fieldName: "asset_description",
+                  label: "Description"
+                },
+                {
+                  fieldName: "lamp_rating_w",
+                  label: "Lamp Rating (Watt)"
+                },
+                {
+                  fieldName: "lat",
+                  label: "Latitude"
+                },
+                {
+                  fieldName: "lon",
+                  label: "Longtitude"
+                }
+              ]
+            }]
+          },
+        });
+
+        // Get Symbol for light posts - Render 2D
+        const treeSymbol = {
+          type: "simple-fill",  // autocasts as new SimpleFillSymbol()
+          color: "green",
+          outline: {  // autocasts as new SimpleLineSymbol()
+            color: [128, 128, 128, 0.5],
+            width: "0.5px"
+          }
+        }
+
+        // Renderer for ree canopies
+        const treeRenderer = {
+          // autocasts as new SimpleRenderer()
+          type: "simple",
+          symbol: treeSymbol,
+          label: "Tree areas"
+        };
+
+        // Feature Layer for Tree Canopies
+        const treesLayer = new FeatureLayer({
+          url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/tree_canopies_2016_urban_forest/FeatureServer/0",
+          copyright: "City of Melbourne Open Data Team",
+          renderer: treeRenderer,
+          refreshInterval: 0.2,
+          elevationInfo: {
+            mode: "on-the-ground"
+          },
+          title: "Tree Canopies 2016 in City of Melbourne",
+          popupEnabled: true,
+          popupTemplate: {
+            title: "Area #{area}",
+            content: [
+            {
+              type: "fields",
+              fieldInfos: [
+                {
+                  fieldName: "Shape__Area",
+                  label: "Area (m²)"
+                },
+                {
+                  fieldName: "Shape__Length",
+                  label: "Length (m)"
+                },
+              ]
+            }]
+          },
+        });
+
+        // Add features into the scene
+        // map.add(buildingsLayer);
+        map.add(lightsLayer);
+        map.add(treesLayer);
+
+        var legend = new Legend({
+          view: view,
+          layerInfos: [
+            {
+              layer: map.layers.getItemAt(0),
+              title: "Footprint Type"
+            },
+            {
+              layer: map.layers.getItemAt(1),
+              title: "Lights"
+            },
+            {
+              layer: map.layers.getItemAt(2),
+              title: "Tree Canopies"
+            },
+          ],
+
+        });
+
+        var lgExpand = new Expand({
+          view: view,
+          content: legend
+        });
+
+        var shExpand = new Expand({
+          view: view,
+          content: search
+        });
+
+        view.when(function() {
+          // Add the home button to the top left corner of the view
+          view.ui.add(homeBtn, "top-left");
+
+          // Add the home button to the top right corner of the view
+          view.ui.add(shExpand, "top-right");
+
+          // Add the home button to the bottom right corner of the view
+          view.ui.add(lgExpand, "top-right");
+
+          // Move the camera to view Australia.
+          moveCameraToAus(view);
+
+          document.getElementById("loginBtn").addEventListener("click", loginVDK);
+          function loginVDK(ev) {
+            if(udSDKJSReady == 1)
+              document.getElementById("statusLoading").style.display = "block";
+              setTimeout(async() => {
+                LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
+              }, 100);
+          }
+        });
+
+        // Install our external renderer
+        externalRenderers.add(view, udSDKRenderer);
+
+        // const getMB = (byte) => {
+        //   let kilo = 1024;
+        //   let mega = kilo * 1024;
+        //   return Math.round(byte / mega);
+        // }
+
+        // setInterval(() => {
+        //   var perf = view.performanceInfo;
+        //   console.log("Used: ", getMB(perf.usedMemory), "/", getMB(perf.totalMemory), "MB", 
+        //   "\nQuality: ", Math.round(perf.quality * 100), "%",
+        //   "\nFeature (Building): ")
+        // }, 5000);
+      });
+    </script>
+    <div class="head-container">
+      <div class="title">
+        <img src="./img/EuclideonLogo_Std.svg" width="150px" alt="logo"/>
+        <h1>New udSDK ESRI Demo</h1>
+      </div>
+      <br/>
+    </div>
+  </head>
+  <body>
+    <script>
+      const udSDKjs = document.createElement('script');
+      udSDKjs.src = './udSDK/udSDKjs.js';
+      document.body.appendChild(udSDKjs);
+
+      const easyudSDKjs = document.createElement('script');
+      easyudSDKjs.src = './udSDK/easyudSDKjs.js';
+      document.body.appendChild(easyudSDKjs);
+    </script>
+    <div id="container">
+      <div id="left">
+        <div id="viewDiv" class="viewDiv"></div>
+      </div>
+      <div id="right">
+        <div id="navigator" class="navigator">
+          <div id="navBtn"></div>
+        </div>
+      </div>
+    </div>
+    <div id="statusLoading" class="statusBox">
+      <div class="loader"></div>
+      <span>Loading...</span>
+    </div>
+    <div class="loginBox" id="loginBox">
+      <table>
+        <h2>Euclideon Login</h2>
+        <tr><td><label for="usernameTxt">Email: </label></td>
+          <td><input id="usernameTxt" type="text" placeholder="Email" /></td></tr>
+        <tr><td><label for="passwordText">Password: </label></td>
+          <td><input id="passwordTxt" type="password" placeholder="Password" /></td></tr>
+      </table>
+      <button id="loginBtn">Login</button><br/>
+      <span class="errorMessage" id="errorMessage"></span>
+    </div>
+    <div class="unsupportMsg">
+      <h1>Sorry, this device is not supported.</h1>
+      <h2>
+        Viewing on a mobile or tablet device? This demo is a desktop application only. We support the latest versions of Google Chrome and Microsoft Edge on Windows, Mac, and Ubuntu.
+      </h2>
+      <a href="https://www.euclideon.com/udsdk/#udstream-nav-demo" rel="noopener noreferrer">Go Back</a>
+    </div>
+    <script>
+      // places in an object array...
+      const places = [
+        { name: "Melbourne", full: "Melbourne City", css_class: "mel" },
+        { name: "Bendigo", full: "Bendigo City", css_class: "bxg" },
+      ];
+
+      function createBtn(className, id, value)
+      {
+        let btn = document.createElement('button');
+        btn.className = "btn " + className;
+        btn.id = id;
+        btn.value = value;
+        btn.innerHTML = "<img src=\"./img/marker.png\" width=16px alt=\"" + value + "\"/> "+ value;
+        return btn;
+      }
+
+      function onClickMap(e) 
+      {
+        // If clicked on the image, return alt, if clicked on button, return value;
+        var val = e.target.value ? e.target.value : e.target.alt;
+        var full = "";
+        var name = ""
+        places.map((place) => {
+          if (val === place.name) {
+            full = place.full;
+            name = place.name;
+            return true;
+          }
+        });
+        // From loadModel.js
+        unload_LoadUDSModel(val);
+        // From cameraControl.js
+        flyCamera(viewer, val, 5.0);
+        // From toggleChosen.js
+        onToggleChosen(e);
+      }
+
+      function loadClickable() 
+      {
+        // Map the array only if login is successful
+        places.map((place, i) => {
+          // Create clickable buttons on the left hand side map.
+          var btn = createBtn(place.css_class, place.name, place.name);
+
+          // Attach the button to the container."
+          document.getElementById("navBtn").appendChild(btn);
+
+          // Add item event listener
+          btn.addEventListener('click', e => onClickMap(e));
+        })
+      }
+
+      function CreateVDKPlugin()
+      {
+        udSDKJSReady = 1;
+        document.getElementById("loginBox").style.display = "block";
+        setTimeout(() => {
+          document.getElementById("statusLoading").style.display = "none";
+        }, 1000)
+      };
+
+      function LoginVDKPlugin(username, password)
+      {
+        if (udSDKJSReady != 1)
+          Alert("Not ready to login!");
+
+        var status = udSDKJS_Login(username, password, "Esri ArcScene");
+
+        if (status == 0)
+        {
+          console.log("udSDKJS Logged in.");
+
+          loadClickable();
+
+          udSDKJSReady = 2;
+          document.getElementById("loginBox").style.display = "none";
+          document.getElementById("statusLoading").style.display = "none";
+        }
+        else
+        {
+          if (status == 13)
+            document.getElementById("errorMessage").innerText = "udSDKJS Error / Email or Password Wrong";
+          else
+            document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + status;
+        }
+      }
+
+      var Module = {
+        noExitRuntime: true,
+        preRun: [],
+        postRun: CreateVDKPlugin,
+        setStatus: function(text) {
+          if (!Module.setStatus.last)
+            Module.setStatus.last = { time: Date.now(), text: '' };
+
+          if (text === Module.setStatus.last.text)
+            return;
+
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30)
+            return; // if this is a progress update, skip it if too soon
+
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+          if (m) {
+            text = m[1];
+          }
+
+          console.log(text);
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function(left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+
+      Module.setStatus('Downloading...');
+    </script>
+    <script>
+
+      // Calculate container's height
+      function calcContHeight(width) 
+      {
+        return (width >= 524 ? "16%" : width >= 397 ? "20%" : width >= 270? "24%" : "45%");
+      }
+    
+      // Listen on windows resize
+      function onWindowResize() 
+      {
+        // Get width and height of the window excluding scrollbars
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        // less than 1024 px define as mobile device
+        if(w <= 1024) 
+        {
+          // document.getElementById("left").style.height = (udSDKJSReady == 2) ? calcContHeight(w) : "3%";
+          document.getElementById("left").style.height = parseInt(h * 9 / 16)+"px";
+          document.getElementById("viewDiv").style.height = parseInt(h * 9 / 16)+"px";
+          document.getElementById("statusLoading").style.top = parseInt((h * 9 / 16) - 100)+"px";
+        }
+        else 
+        {
+          document.getElementById("left").style.height =  parseInt(w * 0.8 * 9 / 16)+"px"; // "690px";
+          // Change to 16:9 Aspect Ratio.
+          document.getElementById("viewDiv").style.height = parseInt(w * 0.8 * 9 / 16)+"px";
+          // Fix loading indicator pos
+          document.getElementById("statusLoading").style.top = parseInt((w * 0.8 * 9 / 16) - 100)+"px";
+          // Minimum size of the window must not smaller than 600px.
+          if(parseInt(document.getElementById("viewDiv").style.height) < 600) 
+          {
+            document.getElementById("viewDiv").style.height = "600px";
+            document.getElementById("statusLoading").style.top = "500px";
+          }
+            
+          // Set the container size as well prevent text being hided by the cesium window.
+          document.getElementById("left").style.height = document.getElementById("viewDiv").style.height;
+          
+        }
+      }
+
+      function isMobileDevice() 
+      {
+        // Mobile Devices
+        if(navigator.userAgent.toLowerCase().match(/mobile/i)) 
+        {
+          console.log("contains mobile: ", true);
+          return true;
+        }
+        // Tablet Devices
+        if(navigator.maxTouchPoints && navigator.maxTouchPoints > 2) 
+        {
+          console.log("max touch points: ", navigator.maxTouchPoints);
+          return true;
+        }
+        // console.log("Not mobile device!");
+        return false;
+      }
+
+      function isSupportSAB() 
+      {
+        try 
+        {
+          // Try creating a share array buffer object.
+          const buffer = new SharedArrayBuffer(8);
+        }
+        catch (e) 
+        {
+          console.log("Shared Array Buffer Unsupported!");
+          return false;
+        }
+        return true;
+      }
+
+      function hideApp() 
+      {
+        // Don't hide app directly as the the warning message will disappear as well.
+        document.getElementById("container").style.display = "none";
+        document.getElementsByClassName("descTextbox")[0].style.display = "none";
+        document.getElementsByClassName("unsupportMsg")[0].style.display = "block";
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("statusLoading").style.display = "none";
+      }
+
+      function alertUnsupported() 
+      {
+        if(isMobileDevice() || !isSupportSAB()) 
+        {
+          hideApp();
+          throw new Error("This device is unsupported!");
+        }
+      }
+
+      // Attaching the event listener function to window's resize event
+      window.addEventListener("resize", onWindowResize);
+      // A load event detects whether users are using unsupported devices.
+      window.addEventListener("load", alertUnsupported);
+      // Calling the function for the first time
+      onWindowResize();
+    </script>
+  </body>
+</html>

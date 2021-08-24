@@ -1,0 +1,5 @@
+/.vscode
+*.py
+/.arcgis_lib
+/udSDK
+esri.html
