@@ -2,6 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta http-equiv="origin-trial" content="AvcnlD3Jh74eZ6jq82HUr96gI1vygNstBwiSJAdv9I4zH+0grab5BJHIjLVz2QoZWgpgp+yKFnX7Iyhhd5IJSgkAAAB7eyJvcmlnaW4iOiJodHRwczovL3d3dy5ldWNsaWRlb24uY29tOjQ0MyIsImZlYXR1cmUiOiJVbnJlc3RyaWN0ZWRTaGFyZWRBcnJheUJ1ZmZlciIsImV4cGlyeSI6MTYzOTUyNjM5OSwiaXNTdWJkb21haW4iOnRydWV9">
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
     <title>udSDK Esri Demo</title>
 
@@ -138,14 +139,12 @@
       var udSDKJSReady = 0;
 
       require([
-        "esri/core/declare",
         "esri/Map",
         "esri/views/SceneView",
         "esri/views/3d/externalRenderers",
         "esri/widgets/Home",
         "esri/widgets/Search"
       ], function(
-        declare,
         Map,
         SceneView,
         externalRenderers,
@@ -153,7 +152,7 @@
         Search
       ) {
         // Set up the external renderer
-        var VaultSDKRenderer = declare(null, {
+        var udSDKRenderer = {
           // Input data
           view: null,
           prevWidth: 0,
@@ -394,7 +393,7 @@
             this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
             this.textureLocationDepth = gl.getUniformLocation(this.program, "u_depth");
           }
-        });
+        };
 
         // Create the map and view
         var map = new Map({
@@ -441,15 +440,21 @@
         });
 
         // Install our external renderer
-        var vaultSDKRenderer = new VaultSDKRenderer(view);
-        externalRenderers.add(view, vaultSDKRenderer);
+        externalRenderers.add(view, udSDKRenderer);
       });
     </script>
-    <script async src=udSDKjs.js></script>
-    <script async src=easyudSDKjs.js></script>
   </head>
 
   <body>
+    <script>
+      const udSDKjs = document.createElement('script');
+      udSDKjs.src = './udSDKjs.js';
+      document.body.appendChild(udSDKjs);
+
+      const easyudSDKjs = document.createElement('script');
+      easyudSDKjs.src = './easyudSDKjs.js';
+      document.body.appendChild(easyudSDKjs);
+    </script>
     <div id="viewDiv"></div>
     <div id="loginBox">
         <span id="errorMessage" style="color: red;"></span>
@@ -469,7 +474,7 @@
         if (udSDKJSReady != 1)
           Alert("Not ready to login!");
 
-        var status = udSDKJS(username, password, "Esri ArcScene");
+        var status = udSDKJS_Login(username, password, "Esri ArcScene");
 
         if (status == 0)
         {
