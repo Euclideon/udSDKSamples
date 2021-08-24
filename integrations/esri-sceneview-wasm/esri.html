@@ -6,8 +6,8 @@
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
     <title>udSDK Esri Demo</title>
 
-    <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/light/main.css" />
-    <script src="https://js.arcgis.com/4.14/"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.20/"></script>
 
     <style>
       html,
@@ -125,12 +125,25 @@
     <script id="shader-vs" type="x-shader/x-vertex">
       attribute vec2 aVertexPosition;
       attribute vec2 aVertexUVs;
-
+      uniform sampler2D u_texture;
       varying vec2 v_uv;
 
+      // A magenta color for referencing
+      // Refer to line 311 to 315, we set a point to magenta color.
+      // And we will compare the magenta point with this vec4 magenta.
+      vec4 magenta = vec4(1.0, 0.0, 1.0, 1.0);
+      vec4 topLeft;
+
       void main(void) {
+        // Correction work
+        topLeft = texture2D(u_texture, vec2(0.0, 0.0));
+        // We want to check if the magenta point is rendered in top left corner
+        // If not, flip it
+        if (topLeft == magenta)
+          v_uv = vec2(aVertexUVs.x, aVertexUVs.y);
+        else
+          v_uv = vec2(aVertexUVs.x, 1.0 - aVertexUVs.y);
         gl_Position = vec4(aVertexPosition.xy, 0.0, 1.0);
-        v_uv = vec2(aVertexUVs.x, 1.0 - aVertexUVs.y);
       }
     </script>
 
@@ -286,6 +299,11 @@
 
               var ptr = udSDKJS_GetColourBuffer();
               var data = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+              // Magenta point
+              data[0] = 255;
+              data[1] = 0;
+              data[2] = 255;
+              data[3] = 255;
 
               gl.activeTexture(gl.TEXTURE0);
               gl.bindTexture(gl.TEXTURE_2D, this.texture);
