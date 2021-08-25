@@ -8,13 +8,14 @@ const udsModels = [
 
 // Global variables.
 var userChosen = null;
+var showModel = true;
 
 /**
  * Check whether user has model rendered.
  * @returns boolean
  */
 const isLoaded = () => {
-  return (userChosen != null);
+  return (userChosen !== null);
 }
 
 /**
@@ -47,6 +48,9 @@ const getModel = (modelName) => {
 const loadUDSModel = async (model) => {
   if (model === null)
     return false;
+  // Do not load the model if the model is hidden by user.
+  if (showModel === false)
+    return false;
   let loadModel = await udSDKJS_LoadModel(model.url);
   udSDKJS_RenderQueueAddModel(loadModel, model.eval[0], model.eval[1]);
   console.log("Model Loaded: ", model.key);
@@ -67,6 +71,9 @@ const unload_LoadUDSModel = async (modelName) => {
     return false;
 
   unloadUDSModels();
+  // Do not load the model if the model is hidden by user.
+  if (showModel === false)
+    return false;
   let loadModel = await udSDKJS_LoadModel(model.url);
   udSDKJS_RenderQueueAddModel(loadModel, model.eval[0], model.eval[1]);
   console.log("Model Loaded: ", model.key);
