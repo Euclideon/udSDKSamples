@@ -220,6 +220,30 @@ body {
   animation: spin 1s linear infinite;
 }
 
+.options {
+  padding: 5px;
+  background-color: #151515;
+  width: 200px;
+  letter-spacing: 1.8;
+  font-size: 110%;
+  display: none;
+}
+
+.options input {
+  vertical-align: top;
+}
+
+/* Scaled up checkboxes for better user experience */
+input[type=checkbox] {
+  /* Double-sized Checkboxes */
+  -ms-transform: scale(1.25); /* IE */
+  -moz-transform: scale(1.25); /* FF */
+  -webkit-transform: scale(1.25); /* Safari and Chrome */
+  -o-transform: scale(1.25); /* Opera */
+  transform: scale(1.25);
+  /* padding: 10px; */
+}
+
 @media only screen and (max-width: 1024px) {
   /* For mobile devices: */
   

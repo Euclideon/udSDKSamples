@@ -3,7 +3,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="origin-trial" content="AuIOI30TB29gw4buNQFFWNexGiDwI8ynu05FxU2JLMIXTBq4Xov54vbmoDP9eKTZCzJpays+49NNCVwGhASptAUAAABgeyJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjgwMDAiLCJmZWF0dXJlIjoiVW5yZXN0cmljdGVkU2hhcmVkQXJyYXlCdWZmZXIiLCJleHBpcnkiOjE2Mzk1MjYzOTl9">
   <meta name="viewport" content="initial-scale=1,width=device-width" />
-  <title>New udSDK Esri Demo</title>
+  <title>Euclideon City Manager</title>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/dark/main.css" crossorigin/>
   <script src="https://js.arcgis.com/4.20/" crossorigin></script>
@@ -136,6 +136,10 @@
     <script>
       var udSDKJSReady = 0;
       var viewer = null;
+      var resolution = 1.0;
+      var buildingsLayer;
+      var lightsLayer;
+      var treesLayer;
 
       require(["esri/config"], 
         function(esriConfig) {
@@ -274,15 +278,15 @@
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
 
-            var width = context.camera.height; // 1024
-            var height = context.camera.height; // 1024
+            var width = context.camera.height * resolution; // 1024
+            var height = context.camera.height * resolution; // 1024
             if (udSDKJSReady == 2)
             {
               // If the window's size has changed.
               if (width != this.prevWidth || height != this.prevHeight)
               {
-                this.prevWidth = width;
-                this.prevHeight = height;
+                this.prevWidth = width  * resolution;
+                this.prevHeight = height * resolution;
                 // We need width x height x 4 byte data for color buffer (RGBA)
                 var data = new Uint8Array(width * height * 4);
 
@@ -442,7 +446,7 @@
 
         // Create the map and view
         var map = new Map({
-          basemap: "hybrid",
+          basemap: "streets", // hybrid
           ground: "world-elevation"
         });
 
@@ -547,7 +551,7 @@
         }
 
         // Feature layer for building footprint
-        const buildingsLayer = new FeatureLayer({
+        buildingsLayer = new FeatureLayer({
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/2020_building_footprints/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: renderer,
@@ -600,7 +604,7 @@
         };
 
         // Feature layer for light posts
-        const lightsLayer = new FeatureLayer({
+        lightsLayer = new FeatureLayer({
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/feature_lighting_in_city_of_melbourne/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: lightsRenderer,
@@ -656,7 +660,7 @@
         };
 
         // Feature Layer for Tree Canopies
-        const treesLayer = new FeatureLayer({
+        treesLayer = new FeatureLayer({
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/tree_canopies_2016_urban_forest/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: treeRenderer,
@@ -719,6 +723,12 @@
           content: search
         });
 
+        var optExpand = new Expand({
+          expandIconClass: "esri-icon-settings",
+          view: view,
+          content: document.getElementById("options")
+        })
+
         view.when(function() {
           // Add the home button to the top left corner of the view
           view.ui.add(homeBtn, "top-left");
@@ -726,11 +736,13 @@
           // Add the home button to the top right corner of the view
           view.ui.add(shExpand, "top-right");
 
-          // Add the home button to the bottom right corner of the view
+          // Add the home button to the top right corner of the view
           view.ui.add(lgExpand, "top-right");
 
-          // Move the camera to view Australia.
-          moveCameraToAus(view);
+          // Add the expandable menu to the top-right corner of the view
+          view.ui.add(optExpand, "top-right");
+
+          document.getElementById("options").style.display = "block";
 
           document.getElementById("loginBtn").addEventListener("click", loginVDK);
           function loginVDK(ev) {
@@ -740,6 +752,9 @@
                 LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
               }, 100);
           }
+
+          // Move the camera to view Australia.
+          moveCameraToAus(view);
         });
 
         // Install our external renderer
@@ -758,11 +773,52 @@
         //   "\nFeature (Building): ")
         // }, 5000);
       });
+
+      // translate  point number into words...
+      const getResRate = (res) => {
+        return (res <= 0.75? "Low" : (res > 0.75 && res <= 1.25 ? "Normal": "High") )
+      }
+
+      // Handling function when user changes model resolution.
+      const onResChange = () => {
+        let res = document.getElementById("modelres").value;
+        resolution = res;
+        document.getElementById("res").innerHTML = "<p id=\"res\">Model Resolution: <b>"+getResRate(res)+"</b></p>";
+      }
+
+      // handling function when user turn on/off building feature layer.
+      const turnBuildingsOnOff = () => {
+        let checked = document.getElementById("bfprint").checked;
+        buildingsLayer.visible = checked;
+      }
+
+      // handling function when user turn on/off lights feature layer.
+      const turnLightsOnOff = () => {
+        let checked = document.getElementById("flights").checked;
+        lightsLayer.visible = checked;
+      }
+
+      // handling function when user turn on/off tree canopies feature layer.
+      const turnTreesOnOff = () => {
+        let checked = document.getElementById("tcanopies").checked;
+        treesLayer.visible = checked;
+      }
+
+      // handling function when user turn on/off uds models.
+      const turnUDSModelOnOff = () => {
+        showModel = document.getElementById("udsmodels").checked;
+        if(!showModel) {
+          unloadUDSModels();
+        }
+        else {
+          loadUDSModel(getModel(userChosen));
+        }
+      }
     </script>
     <div class="head-container">
       <div class="title">
         <img src="./img/EuclideonLogo_Std.svg" width="150px" alt="logo"/>
-        <h1>New udSDK ESRI Demo</h1>
+        <h1>Euclideon City Manager</h1>
       </div>
       <br/>
     </div>
@@ -801,6 +857,15 @@
       </table>
       <button id="loginBtn">Login</button><br/>
       <span class="errorMessage" id="errorMessage"></span>
+    </div>
+    <div class="options" id="options">
+      <b>Options</b><br/><br/>
+      <input type="checkbox" id="bfprint" name="bfprint" onclick="turnBuildingsOnOff()" checked>Buildings<br/>
+      <input type="checkbox" id="flights" name="flights" onclick="turnLightsOnOff()" checked>Lights<br/>
+      <input type="checkbox" id="tcanopies" name="tcanopies" onclick="turnTreesOnOff()" checked>Tree Canopies<br/>
+      <input type="checkbox" id="udsmodels" name="udsmodels" onclick="turnUDSModelOnOff()" checked>UDS Models<br/>
+      <p id="res">Model Resolution: <b>Normal</b></p>
+      <input type="range" id="modelres" min="0.5" max="1.5" value="1.0" step="0.1" class="slider" oninput="onResChange()">
     </div>
     <div class="unsupportMsg">
       <h1>Sorry, this device is not supported.</h1>
