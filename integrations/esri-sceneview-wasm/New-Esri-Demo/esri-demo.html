@@ -9,10 +9,8 @@
   <script src="https://js.arcgis.com/4.20/" crossorigin></script>
 
   <link rel="stylesheet" href="./css/main.css" />
-  <link rel="stylesheet" href="./css/buttons.css" />
   <script src="./lib/cameraControl.js"></script>
   <script src="./lib/loadModel.js"></script>
-  <script src="./lib/toggleChosen.js"></script>
   <head>
     <!-- A simple fragment shader -->
     <script id="shader-fs" type="x-shader/x-fragment">
@@ -875,58 +873,6 @@
       <a href="https://www.euclideon.com/udsdk/#udstream-nav-demo" rel="noopener noreferrer">Go Back</a>
     </div>
     <script>
-      // places in an object array...
-      const places = [
-        { name: "Melbourne", full: "Melbourne City", css_class: "mel" },
-        { name: "Bendigo", full: "Bendigo City", css_class: "bxg" },
-      ];
-
-      function createBtn(className, id, value)
-      {
-        let btn = document.createElement('button');
-        btn.className = "btn " + className;
-        btn.id = id;
-        btn.value = value;
-        btn.innerHTML = "<img src=\"./img/marker.png\" width=16px alt=\"" + value + "\"/> "+ value;
-        return btn;
-      }
-
-      function onClickMap(e) 
-      {
-        // If clicked on the image, return alt, if clicked on button, return value;
-        var val = e.target.value ? e.target.value : e.target.alt;
-        var full = "";
-        var name = ""
-        places.map((place) => {
-          if (val === place.name) {
-            full = place.full;
-            name = place.name;
-            return true;
-          }
-        });
-        // From loadModel.js
-        unload_LoadUDSModel(val);
-        // From cameraControl.js
-        flyCamera(viewer, val, 5.0);
-        // From toggleChosen.js
-        onToggleChosen(e);
-      }
-
-      function loadClickable() 
-      {
-        // Map the array only if login is successful
-        places.map((place, i) => {
-          // Create clickable buttons on the left hand side map.
-          var btn = createBtn(place.css_class, place.name, place.name);
-
-          // Attach the button to the container."
-          document.getElementById("navBtn").appendChild(btn);
-
-          // Add item event listener
-          btn.addEventListener('click', e => onClickMap(e));
-        })
-      }
-
       function CreateVDKPlugin()
       {
         udSDKJSReady = 1;
@@ -947,11 +893,14 @@
         {
           console.log("udSDKJS Logged in.");
 
-          loadClickable();
-
           udSDKJSReady = 2;
           document.getElementById("loginBox").style.display = "none";
           document.getElementById("statusLoading").style.display = "none";
+
+          // From loadModel.js
+          unload_LoadUDSModel("Melbourne");
+          // From cameraControl.js
+          flyCamera(viewer, "Melbourne", 5.0);
         }
         else
         {
