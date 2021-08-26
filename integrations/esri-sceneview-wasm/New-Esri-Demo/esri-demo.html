@@ -3,7 +3,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="origin-trial" content="AuIOI30TB29gw4buNQFFWNexGiDwI8ynu05FxU2JLMIXTBq4Xov54vbmoDP9eKTZCzJpays+49NNCVwGhASptAUAAABgeyJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjgwMDAiLCJmZWF0dXJlIjoiVW5yZXN0cmljdGVkU2hhcmVkQXJyYXlCdWZmZXIiLCJleHBpcnkiOjE2Mzk1MjYzOTl9">
   <meta name="viewport" content="initial-scale=1,width=device-width" />
-  <title>Euclideon City Manager</title>
+  <title>ESRI City Viewer</title>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/dark/main.css" crossorigin/>
   <script src="https://js.arcgis.com/4.20/" crossorigin></script>
@@ -783,7 +783,7 @@
       const onResChange = () => {
         let res = document.getElementById("modelres").value;
         resolution = res;
-        document.getElementById("res").innerHTML = "<p id=\"res\">Model Resolution: <b>"+getResRate(res)+"</b></p>";
+        document.getElementById("res").innerHTML = "<p id=\"res\">UDS Model <br/>Resolution: <b>"+getResRate(res)+"</b></p>";
       }
 
       // handling function when user turn on/off building feature layer.
@@ -818,7 +818,7 @@
     <div class="head-container">
       <div class="title">
         <img src="./img/EuclideonLogo_Std.svg" width="150px" alt="logo"/>
-        <h1>Euclideon City Manager</h1>
+        <h1>ESRI City Viewer</h1>
       </div>
       <br/>
     </div>
@@ -864,7 +864,7 @@
       <input type="checkbox" id="flights" name="flights" onclick="turnLightsOnOff()" checked>Lights<br/>
       <input type="checkbox" id="tcanopies" name="tcanopies" onclick="turnTreesOnOff()" checked>Tree Canopies<br/>
       <input type="checkbox" id="udsmodels" name="udsmodels" onclick="turnUDSModelOnOff()" checked>UDS Models<br/>
-      <p id="res">Model Resolution: <b>Normal</b></p>
+      <p id="res">UDS Model <br/>Resolution: <b>Normal</b></p>
       <input type="range" id="modelres" min="0.5" max="1.5" value="1.0" step="0.1" class="slider" oninput="onResChange()">
     </div>
     <div class="unsupportMsg">
@@ -1074,7 +1074,6 @@
       {
         // Don't hide app directly as the the warning message will disappear as well.
         document.getElementById("container").style.display = "none";
-        document.getElementsByClassName("descTextbox")[0].style.display = "none";
         document.getElementsByClassName("unsupportMsg")[0].style.display = "block";
         document.getElementById("loginBox").style.display = "none";
         document.getElementById("statusLoading").style.display = "none";
