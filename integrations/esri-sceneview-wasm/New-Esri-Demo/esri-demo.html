@@ -454,9 +454,9 @@
           container: "viewDiv",
           map: map,
           viewingMode: "global",
-          qualityProfile: "high",
-          maximumNumberOfFeatures: 70000,
-          maximumNumberOfFeaturesExceeded: true,
+          qualityProfile: "medium",
+          maximumNumberOfFeatures: 65000,
+          maximumNumberOfFeaturesExceeded: false,
           environment: {
             lighting: {
               directShadowsEnabled: true
@@ -556,7 +556,8 @@
           copyright: "City of Melbourne Open Data Team",
           renderer: renderer,
           opacity: 0.9,
-          refreshInterval: 0.1,
+          refreshInterval: 0.05,
+          maximumNumberOfFeatures: 35000, // Maximum number of features can be displayed
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -608,7 +609,8 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/feature_lighting_in_city_of_melbourne/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: lightsRenderer,
-          refreshInterval: 0.1,
+          refreshInterval: 0.05,
+          maximumNumberOfFeatures: 5000, // Maximum number of features can be displayed
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -664,7 +666,8 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/tree_canopies_2016_urban_forest/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: treeRenderer,
-          refreshInterval: 0.1,
+          refreshInterval: 0.05,
+          maximumNumberOfFeatures: 15000, // Maximum number of features can be displayed
           elevationInfo: {
             mode: "on-the-ground"
           },
