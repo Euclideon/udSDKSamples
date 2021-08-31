@@ -14,22 +14,6 @@ const locations = [
       heading: 43.7650864,
       tilt: 64.840576
     }
-  },
-  {
-    name: "Bendigo", 
-    description: "Bendigo City", 
-    camera: {
-      position: {
-        x: 16061786.289466,
-        y: -4406420.012302,
-        z: 339.154327,
-        spatialReference: { 
-          wkid: 102100
-        },
-      },
-      heading: 320.817253,
-      tilt: 70.099063
-    }
   }
 ];
 

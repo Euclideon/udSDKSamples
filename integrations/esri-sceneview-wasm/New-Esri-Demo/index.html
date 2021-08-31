@@ -3,6 +3,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="origin-trial" content="AuIOI30TB29gw4buNQFFWNexGiDwI8ynu05FxU2JLMIXTBq4Xov54vbmoDP9eKTZCzJpays+49NNCVwGhASptAUAAABgeyJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjgwMDAiLCJmZWF0dXJlIjoiVW5yZXN0cmljdGVkU2hhcmVkQXJyYXlCdWZmZXIiLCJleHBpcnkiOjE2Mzk1MjYzOTl9">
   <meta name="viewport" content="initial-scale=1,width=device-width" />
+  <meta http-equiv="origin-trial" content="AvcnlD3Jh74eZ6jq82HUr96gI1vygNstBwiSJAdv9I4zH+0grab5BJHIjLVz2QoZWgpgp+yKFnX7Iyhhd5IJSgkAAAB7eyJvcmlnaW4iOiJodHRwczovL3d3dy5ldWNsaWRlb24uY29tOjQ0MyIsImZlYXR1cmUiOiJVbnJlc3RyaWN0ZWRTaGFyZWRBcnJheUJ1ZmZlciIsImV4cGlyeSI6MTYzOTUyNjM5OSwiaXNTdWJkb21haW4iOnRydWV9">
   <title>ESRI City Viewer</title>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/dark/main.css" crossorigin/>
@@ -453,11 +454,11 @@
           map: map,
           viewingMode: "global",
           qualityProfile: "medium",
-          maximumNumberOfFeatures: 65000,
+          maximumNumberOfFeatures: 60000,
           maximumNumberOfFeaturesExceeded: false,
           environment: {
             lighting: {
-              directShadowsEnabled: true
+              directShadowsEnabled: false
             }
           },
           camera: {
@@ -465,6 +466,7 @@
               x: 0,
               y: 0,
               z: 30000000,
+              wkid: 102100
             },
             heading: 359.47,
             tilt: 0.2
@@ -550,12 +552,11 @@
 
         // Feature layer for building footprint
         buildingsLayer = new FeatureLayer({
-          url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/2020_building_footprints/FeatureServer/0",
+          url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/2018_building_footprints/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: renderer,
           opacity: 0.9,
-          refreshInterval: 0.05,
-          maximumNumberOfFeatures: 35000, // Maximum number of features can be displayed
+          refreshInterval: 0.1,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -604,11 +605,10 @@
 
         // Feature layer for light posts
         lightsLayer = new FeatureLayer({
-          url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/feature_lighting_in_city_of_melbourne/FeatureServer/0",
+          url: "https://services2.arcgis.com/18ajPSI0b3ppsmMt/arcgis/rest/services/traffic_lights/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: lightsRenderer,
-          refreshInterval: 0.05,
-          maximumNumberOfFeatures: 5000, // Maximum number of features can be displayed
+          refreshInterval: 0.1,
           elevationInfo: {
             mode: "relative-to-ground"
           },
@@ -664,8 +664,7 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/tree_canopies_2016_urban_forest/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: treeRenderer,
-          refreshInterval: 0.05,
-          maximumNumberOfFeatures: 15000, // Maximum number of features can be displayed
+          refreshInterval: 0.1,
           elevationInfo: {
             mode: "on-the-ground"
           },
