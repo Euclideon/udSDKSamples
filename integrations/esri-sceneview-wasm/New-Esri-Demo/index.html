@@ -555,12 +555,14 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/2018_building_footprints/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: renderer,
-          opacity: 0.9,
-          refreshInterval: 0.1,
+          opacity: 0.05,
+          refreshInterval: 0.05,
+          minScale: 15000,
+          maxScale: 0,
           elevationInfo: {
             mode: "relative-to-ground"
           },
-          title: "Melbourne Build Footprint 2020",
+          title: "Melbourne Build Footprint 2018",
           popupEnabled: true,
           popupTemplate: {
             title: "Building #{ObjectId}",
@@ -588,53 +590,92 @@
           }
         });
 
-        // Get 3D Symbol for light posts
-        const lightsSymbol = {
-          type: "web-style",
-          name: "Light_On_Post_-_Light_on",
-          styleName: "EsriRealisticStreetSceneStyle"
-        }
+        // Get icon for lights
+        const lightsSymbol = (url) => {
+          return {
+            type: "point-3d", // autocasts as new PointSymbol3D()
+            symbolLayers: [
+              {
+                type: "icon", // autocasts as new IconSymbol3DLayer()
+                resource: {
+                  href: url
+                },
+                size: 24,
+                outline: {
+                  color: "black",
+                  size: 1
+                }
+              }
+            ],
+            verticalOffset: {
+              screenLength: 40,
+              maxWorldLength: 200,
+              minWorldLength: 35
+            },
+            callout: {
+              type: "line", // autocasts as new LineCallout3D()
+              color: "white",
+              size: 0.5,
+              border: {
+                color: "black"
+              }
+            }
+          };
+        };
 
-        // Renderer for light posts
+        // Renderer for lights
         const lightsRenderer = {
-          // autocasts as new SimpleRenderer()
-          type: "simple",
-          symbol: lightsSymbol,
-          label: "Feature lights"
+          // autocasts as new UniqueValueRenderer()
+          type: "unique-value",
+          field: "SITE_TYPE",
+          defaultSymbol: lightsSymbol("./img/light_other.png"),
+          defalutValue: "Other Traffic Signal",
+          uniqueValueInfos: [
+            {
+              value: "INT",
+              symbol: lightsSymbol("./img/light_traffic.png"),
+            },
+            {
+              value: "POS",
+              symbol: lightsSymbol("./img/light_ped.png"),
+            }
+            // {
+            //   value: "Other Traffic Signal",
+            //   symbol: lightsSymbol("./img/light_other.png"),
+            // }
+          ]
         };
 
         // Feature layer for light posts
         lightsLayer = new FeatureLayer({
           url: "https://services2.arcgis.com/18ajPSI0b3ppsmMt/arcgis/rest/services/traffic_lights/FeatureServer/0",
-          copyright: "City of Melbourne Open Data Team",
+          copyright: "Department of Transport (Victoria)",
           renderer: lightsRenderer,
-          refreshInterval: 0.1,
+          refreshInterval: 0.5,
+          minScale: 5000,
+          maxScale: 0,
           elevationInfo: {
             mode: "relative-to-ground"
           },
-          title: "Feature Lighting in City of Melbourne",
+          title: "Traffic Lights in City of Melbourne",
           popupEnabled: true,
           popupTemplate: {
-            title: "Light #{asset_number}",
+            title: "Light #{SITE_NO}",
             content: [
             {
               type: "fields",
               fieldInfos: [
                 {
-                  fieldName: "asset_description",
-                  label: "Description"
+                  fieldName: "SITE_NAME",
+                  label: "Location"
                 },
                 {
-                  fieldName: "lamp_rating_w",
-                  label: "Lamp Rating (Watt)"
+                  fieldName: "SITE_TYPE",
+                  label: "Type"
                 },
                 {
-                  fieldName: "lat",
-                  label: "Latitude"
-                },
-                {
-                  fieldName: "lon",
-                  label: "Longtitude"
+                  fieldName: "STATUS",
+                  label: "Status"
                 }
               ]
             }]
@@ -665,6 +706,8 @@
           copyright: "City of Melbourne Open Data Team",
           renderer: treeRenderer,
           refreshInterval: 0.1,
+          minScale: 25000,
+          maxScale: 0,
           elevationInfo: {
             mode: "on-the-ground"
           },
