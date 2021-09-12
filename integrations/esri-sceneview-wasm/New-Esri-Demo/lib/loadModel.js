@@ -1,6 +1,6 @@
 const udsModels = [
   // Melbourne Model
-  { key: "Melbourne", url: "https://sampleeuclideon.blob.core.windows.net/esri/Melbourne.uds", eval: [145.0, -1] },
+  { key: "Melbourne", url: "https://sampleeuclideon.blob.core.windows.net/esri/Melbourne_Circle.uds", eval: [130.0, -1] },
   // ...add more uds models here...
 ];
 

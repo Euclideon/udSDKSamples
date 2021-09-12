@@ -4,15 +4,16 @@ const locations = [
     description: "Melbourne City", 
     camera: {
       position: {
-        x: 16134291.687088,
-        y: -4555398.704025,
-        z: 575.375238,
+        x: 16136282.377,
+        y: -4555000.549,
+        z: 489.713,
         spatialReference: { 
-          wkid: 102100
+          wkid: 3857,
+		      latestWkid: 3857
         },
       },
-      heading: 43.7650864,
-      tilt: 64.840576
+      heading: 14.089,
+      tilt: 64.998
     }
   }
 ];
@@ -33,7 +34,7 @@ const flyCamera = (view, place, duration) => {
     if(place === location.name) {
       // If the place is matched in the location array, we fly to camera.
       const options = {
-        speedFactor: 0.33, // animation is 3 times slower than default
+        speedFactor: 0.5, // animation is 3 times slower than default
         easing: "out-quint" // easing function to slow down when reaching the target
       };
     
@@ -51,7 +52,8 @@ const defaultViewpoint = () => {
         y: -3147250.482783899,
         z: 12059425.86571629,
         spatialReference: { 
-          wkid: 102100
+          wkid: 3857,
+		      latestWkid: 3857
         },
       },
       heading: 3.78,
@@ -72,7 +74,8 @@ const moveCameraToAus = (view) => {
       y: -3147250.482783899,
       z: 12059425.86571629,
       spatialReference: { 
-        wkid: 102100
+        wkid: 3857,
+		    latestWkid: 3857
       },
     },
     heading: 3.78,
