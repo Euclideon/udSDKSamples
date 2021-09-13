@@ -139,7 +139,6 @@
       var treesLayer;
       
       require([
-        "esri/config",
         "esri/Map",
         "esri/Viewpoint",
         "esri/views/SceneView",
@@ -151,7 +150,6 @@
         "esri/layers/FeatureLayer",
         "esri/symbols/ExtrudeSymbol3DLayer"
       ], function(
-        esriConfig,
         Map,
         Viewpoint,
         SceneView,
@@ -163,10 +161,6 @@
         FeatureLayer,
         ExtrudeSymbol3DLayer
       ) {
-        esriConfig.request.trustedServers.push("https://www.arcgis.com");
-        esriConfig.request.trustedServers.push("https://www.euclideon.com");
-        esriConfig.request.trustedServers.push("http://localhost");
-        esriConfig.request.trustedServers.push("http://localhost:8000");
 
         // Set up the external renderer
         const udSDKRenderer = {
@@ -189,12 +183,6 @@
 
           textureLocation: null,
           textureLocationDepth: null,
-
-          // Temporary matrices and vectors,
-          // used to avoid allocating objects in each frame.
-          // tempMatrix4: new Float32Array(16),
-          // tempMatrix3: new Float32Array(9),
-          // tempVec3: new Float32Array(3),
 
           /**
            * Constructor
@@ -458,7 +446,9 @@
               x: 0,
               y: 0,
               z: 30000000,
-              wkid: 102100
+              spatialReference: {
+                wkid: 3857
+              }
             },
             heading: 359.47,
             tilt: 0.2
@@ -547,7 +537,7 @@
           url: "https://services8.arcgis.com/EHp4zQcwjqlIUfZd/arcgis/rest/services/2018_building_footprints/FeatureServer/0",
           copyright: "City of Melbourne Open Data Team",
           renderer: renderer,
-          opacity: 0.05,
+          opacity: 0.1,
           refreshInterval: 0.05,
           minScale: 15000,
           maxScale: 0,
@@ -643,6 +633,7 @@
           url: "https://services2.arcgis.com/18ajPSI0b3ppsmMt/arcgis/rest/services/traffic_lights/FeatureServer/0",
           copyright: "Department of Transport (Victoria)",
           renderer: lightsRenderer,
+          opacity: 0.7,
           refreshInterval: 0.5,
           minScale: 5000,
           maxScale: 0,
@@ -794,20 +785,7 @@
         });
 
         // Install our external renderer
-        externalRenderers.add(view, udSDKRenderer);
-
-        // const getMB = (byte) => {
-        //   let kilo = 1024;
-        //   let mega = kilo * 1024;
-        //   return Math.round(byte / mega);
-        // }
-
-        // setInterval(() => {
-        //   var perf = view.performanceInfo;
-        //   console.log("Used: ", getMB(perf.usedMemory), "/", getMB(perf.totalMemory), "MB", 
-        //   "\nQuality: ", Math.round(perf.quality * 100), "%",
-        //   "\nFeature (Building): ")
-        // }, 5000);
+        externalRenderers.add(view, udSDKRenderer);  
       });
 
       // translate  point number into words...
