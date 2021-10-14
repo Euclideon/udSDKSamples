@@ -244,6 +244,33 @@ input[type=checkbox] {
   /* padding: 10px; */
 }
 
+.measureTools {
+  background: #242424;
+  padding: 0px;
+  display: none;
+}
+
+.action-button {
+  font-size: 16px;
+  background-color: transparent;
+  color: #6e6e6e;
+  height: 32px;
+  width: 32px;
+  text-align: center;
+  vertical-align: middle;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
+  border: none;
+}
+
+.action-button:hover,
+.action-button:focus {
+  color: #e4e4e4;
+}
+
+.active {
+  color: #e4e4e4;
+}
+
 @media only screen and (max-width: 1024px) {
   /* For mobile devices: */
   
