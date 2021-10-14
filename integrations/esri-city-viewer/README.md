@@ -12,7 +12,7 @@ Organization:          Euclideon, https://www.euclideon.com
 Date:                  2021-10-14
 Last Update:           2021-10-14
 udSDK Version:         2.1.0
-Toolsets:			         Arcgis Javascript API 4.20
+Toolsets:              Arcgis Javascript API 4.20
 ```
 
 ## Resources Required
