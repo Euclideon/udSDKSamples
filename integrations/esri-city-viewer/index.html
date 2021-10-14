@@ -148,7 +148,10 @@
         "esri/widgets/Legend",
         "esri/widgets/Expand",
         "esri/layers/FeatureLayer",
-        "esri/symbols/ExtrudeSymbol3DLayer"
+        "esri/symbols/ExtrudeSymbol3DLayer",
+        "esri/widgets/DirectLineMeasurement3D",
+        "esri/widgets/AreaMeasurement3D",
+        "esri/core/promiseUtils"
       ], function(
         Map,
         Viewpoint,
@@ -159,8 +162,13 @@
         Legend,
         Expand,
         FeatureLayer,
-        ExtrudeSymbol3DLayer
+        ExtrudeSymbol3DLayer,
+        DirectLineMeasurement3D,
+        AreaMeasurement3D,
+        promiseUtils
       ) {
+        // Initialise measure tool variable
+        let activeWidget = null;
 
         // Set up the external renderer
         const udSDKRenderer = {
@@ -464,8 +472,7 @@
           }
         });
         // assign viewer with this view.
-        viewer = view;
-        
+        viewer = view; 
 
         var homeBtn = new Home({
           view: view,
@@ -611,7 +618,7 @@
           type: "unique-value",
           field: "SITE_TYPE",
           defaultSymbol: lightsSymbol("./img/light_other.png"),
-          defalutValue: "Other Traffic Signal",
+          defaultValue: "Other Traffic Signal",
           uniqueValueInfos: [
             {
               value: "INT",
@@ -621,10 +628,6 @@
               value: "POS",
               symbol: lightsSymbol("./img/light_ped.png"),
             }
-            // {
-            //   value: "Other Traffic Signal",
-            //   symbol: lightsSymbol("./img/light_other.png"),
-            // }
           ]
         };
 
@@ -719,6 +722,95 @@
         map.add(buildingsLayer);
         map.add(lightsLayer);
         map.add(treesLayer);
+        
+        // Install our external renderer
+        externalRenderers.add(view, udSDKRenderer);
+
+        // Activate one of the ESRI Tools according to the parsed argument
+        const setActiveTool = (tool) => {
+          switch(tool) {
+            case "distance": {
+              activeWidget = new DirectLineMeasurement3D({
+                  view: view
+                });
+
+                // skip the initial 'new measurement' button
+                activeWidget.viewModel.start().catch((error) => {
+                  // don't display abort errors
+                  if (promiseUtils.isAbortError(error)) {
+                    return; 
+                  }
+                  throw error;
+                });
+
+                view.ui.add(activeWidget, "top-right");
+                setActiveButton(document.getElementById("distanceBtn"));
+              break;
+            }
+            case "area": {
+              activeWidget = new AreaMeasurement3D({
+                  view: view
+                });
+
+                // skip the initial 'new measurement' button
+                activeWidget.viewModel.start().catch((error) => {
+                  // don't display abort errors
+                  if (promiseUtils.isAbortError(error)) {
+                    return;
+                  }
+                  throw error;
+                });
+
+                view.ui.add(activeWidget, "top-right");
+                setActiveButton(document.getElementById("areaBtn"));
+              break;
+            }
+            case null: {
+              if (activeWidget) {
+                view.ui.remove(activeWidget);
+                activeWidget.destroy();
+                activeWidget = null;
+              }
+              break;
+            }
+          }
+        }
+
+        const setActiveButton = (button) => {
+          // focus the view to activate the keyboard shortvut as well.
+          view.focus();
+          const elements = document.getElementsByClassName("active");
+
+          // Deactivate other buttons
+          for (let i = 0; i < elements.length; i++) {
+            elements[i].classList.remove("active");
+          }
+
+          // Activate the selected button if there is any
+          if (button) {
+            button.classList.add("active");
+          }
+        }
+
+        // Attach event handling for distance measurement tool.
+        document.getElementById("distanceBtn").addEventListener("click", event => {
+          setActiveTool(null);
+          if (!event.target.classList.contains("active")) {
+            setActiveTool("distance");
+          } else {
+            setActiveButton(null);
+          }
+        });
+
+        // Attach event handling for area measurement tool.
+        document.getElementById("areaBtn").addEventListener("click", event => {
+          setActiveTool(null);
+          if (!event.target.classList.contains("active")) {
+            setActiveTool("area");
+          } else {
+            setActiveButton(null);
+          }
+        });
 
         var legend = new Legend({
           view: view,
@@ -759,15 +851,19 @@
           // Add the home button to the top left corner of the view
           view.ui.add(homeBtn, "top-left");
 
-          // Add the home button to the top right corner of the view
+          // Add the search bar to the top right corner of the view
           view.ui.add(shExpand, "top-right");
 
-          // Add the home button to the top right corner of the view
+          // Add the legend panel to the top right corner of the view
           view.ui.add(lgExpand, "top-right");
 
           // Add the expandable menu to the top-right corner of the view
           view.ui.add(optExpand, "top-right");
 
+          // Add the measurement toolbar to the top right corner of the view
+          view.ui.add("measureTools", "top-right");
+
+          document.getElementById("measureTools").style.display = "block";
           document.getElementById("options").style.display = "block";
 
           document.getElementById("loginBtn").addEventListener("click", loginVDK);
@@ -783,9 +879,6 @@
           moveCameraToAus(view);
           tryAutoLogin(view);
         });
-
-        // Install our external renderer
-        externalRenderers.add(view, udSDKRenderer);  
       });
 
       // translate  point number into words...
@@ -880,6 +973,23 @@
       <input type="checkbox" id="udsmodels" name="udsmodels" onclick="turnUDSModelOnOff()" checked>UDS Models<br/>
       <p id="res">UDS Model <br/>Resolution: <b>Normal</b></p>
       <input type="range" id="modelres" min="0.5" max="1.5" value="1.0" step="0.1" class="slider" oninput="onResChange()">
+    </div>
+    <div class="measureTools" id="measureTools">
+      <button
+        class="action-button esri-icon-measure-line"
+        id="distanceBtn"
+        type="button"
+        title="Measure distance between two points"
+        value="distance"
+      ></button>
+      <br/>
+      <button
+        class="action-button esri-icon-measure-area"
+        id="areaBtn"
+        type="button"
+        title="Measure area"
+        value="area"
+      ></button>
     </div>
     <div class="unsupportMsg">
       <h1>Sorry, this device is not supported.</h1>
