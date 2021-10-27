@@ -31,8 +31,10 @@ Toolsets:              Arcgis Javascript API 4.20
 6. You need to setup a server which has CORS Enabled (COOP & COEP) to solve cross-origin-isolate issue, visit [here](https://web.dev/coop-coep/) for more detail.
 7. Login to the login box.
 8. Observe the models in the viewer.
-  - LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/2dqj-9ydd).
+    - LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/2dqj-9ydd).
 9. Observe the building footprint (blue buildings), traffic lights and tree canopies.
 10. Click on Gear button on right-hand-side menu, you can disable certain dataset, and adjust udSDK model resolutions.
+11. You can also measure the distance or the area when you click on either the model or the map tiles with one of the measurement tools enabled ![image](https://user-images.githubusercontent.com/28862516/138794172-f30b6e3b-4a5d-4557-b410-3a7def950f35.png)
+    - Please note that you can have multiple direct lines simutaneously, but you can only have one area measurement at current stage.
 
 <!-- End -->
