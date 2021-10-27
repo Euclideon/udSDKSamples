@@ -2,14 +2,15 @@
 <html lang="en">
   <meta charset="utf-8" />
   <meta name="viewport" content="initial-scale=1,width=device-width" />
-  <title>ESRI City Viewer</title>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.5.0/math.min.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://www.euclideon.com/demo/esri_city_viewer/arcgis_js/4.20/esri/themes/dark/main.css" />
   <script src="https://www.euclideon.com/demo/esri_city_viewer/arcgis_js/4.20/init.js"></script>
 
   <link rel="stylesheet" href="./css/main.css" />
   <script src="./lib/cameraControl.js"></script>
   <script src="./lib/loadModel.js"></script>
+  <title>ESRI City Viewer</title>
   <head>
     <!-- A simple fragment shader -->
     <script id="shader-fs" type="x-shader/x-fragment">
@@ -137,6 +138,14 @@
       var buildingsLayer;
       var lightsLayer;
       var treesLayer;
+      var cursorX = -1;
+      var cursorY = -1;
+      var dataHeap;
+      var vpMatrix;
+      var clickedPoints = [];
+      var clickedPointsArea = [];
+      var drewLine = [];
+      var drewArea = [];
       
       require([
         "esri/Map",
@@ -149,9 +158,13 @@
         "esri/widgets/Expand",
         "esri/layers/FeatureLayer",
         "esri/symbols/ExtrudeSymbol3DLayer",
-        "esri/widgets/DirectLineMeasurement3D",
-        "esri/widgets/AreaMeasurement3D",
-        "esri/core/promiseUtils"
+        "esri/core/promiseUtils",
+        "esri/layers/DirectLineMeasurementLayer",
+        "esri/layers/AreaMeasurementLayer",
+        "esri/Graphic",
+        "esri/geometry/Point",
+        "esri/geometry/Polygon",
+        "esri/geometry/SpatialReference"
       ], function(
         Map,
         Viewpoint,
@@ -163,12 +176,17 @@
         Expand,
         FeatureLayer,
         ExtrudeSymbol3DLayer,
-        DirectLineMeasurement3D,
-        AreaMeasurement3D,
-        promiseUtils
+        promiseUtils,
+        DirectLineMeasurementLayer,
+        AreaMeasurementLayer,
+        Graphic,
+        Point,
+        Polygon,
+        SpatialReference
       ) {
+
         // Initialise measure tool variable
-        let activeWidget = null;
+        let activeWidget = -1;
 
         // Set up the external renderer
         const udSDKRenderer = {
@@ -265,14 +283,14 @@
             gl.activeTexture(gl.TEXTURE1);
             gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
 
-            var width = context.camera.height * resolution; // 1024
+            var width = context.camera.width * resolution; // 1024
             var height = context.camera.height * resolution; // 1024
             if (udSDKJSReady == 2)
             {
               // If the window's size has changed.
               if (width != this.prevWidth || height != this.prevHeight)
               {
-                this.prevWidth = width  * resolution;
+                this.prevWidth = width * resolution;
                 this.prevHeight = height * resolution;
                 // We need width x height x 4 byte data for color buffer (RGBA)
                 var data = new Uint8Array(width * height * 4);
@@ -293,7 +311,8 @@
 
               v = context.camera.projectionMatrix;
               udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
-              
+
+              vpMatrix = context.camera.viewProjectionMatrix;
               udSDKJS_RenderQueue();
 
               // Get memory address from the color buffer
@@ -310,7 +329,7 @@
               gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
 
               var ptr = udSDKJS_GetDepthBuffer();
-              var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+              dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
 
               gl.activeTexture(gl.TEXTURE1);
               gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
@@ -341,7 +360,6 @@
             // garbage collect
             v = null;
             data = null;
-            dataHeap = null;
           },
 
           /**
@@ -718,58 +736,35 @@
           },
         });
 
+        
         // Add features into the scene
         map.add(buildingsLayer);
         map.add(lightsLayer);
         map.add(treesLayer);
+
+        // Turn on/off by default checkbox value
+        turnBuildingsOnOff();
+        turnLightsOnOff();
+        turnTreesOnOff();
         
         // Install our external renderer
         externalRenderers.add(view, udSDKRenderer);
 
-        // Activate one of the ESRI Tools according to the parsed argument
         const setActiveTool = (tool) => {
           switch(tool) {
             case "distance": {
-              activeWidget = new DirectLineMeasurement3D({
-                  view: view
-                });
-
-                // skip the initial 'new measurement' button
-                activeWidget.viewModel.start().catch((error) => {
-                  // don't display abort errors
-                  if (promiseUtils.isAbortError(error)) {
-                    return; 
-                  }
-                  throw error;
-                });
-
-                view.ui.add(activeWidget, "top-right");
-                setActiveButton(document.getElementById("distanceBtn"));
+              activeWidget = 1;
+              setActiveButton(document.getElementById("distanceBtn"));
               break;
             }
             case "area": {
-              activeWidget = new AreaMeasurement3D({
-                  view: view
-                });
-
-                // skip the initial 'new measurement' button
-                activeWidget.viewModel.start().catch((error) => {
-                  // don't display abort errors
-                  if (promiseUtils.isAbortError(error)) {
-                    return;
-                  }
-                  throw error;
-                });
-
-                view.ui.add(activeWidget, "top-right");
-                setActiveButton(document.getElementById("areaBtn"));
+              activeWidget = 2;
+              setActiveButton(document.getElementById("areaBtn"));
               break;
             }
             case null: {
-              if (activeWidget) {
-                view.ui.remove(activeWidget);
-                activeWidget.destroy();
-                activeWidget = null;
+              if (activeWidget !== -1) {
+                activeWidget = -1;
               }
               break;
             }
@@ -879,11 +874,260 @@
           moveCameraToAus(view);
           tryAutoLogin(view);
         });
+
+        // symbol for the ground point
+        const groundHitSymbol = {
+          type: "point-3d",
+          symbolLayers: [
+            {
+              type: "icon", // autocasts as new IconSymbol3DLayer()
+              size: 8, // points
+              resource: { primitive: "circle" },
+              material: { color: "darkgreen" },
+              outline: {
+                color: "limegreen"
+              }
+            }
+          ]
+        };
+
+        // symbol for first object hit point
+        const udsHitSymbol = {
+          type: "point-3d",
+          symbolLayers: [
+            {
+              type: "icon", // autocasts as new IconSymbol3DLayer()
+              size: 8, // points
+              resource: { primitive: "circle" },
+              material: { color: "darkblue" },
+              outline: {
+                color: "deepskyblue"
+              }
+            }
+          ]
+        };
+
+        const drawPoint = (pos, spatialRef, symbol) => {
+          if(pos.length !== 3) {
+            throw new Error("position must be a 3-length array!");
+            return;
+          }
+          const point = new Graphic({
+            geometry: new Point({
+              x: pos[0],
+              y: pos[1],
+              z: pos[2],
+              spatialReference: spatialRef
+            }),
+            symbol: symbol
+          });
+          view.graphics.add(point);
+        }
+
+        /**
+         * Draw a straight line based on two 3D coordinates
+         * @name        createDirectine3D
+         * @param       {Array}     point1
+         * @param       {Array}     point2
+         * @param       {Number}    spatialRef
+        */
+        const createDirectLine3D = (point1, point2, spatialRef) => {
+          // return if parameter doesn't fulfill length condition - at least 3 numbers each.
+          if(point1 == null || point1.length < 3 || point2 == null || point2.length < 3) {
+            return;
+          }
+
+          const dLMeasureLayer = new DirectLineMeasurementLayer({
+            startPoint: new Point({
+              x: point1[0],
+              y: point1[1],
+              z: point1[2],
+              spatialReference: spatialRef
+            }),
+            endPoint: new Point({
+              x: point2[0],
+              y: point2[1],
+              z: point2[2],
+              spatialReference: spatialRef
+            }),
+          });
+          drewLine.push(dLMeasureLayer);
+          view.map.add(dLMeasureLayer);
+          view.whenLayerView(dLMeasureLayer).then(lv => {
+            lv.unit = "metric";
+          });
+        }
+
+        /**
+         * Draw an Area based on multiple 3D coordinates
+         * @name        createArea3D
+         * @param       {Array[]}     points
+         * @param       {Number}      spatialRef
+        */
+        const createArea3D = (points, spatialRef) => {
+          if(!points || points.length < 3) {
+            return;
+          }
+          // Integrity check - check each element has at least 3 values.
+          points.forEach((point) => {
+            if(point.length < 3) {
+              return;
+            }
+          });
+          // Initialise
+          let rings = [];
+          rings[0] = [];
+          points.forEach((point) => {
+            rings[0].push(point);
+          });
+
+          const polygon = new Polygon({
+            hasZ: true,
+            rings: rings,
+            spatialReference: 3857
+          });
+
+          const areaMeasureLayer = new AreaMeasurementLayer({
+            geometry: polygon
+          });
+          drewArea.push(areaMeasureLayer);
+          view.map.add(areaMeasureLayer);
+          view.whenLayerView(areaMeasureLayer).then(lv => {
+            lv.unit = "metric";
+          });
+        }
+
+        const getDistanceBetween2Points = (point1, point2) => {
+          // if either not exist / less than length of 3
+          if(!point1 || !point2 || point1.length < 3 || point2.length < 3)
+            return;
+          let dist = 0;
+          point1.forEach((pt1, i) => {
+            dist += Math.pow((pt1 - point2[i]), 2);
+          })
+          return Math.sqrt(dist);
+        }
+
+        const toolVisualise = () => {
+          // Abort when there is no tool activated.
+          if(activeWidget === -1)
+            return;
+          
+          // If user is using direct line tool
+          if(activeWidget === 1) {
+            // remove previous stuff and refresh
+            if(drewLine !== []) {
+              drewLine.forEach((line) => {
+                view.map.remove(line);
+              });
+              drewLine = [];
+            }
+            if(clickedPoints.length < 2)
+              return;
+            for(let i = 0; i < clickedPoints.length - 1; i += 2) {
+              if(i % 2 == 0)
+                createDirectLine3D(clickedPoints[i], clickedPoints[i + 1], 3857);
+            }
+          }
+          // if user is using area tool
+          else if(activeWidget === 2) {
+            if(drewArea !== []) {
+              drewArea.forEach((area) => {
+                view.map.remove(area);
+              });
+              drewArea = [];
+            }
+            // At least 3 points to create an area
+            if(clickedPointsArea.length < 3)
+              return;
+            // find which index is the close to the start point <= 10 units; if not, just use the last point
+            let closeIndex = -1;
+            let startPoint = clickedPointsArea[0];
+            // If you click near the start of the point, it will treat that as a closed area and ignore the rest clicked points
+            for(let i = 1; i < clickedPointsArea.length; i++) {
+              if(getDistanceBetween2Points(startPoint, clickedPointsArea[i]) < 5.0) {
+                closeIndex = i;
+                break;
+              }
+              closeIndex = i;
+            }
+            // drawing an area with these points
+            let drawingPoints = [];
+            for(let i = 0; i <= closeIndex; i++) {
+              drawingPoints.push(clickedPointsArea[i]);
+            }
+            // close the ring
+            drawingPoints.push(startPoint);
+            createArea3D(drawingPoints, 3857);
+          }
+        }
+
+        // Get the screen point from the view's click event
+        view.on("click", async(event) => {
+          // If udSDK is not ready, return.
+          if (udSDKJSReady !== 2) {
+            return;
+          }
+          let udsWorldPos = null;
+          let hitTestPos = null;
+          let udsDistance = -1.0;
+          let hitDistance = -1.0;
+          let cameraPos = view.camera.position;
+
+          udsWorldPos = updateCursorXY(event);
+          // Search for graphics at the clicked location. 
+          // we need to await this to finish before calculation and comparison
+          await view.hitTest(event, { exclude: [view.graphics] })
+          .then((response) => {
+            let result = response.ground;
+            if (result.mapPoint !== null) {
+              let x = result.mapPoint.x;
+              let y = result.mapPoint.y;
+              let z = result.mapPoint.z;
+              hitDistance = result.distance;
+              hitTestPos = [x, y, z];
+            } 
+            else {
+              // set extreme large value when the user didn't click on the ground
+              console.log("Did not hit any ground");
+              hitDistance = 999999.0;
+            }
+          });
+
+          // Calculate distances between camera and uds
+          udsDistance = Math.sqrt(
+            (Math.pow(cameraPos.x - udsWorldPos[0], 2)
+            + Math.pow(cameraPos.y - udsWorldPos[1], 2)
+            + Math.pow(cameraPos.z - udsWorldPos[2], 2))
+          );
+          console.log("Distance (hit pos to camera):", hitDistance);
+          console.log("Distance (UDS pos to camera):", udsDistance);
+
+          // Compare and find which one is nearer.
+          if((hitDistance !== -1.0 && udsDistance !== -1.0)) {
+            if(activeWidget !== -1) {
+              // if uds distance is smaller or equal to ground hit distance, draw point at uds
+              if(udsDistance <= hitDistance) {
+                drawPoint(udsWorldPos, 3857, udsHitSymbol);
+                // Depending on which tool, push to what array;
+                activeWidget === 1 ? clickedPoints.push(udsWorldPos) : clickedPointsArea.push(udsWorldPos);
+              }
+              else {
+                if(hitDistance < 999999.0) {
+                  drawPoint(hitTestPos, 3857, groundHitSymbol);
+                  // Depending on which tool, push to what array;
+                  activeWidget === 1 ? clickedPoints.push(hitTestPos) : clickedPointsArea.push(hitTestPos);
+                }
+              }
+              toolVisualise();
+            }
+          }
+        });
       });
 
       // translate  point number into words...
       const getResRate = (res) => {
-        return (res <= 0.75? "Low" : (res > 0.75 && res <= 1.25 ? "Normal": "High") )
+        return (res <= 0.75? "Low" : (res > 0.75 && res <= 1.25 ? "Normal": "High"));
       }
 
       // Handling function when user changes model resolution.
@@ -920,6 +1164,110 @@
         else {
           loadUDSModel(getModel(userChosen));
         }
+      }
+
+      const updateCursorXY = (e) => {
+        // ignore when udSDK is not ready.
+        if(udSDKJSReady !== 2)
+          return;
+
+        let element = document.getElementById("left");
+        // get actual coordinate in the view element.
+        let actualX = e.screenPoint.x;
+        let actualY = e.screenPoint.y;
+
+        if(actualX < 0.0 || actualY < 0.0)
+          return;
+        cursorX = Math.floor(actualX);
+        cursorY = Math.floor(actualY);
+
+        // console.log("Clicked Screen Coord: X:", cursorX, ", Y:", cursorY);
+        let depth = getCursorDepth(cursorX, cursorY, resolution, element.clientWidth);
+        // console.log("Depth at (", cursorX, ",", cursorY, "):", depth);
+        let udsWorldPos = getWorldPosition(vpMatrix, cursorX, cursorY, element.clientWidth, element.clientHeight, depth);
+        return udsWorldPos;
+      }
+
+      // Get depth from that cursor point
+      const getCursorDepth = (x, y, res, width) => {
+        if(x != -1 && y != -1) {
+          let depth = new Uint8Array(4);
+          for(var i = 0; i < 4; i++) {
+            let index = Math.round((Math.floor(x * res) + (Math.floor(y * res) * Math.floor(width * res))) * 4) + i;
+            depth[i] = dataHeap[index];
+          }
+          depth.reverse();
+          // convert 4-byte numbers into depth floating number
+          // Create buffer
+          let buffer = new ArrayBuffer(4);
+          // Create Data view for the buffer
+          let view = new DataView(buffer);
+          // Set DataView Bytes
+          depth.forEach((b, i) => {
+            view.setUint8(i, b);
+          });
+          // We got the first 32-bit floating number
+          let num = view.getFloat32(0);
+          return num;
+        }
+      }
+
+      // A function that transforms 1 x 16 array into 4x4 matrix, or 1 x 9 into 3x3 array
+      const arrayToMatrix = (matrix) => {
+        let result = [];
+        // Floor and squre root the number of element of the array, make sure index out of bound doesn't happend
+        let step = Math.floor(Math.sqrt(matrix.length));
+        for(let i = 0, j = -1; i < matrix.length; i++) {
+          if(i % step === 0) {
+            j++;
+            result[j] = [];
+          }
+          result[j].push(matrix[i]);
+        }
+        return result;
+      }
+
+      const getInverseViewProjMatrix = (viewMat, projMat) => {
+        let prod = math.multiply(projMat, viewMat);
+        // console.log("View Projection Matrix (Not Inversed): ", prod);
+        return math.inv(prod);
+      }
+
+      const mag3 = (arr3) => {
+        return Math.sqrt(arr3[0] * arr3[0] + arr3[1] * arr3[1] + arr3[2] * arr3[2]);
+      };
+
+      const mag2 = (arr3) => {
+        return Math.sqrt(arr3[0] * arr3[0] + arr3[1] * arr3[1]);
+      };
+
+      const getWorldPosition = (vpMatrix, cursorX, cursorY, width, height, uDepth) => {
+
+        // Initialise result
+        let result;
+        let invViewProjMatrix = math.inv(arrayToMatrix(vpMatrix));
+
+        // Get transformed mouse x, y and depth, assign one by one makes more readable
+        let transformDepth = new Array(4);
+        transformDepth[0] = (cursorX / width) * 2.0 - 1.0;
+        transformDepth[1] = -((cursorY / height) * 2.0 - 1.0); // flip
+        transformDepth[2] = uDepth; // * 2.0 - 1.0;
+        transformDepth[3] = 1.0;
+
+        result = math.multiply(transformDepth, invViewProjMatrix);
+        result = math.divide(result, result[3]);
+		
+        // transform from cartesian->lat/long->3857
+        let earthRadius = 6378137.0;		
+        let lla_lat = Math.atan2(result[2], mag2(result));
+        let lla_long = Math.atan2(result[1], result[0]);
+        let lla_alt = mag3(result) - earthRadius;
+          
+        let resultX = lla_long * earthRadius;
+        let resultY = Math.log(Math.tan(Math.PI * 0.25 + lla_lat * 0.5)) * earthRadius;
+      
+        // console.log("Lat: ", lla_lat, ", Long: ", lla_long, ", alt:", lla_alt, " : resultX: ", resultX, ", resultY: ", resultY);
+        return [resultX, resultY, lla_alt];
       }
     </script>
     <div class="head-container">
@@ -967,12 +1315,12 @@
     </div>
     <div class="options" id="options">
       <b>Options</b><br/><br/>
-      <input type="checkbox" id="bfprint" name="bfprint" onclick="turnBuildingsOnOff()" checked>Buildings<br/>
-      <input type="checkbox" id="flights" name="flights" onclick="turnLightsOnOff()" checked>Traffic Lights<br/>
-      <input type="checkbox" id="tcanopies" name="tcanopies" onclick="turnTreesOnOff()" checked>Tree Canopies<br/>
+      <input type="checkbox" id="bfprint" name="bfprint" onclick="turnBuildingsOnOff()" unchecked>Buildings<br/>
+      <input type="checkbox" id="flights" name="flights" onclick="turnLightsOnOff()" unchecked>Traffic Lights<br/>
+      <input type="checkbox" id="tcanopies" name="tcanopies" onclick="turnTreesOnOff()" unchecked>Tree Canopies<br/>
       <input type="checkbox" id="udsmodels" name="udsmodels" onclick="turnUDSModelOnOff()" checked>UDS Models<br/>
       <p id="res">UDS Model <br/>Resolution: <b>Normal</b></p>
-      <input type="range" id="modelres" min="0.5" max="1.5" value="1.0" step="0.1" class="slider" oninput="onResChange()">
+      <input type="range" id="modelres" min="0.5" max="1.5" value="1.0" step="0.25" class="slider" oninput="onResChange()">
     </div>
     <div class="measureTools" id="measureTools">
       <button
