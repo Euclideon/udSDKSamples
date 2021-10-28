@@ -224,8 +224,8 @@
           setup: function(context) {
             this.initShaders(context);
 
-            this.prevWidth = context.camera.width;
-            this.prevHeight = context.camera.height;
+            this.prevWidth = context.camera.width * resolution;
+            this.prevHeight = context.camera.height * resolution;
 
             var gl = context.gl;
 
@@ -290,8 +290,8 @@
               // If the window's size has changed.
               if (width != this.prevWidth || height != this.prevHeight)
               {
-                this.prevWidth = width * resolution;
-                this.prevHeight = height * resolution;
+                this.prevWidth = width;
+                this.prevHeight = height;
                 // We need width x height x 4 byte data for color buffer (RGBA)
                 var data = new Uint8Array(width * height * 4);
 
@@ -1088,8 +1088,8 @@
               hitTestPos = [x, y, z];
             } 
             else {
-              // set extreme large value when the user didn't click on the ground
               console.log("Did not hit any ground");
+              // set extreme large value when the user didn't click on the ground
               hitDistance = 999999.0;
             }
           });
@@ -1100,8 +1100,7 @@
             + Math.pow(cameraPos.y - udsWorldPos[1], 2)
             + Math.pow(cameraPos.z - udsWorldPos[2], 2))
           );
-          console.log("Distance (hit pos to camera):", hitDistance);
-          console.log("Distance (UDS pos to camera):", udsDistance);
+          console.log("Hit Object", udsDistance <= hitDistance ? "UDS Model" : "Map Tiles / Ground");
 
           // Compare and find which one is nearer.
           if((hitDistance !== -1.0 && udsDistance !== -1.0)) {
@@ -1165,26 +1164,41 @@
           loadUDSModel(getModel(userChosen));
         }
       }
+      
+      // A function that transforms 1 x 16 array into 4x4 matrix, or 1 x 9 into 3x3 array
+      const arrayToMatrix = (matrix) => {
+        let result = [];
+        // Floor and squre root the number of element of the array, make sure index out of bound doesn't happend
+        let step = Math.floor(Math.sqrt(matrix.length));
+        for(let i = 0, j = -1; i < matrix.length; i++) {
+          if(i % step === 0) {
+            j++;
+            result[j] = [];
+          }
+          result[j].push(matrix[i]);
+        }
+        return result;
+      }
 
       const updateCursorXY = (e) => {
         // ignore when udSDK is not ready.
         if(udSDKJSReady !== 2)
           return;
 
-        let element = document.getElementById("left");
+        let element = document.getElementById("viewDiv");
         // get actual coordinate in the view element.
-        let actualX = e.screenPoint.x;
-        let actualY = e.screenPoint.y;
+        let actualX = e.x;
+        let actualY = e.y;
 
         if(actualX < 0.0 || actualY < 0.0)
           return;
-        cursorX = Math.floor(actualX);
-        cursorY = Math.floor(actualY);
+        cursorX = Math.round(actualX);
+        cursorY = Math.round(actualY);
 
         // console.log("Clicked Screen Coord: X:", cursorX, ", Y:", cursorY);
         let depth = getCursorDepth(cursorX, cursorY, resolution, element.clientWidth);
         // console.log("Depth at (", cursorX, ",", cursorY, "):", depth);
-        let udsWorldPos = getWorldPosition(vpMatrix, cursorX, cursorY, element.clientWidth, element.clientHeight, depth);
+        let udsWorldPos = getWorldPosition(vpMatrix, cursorX, cursorY, element.clientWidth, element.clientHeight, depth, resolution);
         return udsWorldPos;
       }
 
@@ -1192,6 +1206,7 @@
       const getCursorDepth = (x, y, res, width) => {
         if(x != -1 && y != -1) {
           let depth = new Uint8Array(4);
+
           for(var i = 0; i < 4; i++) {
             let index = Math.round((Math.floor(x * res) + (Math.floor(y * res) * Math.floor(width * res))) * 4) + i;
             depth[i] = dataHeap[index];
@@ -1212,21 +1227,6 @@
         }
       }
 
-      // A function that transforms 1 x 16 array into 4x4 matrix, or 1 x 9 into 3x3 array
-      const arrayToMatrix = (matrix) => {
-        let result = [];
-        // Floor and squre root the number of element of the array, make sure index out of bound doesn't happend
-        let step = Math.floor(Math.sqrt(matrix.length));
-        for(let i = 0, j = -1; i < matrix.length; i++) {
-          if(i % step === 0) {
-            j++;
-            result[j] = [];
-          }
-          result[j].push(matrix[i]);
-        }
-        return result;
-      }
-
       const getInverseViewProjMatrix = (viewMat, projMat) => {
         let prod = math.multiply(projMat, viewMat);
         // console.log("View Projection Matrix (Not Inversed): ", prod);
@@ -1241,7 +1241,12 @@
         return Math.sqrt(arr3[0] * arr3[0] + arr3[1] * arr3[1]);
       };
 
-      const getWorldPosition = (vpMatrix, cursorX, cursorY, width, height, uDepth) => {
+      const getWorldPosition = (vpMatrix, cursorX, cursorY, width, height, uDepth, res) => {
+
+        cursorX *= res;
+        cursorY *= res;
+        width *= res;
+        height *= res;
 
         // Initialise result
         let result;
@@ -1249,8 +1254,8 @@
 
         // Get transformed mouse x, y and depth, assign one by one makes more readable
         let transformDepth = new Array(4);
-        transformDepth[0] = (cursorX / width) * 2.0 - 1.0;
-        transformDepth[1] = -((cursorY / height) * 2.0 - 1.0); // flip
+        transformDepth[0] = ((cursorX / width) * 2.0) - 1.0;
+        transformDepth[1] = -(((cursorY / height) * 2.0) - 1.0); // flip
         transformDepth[2] = uDepth; // * 2.0 - 1.0;
         transformDepth[3] = 1.0;
 
@@ -1456,7 +1461,6 @@
         // less than 1024 px define as mobile device
         if(w <= 1024) 
         {
-          // document.getElementById("left").style.height = (udSDKJSReady == 2) ? calcContHeight(w) : "3%";
           document.getElementById("left").style.height = parseInt(h * 9 / 16)+"px";
           document.getElementById("viewDiv").style.height = parseInt(h * 9 / 16)+"px";
           document.getElementById("statusLoading").style.top = parseInt((h * 9 / 16) - 100)+"px";
@@ -1475,7 +1479,7 @@
             document.getElementById("statusLoading").style.top = "500px";
           }
             
-          // Set the container size as well prevent text being hided by the cesium window.
+          // Set the container size as well prevent text being hided by the window.
           document.getElementById("left").style.height = document.getElementById("viewDiv").style.height;
           
         }
