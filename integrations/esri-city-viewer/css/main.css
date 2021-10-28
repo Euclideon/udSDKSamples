@@ -17,6 +17,28 @@
   100% { transform: rotate(360deg); }
 }
 
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  /* background: #f1f1f1; 
+  opacity: 0.3; */
+  background: rgba(241, 241, 241, 0.2);
+}
+ 
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: rgba(40, 204, 211, 1.0);
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 140, 149, 1.0);
+}
+
 /* Font family */
 h1, h2, h3, h4, h5, h6, p {
   font-family: "source-sans-pro";
