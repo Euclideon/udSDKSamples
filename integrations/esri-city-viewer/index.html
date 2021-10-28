@@ -1090,7 +1090,7 @@
             else {
               console.log("Did not hit any ground");
               // set extreme large value when the user didn't click on the ground
-              hitDistance = 999999.0;
+              hitDistance = 99999999.0;
             }
           });
 
@@ -1112,7 +1112,7 @@
                 activeWidget === 1 ? clickedPoints.push(udsWorldPos) : clickedPointsArea.push(udsWorldPos);
               }
               else {
-                if(hitDistance < 999999.0) {
+                if(hitDistance < 99999999.0) {
                   drawPoint(hitTestPos, 3857, groundHitSymbol);
                   // Depending on which tool, push to what array;
                   activeWidget === 1 ? clickedPoints.push(hitTestPos) : clickedPointsArea.push(hitTestPos);
