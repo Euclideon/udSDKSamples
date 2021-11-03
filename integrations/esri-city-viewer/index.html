@@ -1079,16 +1079,31 @@
           // we need to await this to finish before calculation and comparison
           await view.hitTest(event, { exclude: [view.graphics] })
           .then((response) => {
-            let result = response.ground;
-            if (result.mapPoint !== null) {
-              let x = result.mapPoint.x;
-              let y = result.mapPoint.y;
-              let z = result.mapPoint.z;
-              hitDistance = result.distance;
+            let resultGround = response.ground; // ground hit result
+            let resultOther = response.results; // results other than ground but non-uds
+            if (resultGround.mapPoint !== null) {
+              let x = resultGround.mapPoint.x;
+              let y = resultGround.mapPoint.y;
+              let z = resultGround.mapPoint.z;
+              hitDistance = resultGround.distance;
               hitTestPos = [x, y, z];
-            } 
+            }
+            // If we hit something else
+            else if (resultOther !== null && resultOther.length !== 0) {
+              // if there is no ground point returned, we initialise here for comparison.
+              if (hitDistance === -1.0) {
+                hitDistance = resultOther[0].distance;
+                hitTestPos = [resultOther[0].mapPoint.x, resultOther[0].mapPoint.y, resultOther[0].mapPoint.z];
+              }
+              for (let i = 0; i < resultOther.length; i++) {
+                // if We found a nearer point, we update it
+                if (resultOther[i].distance < hitDistance) {
+                  hitDistance = resultOther[i].distance;
+                  hitTestPos = [resultOther[i].mapPoint.x, resultOther[i].mapPoint.y, resultOther[i].mapPoint.z];
+                }
+              }
+            }
             else {
-              console.log("Did not hit any ground");
               // set extreme large value when the user didn't click on the ground
               hitDistance = 99999999.0;
             }
@@ -1107,9 +1122,12 @@
             if(activeWidget !== -1) {
               // if uds distance is smaller or equal to ground hit distance, draw point at uds
               if(udsDistance <= hitDistance) {
-                drawPoint(udsWorldPos, 3857, udsHitSymbol);
-                // Depending on which tool, push to what array;
-                activeWidget === 1 ? clickedPoints.push(udsWorldPos) : clickedPointsArea.push(udsWorldPos);
+                // uds measurement doesn't return precisely beyond this value
+                if(udsDistance <= 25000.0) {
+                  drawPoint(udsWorldPos, 3857, udsHitSymbol);
+                  // Depending on which tool, push to what array;
+                  activeWidget === 1 ? clickedPoints.push(udsWorldPos) : clickedPointsArea.push(udsWorldPos);
+                }
               }
               else {
                 if(hitDistance < 99999999.0) {
