@@ -3,14 +3,38 @@
 
 namespace udSDK
 {
-  Context::Context(std::string URL, std::string applicationName, std::string email, std::string password)
+  Context::Context(std::string URL, std::string applicationName, std::string email, std::string password, bool legacyConnection)
   {
     udError result = udE_Failure;
 
     result = udContext_TryResume(&m_pContext, URL.c_str(), applicationName.c_str(), email.c_str(), 0); // Set to 1 to try use the dongle (doesn't work in debug)
 
+  
     if (result != udE_Success)
-      result = udContext_Connect(&m_pContext, URL.c_str(), applicationName.c_str(), email.c_str(), password.c_str());
+    {
+      if (legacyConnection)
+      {
+        result = udContext_ConnectLegacy(&m_pContext, URL.c_str(), applicationName.c_str(), email.c_str(), password.c_str());
+      }
+      else
+      {
+        udContextPartial *pPartialConnection;
+        const char *pApprovePath = nullptr;
+        result = udContext_ConnectStart(&pPartialConnection, URL.c_str(), applicationName.c_str(), "0.1", &pApprovePath, nullptr);
+        if (pApprovePath != nullptr)
+        {
+          printf("visit \"%s\" on this device to complete connection\nPress Enter to continue...\n", pApprovePath);
+          while (getc(stdin) != '\n');
+        }
+
+        result = udContext_ConnectComplete(&m_pContext, &pPartialConnection);
+        if (pPartialConnection != nullptr)
+        {
+          udContext_ConnectCancel(&pPartialConnection);
+        }
+      }
+    }
+      
 
     if (result != udE_Success)
       throw "Did not login!";
@@ -89,9 +113,9 @@ namespace udSDK
   }
 
   // Vault::PointCloud
-  PointCloud::PointCloud(Context *pContext, std::string modelLocation)
+  PointCloud::PointCloud(Context *pContext, std::string modelLocation, udPointCloudLoadOptions *pOptions)
   {
-    udError error = udPointCloud_Load(pContext->m_pContext, &m_pModel, modelLocation.c_str(), &m_header);
+    udError error = udPointCloud_LoadAdv(pContext->m_pContext, &m_pModel, modelLocation.c_str(), &m_header, pOptions);
 
     if (error != udE_Success)
       throw "Could not load point cloud!";

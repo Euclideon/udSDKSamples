@@ -30,7 +30,7 @@ bool Render(std::string inputPath, udSDK::Context &context)
     1,0,0,0,
     0,1,0,0,
     0,0,1,0,
-    5,-75,5,1
+    0,-5,0,1
   };
 
   int *pColorBuffer = new int[width * height];
@@ -56,7 +56,7 @@ bool Render(std::string inputPath, udSDK::Context &context)
       int color = pColorBuffer[x + y * width];
       int newColor = 0;
 
-      // Flip R and B - STBI expects ABGR (documented as ARGB) and pColorBuffer is ARGB
+      // Flip R and B - STBI expects ARGB and pColorBuffer is ABGR
       newColor = newColor | (((color >> 24) & 0xFF) << 24);
       newColor = newColor | (((color >> 16) & 0xFF) << 0);
       newColor = newColor | (((color >> 8) & 0xFF) << 8);
@@ -77,7 +77,8 @@ bool Render(std::string inputPath, udSDK::Context &context)
 
 int main(int argc, char **ppArgv)
 {
-  std::string serverPath = "https://udstream.euclideon.com";
+  bool legacyConnection = false;
+  std::string serverPath = legacyConnection ? "https://udstream.euclideon.com" : "https://udcloud.euclideon.com"; //examples of servers supporting legacy and non legacy login methods
   std::string email = "";
   std::string password = "";
   std::string modelName = "https://models.euclideon.com/DirCube.uds"; //Can be any local or remote file
@@ -92,9 +93,11 @@ int main(int argc, char **ppArgv)
       serverPath = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-m") == 0 && i + 1 < argc)
       modelName = ppArgv[++i];
+    else if (strcmp(ppArgv[i], "-legacyServer") == 0 && i + 1 < argc)
+      legacyConnection = true;
   }
 
-  udSDK::Context context(serverPath, "C++ Sample", email, password);
+  udSDK::Context context(serverPath, "C++ Sample", email, password, legacyConnection);
 
   bool vRender = Render(modelName, context);
   bool vConvert = Convert(modelName, modelName + ".uds", context);

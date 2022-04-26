@@ -19,7 +19,7 @@ namespace udSDK
   class Context
   {
   public:
-    Context(std::string URL, std::string applicationName, std::string email, std::string password);
+    Context(std::string URL, std::string applicationName, std::string email, std::string password, bool legacyConnection);
     ~Context();
 
     udError Disconnect();
@@ -65,7 +65,7 @@ namespace udSDK
   class PointCloud
   {
   public:
-    PointCloud(Context *pContext, std::string modelLocation);
+    PointCloud(Context *pContext, std::string modelLocation, udPointCloudLoadOptions *pOptions = nullptr);
     ~PointCloud();
 
     udError GetMetadata(std::string *pJSONMetadata);
