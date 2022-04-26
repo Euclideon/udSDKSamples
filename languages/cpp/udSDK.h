@@ -70,6 +70,7 @@ namespace udSDK
 
     udError GetMetadata(std::string *pJSONMetadata);
     udError GetStoredMatrix(double matrix[16]);
+    udError GetOriginalAttributes(udAttributeSet *pSet);
 
   private:
     udPointCloud *m_pModel;

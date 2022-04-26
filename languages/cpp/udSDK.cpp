@@ -151,6 +151,11 @@ namespace udSDK
       throw "Could not create convert context info!";
   }
 
+  udError PointCloud::GetOriginalAttributes(udAttributeSet *pSet)
+  {
+    return udPointCloud_GetSourceAttributes(m_pModel, pSet);
+  }
+
   Convert::~Convert()
   {
     udConvert_DestroyContext(&m_pConvertContext);
