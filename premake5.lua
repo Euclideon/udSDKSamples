@@ -138,6 +138,7 @@ solution "udSDKSamples"
 			dofile "features/convertdem/project.lua"
 			dofile "features/renderingcustomvoxelshaders/project.lua"
 			dofile "features/getscenesfromudcloud/project.lua"
+			dofile "features/excludeStreamedAttributes/project.lua"
 		end
 	group "viewer"
 		if os.target() ~= "android" and os.target() ~= "ios" and os.target() ~= "emscripten" then
