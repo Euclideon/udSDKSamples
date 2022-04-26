@@ -25,10 +25,11 @@ int main(int argc, char **ppArgv)
   int x, y;
   const int width = 1280;
   const int height = 720;
-  char *pServerPath = "https://udstream.euclideon.com";
+  int legacyServer = 0;
+  char *pServerPath = legacyServer ? "https://udstream.euclideon.com" : "https://udcloud.euclideon.com";
   char *pUsername = "Username";
   char *pPassword = "Password";
-  char *pModelName = "DirCube.uds";
+  char *pModelName = "https://models.euclideon.com/DirCube.uds";
   int pause = 0;
 
   for (int i = 0; i < argc; ++i)
@@ -43,13 +44,15 @@ int main(int argc, char **ppArgv)
       pModelName = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-pause") == 0)
       pause = 1;
+    else if (strcmp(ppArgv[i], "-legacyServer") == 0)
+      legacyServer = 1;
   }
 
   const double cameraMatrix[] = {
     1,0,0,0,
     0,1,0,0,
     0,0,1,0,
-    5,-75,5,1
+    5,-5,5,1
   };
 
   enum udError error;
@@ -67,10 +70,33 @@ int main(int argc, char **ppArgv)
   memset(&header, 0, sizeof(header));
   memset(&options, 0, sizeof(options));
 
+  // udCloud sign in does not require a username to be provided, however resuming a session does require the username
   error = udContext_TryResume(&pContext, pServerPath, "CClient", pUsername, 0);
 
-  if (error != udE_Success)
-    error = udContext_Connect(&pContext, pServerPath, "CClient", pUsername, pPassword);
+  if (error != udE_Success && legacyServer)
+  { 
+    error = udContext_ConnectLegacy(&pContext, pServerPath, "CClient", pUsername, pPassword);
+  }
+  else if (error != udE_Success)
+  {
+    // udCloud sign in is completed in browser on the clients machine - alternatively sign in can be completed using the approval code pApproveCode
+    struct udContextPartial *pPartialContext = NULL;
+    const char *pApprovePath;
+    const char *pApproveCode;
+    error = udContext_ConnectStart(&pPartialContext, pServerPath, "CClient", "0.1", &pApprovePath, &pApproveCode);
+    if (error == udE_Success)
+    {
+      printf("Visit \"%s\" on this device to log in to udSDK\nPress Enter to Continue...\n", pApprovePath);
+      while (getc(stdin) != '\n');
+      error = udContext_ConnectComplete(&pContext, &pPartialContext);
+    }
+
+    if (error != udE_Success)
+    {
+      udContext_ConnectCancel(&pPartialContext);
+      goto epilogue;
+    }
+  }
 
   if (error != udE_Success)
     goto epilogue;
