@@ -30,7 +30,7 @@ bool Render(std::string inputPath, udSDK::Context &context)
     1,0,0,0,
     0,1,0,0,
     0,0,1,0,
-    5,-75,5,1
+    0,-5,0,1
   };
 
   int *pColorBuffer = new int[width * height];
@@ -40,6 +40,7 @@ bool Render(std::string inputPath, udSDK::Context &context)
 
   udSDK::RenderContext renderer(&context);
   udSDK::RenderTarget renderView(&context, &renderer, width, height);
+
   udSDK::PointCloud pointcloud(&context, inputPath);
 
   models.push_back(&pointcloud);
@@ -77,24 +78,27 @@ bool Render(std::string inputPath, udSDK::Context &context)
 
 int main(int argc, char **ppArgv)
 {
-  std::string serverPath = "https://udstream.euclideon.com";
+  bool legacyConnection = false;
+  std::string serverPath = legacyConnection ? "https://udstream.euclideon.com" : "https://udcloud.euclideon.com"; //examples of servers supporting legacy and non legacy login methods
   std::string email = "";
   std::string password = "";
   std::string modelName = "https://models.euclideon.com/DirCube.uds"; //Can be any local or remote file
 
   for (int i = 0; i < argc; ++i)
   {
-    if (strcmp(ppArgv[i], "-u") == 0 && i + 1 < argc)
+    if (strcmp(ppArgv[i], "-u") == 0 && i + 1 < argc) // only required for legacy login
       email = ppArgv[++i];
-    else if (strcmp(ppArgv[i], "-p") == 0 && i + 1 < argc)
+    else if (strcmp(ppArgv[i], "-p") == 0 && i + 1 < argc) // only required for legacy login
       password = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-s") == 0 && i + 1 < argc)
       serverPath = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-m") == 0 && i + 1 < argc)
       modelName = ppArgv[++i];
+    else if (strcmp(ppArgv[i], "-legacyServer") == 0)
+      legacyConnection = true;
   }
 
-  udSDK::Context context(serverPath, "C++ Sample", email, password);
+  udSDK::Context context(serverPath, "C++ Sample", email, password, legacyConnection);
 
   bool vRender = Render(modelName, context);
   bool vConvert = Convert(modelName, modelName + ".uds", context);

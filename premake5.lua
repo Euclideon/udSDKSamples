@@ -137,6 +137,7 @@ solution "udSDKSamples"
 			dofile "features/convertcustomdata/project.lua"
 			dofile "features/convertdem/project.lua"
 			dofile "features/renderingcustomvoxelshaders/project.lua"
+			dofile "features/excludeStreamedAttributes/project.lua"
 		end
 
 	group "libraries"

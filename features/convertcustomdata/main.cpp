@@ -16,7 +16,7 @@ struct CustomConvert
   uint32_t pointsWritten;
 };
 
-udError CustomConvertTest_Open(struct udConvertCustomItem * /*pConvertInput*/, uint32_t /*everyNth*/, const double /*origin*/[3], double /*pointResolution*/, enum udConvertCustomItemFlags /*flags*/)
+udError CustomConvertTest_Open(struct udConvertCustomItem * /*pConvertInput*/, uint32_t /*everyNth*/, double /*pointResolution*/, enum udConvertCustomItemFlags /*flags*/)
 {
   return udE_Success;
 }
@@ -69,17 +69,12 @@ void CustomConvertTest_Close(struct udConvertCustomItem * /*pConvertInput*/)
 
 int main(int argc, char **ppArgv)
 {
-  // This confirms that the statics have been configured correctly
-  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in udSDKFeatureSamples.h");
-  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in udSDKFeatureSamples.h");
-
   // Define our variables
   udError udResult = udE_Success;
-  udContext *pContext = nullptr;
 
   // Resume Session or Login
-  if (udContext_TryResume(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, false) != udE_Success)
-    udResult = udContext_Connect(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, s_udStreamPassword);
+  udResult = BasicParseLogin(argc, ppArgv);
+  udContext *pContext = g_pContext;
 
   if (udResult != udE_Success)
     ExitWithMessage(udResult, "Could not login!");

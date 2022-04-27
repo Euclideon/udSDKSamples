@@ -19,7 +19,7 @@ namespace udSDK
   class Context
   {
   public:
-    Context(std::string URL, std::string applicationName, std::string email, std::string password);
+    Context(std::string URL, std::string applicationName, std::string email, std::string password, bool legacyConnection);
     ~Context();
 
     udError Disconnect();
@@ -70,6 +70,7 @@ namespace udSDK
 
     udError GetMetadata(std::string *pJSONMetadata);
     udError GetStoredMatrix(double matrix[16]);
+    udError GetOriginalAttributes(udAttributeSet *pSet);
 
   private:
     udPointCloud *m_pModel;

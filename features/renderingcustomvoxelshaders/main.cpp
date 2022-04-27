@@ -37,10 +37,6 @@ uint32_t CustomVoxelShader(struct udPointCloud *pPointCloud, const udVoxelID *pV
 
 int main(int argc, char **ppArgv)
 {
-  // This confirms that the statics have been configured correctly
-  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in udSDKFeatureSamples.h");
-  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in udSDKFeatureSamples.h");
-
   // Define our variables
   const double cameraMatrix[] = {
     +1.0,+0.0,+0.0,0,
@@ -50,7 +46,7 @@ int main(int argc, char **ppArgv)
     +50.0,-55.0,+55.0,1
   };
 
-  udError vdkResult = udE_Success;
+  udError result = udE_Success;
   udContext *pContext = nullptr;
   udRenderContext *pRenderer = nullptr;
   udRenderTarget *pRenderView = nullptr;
@@ -65,11 +61,10 @@ int main(int argc, char **ppArgv)
   float *pDepthBuffer = new float[Width * Height];
 
   // Resume Session or Login
-  if (udContext_TryResume(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, false) != udE_Success)
-    vdkResult = udContext_Connect(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, s_udStreamPassword);
+  result = BasicParseLogin(argc, ppArgv);
 
-  if (vdkResult != udE_Success)
-    ExitWithMessage(vdkResult, "Could not login!");
+  if (result != udE_Success)
+    ExitWithMessage(result, "Could not login!");
 
   if (udRenderContext_Create(pContext, &pRenderer) != udE_Success)
     ExitWithMessage(2, "Could not create render context");
