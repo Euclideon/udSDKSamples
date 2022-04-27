@@ -44,7 +44,7 @@ struct DEMConvert
   double outputResolution;
 };
 
-udError DEMConvertTest_Open(struct udConvertCustomItem * pConvertInput, uint32_t /*everyNth*/, const double /*origin*/[3], double pointResolution, enum udConvertCustomItemFlags /*flags*/)
+udError DEMConvertTest_Open(struct udConvertCustomItem * pConvertInput, uint32_t /*everyNth*/, double pointResolution, enum udConvertCustomItemFlags /*flags*/)
 {
   DEMConvert *pItem = (DEMConvert *)pConvertInput->pData;
   pItem->outputResolution = pointResolution;
@@ -168,22 +168,27 @@ void DEMConvertTest_Close(struct udConvertCustomItem * /*pConvertInput*/)
 
 int main(int argc, char **ppArgv)
 {
-  // This confirms that the statics have been configured correctly
-  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in udSDKFeatureSamples.h");
-  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in udSDKFeatureSamples.h");
-
   int width = 0;
   int height = 0;
   int channels = 0;
+  const char *pImagePath = "";
+  const char *pDemPath = "";
 
-  if (argc < 2)
+  for (int i = 0; i < argc; ++i)
+  {
+    if (strcmp(ppArgv[i], "-image") == 0 && i + 1 < argc)
+      pImagePath = ppArgv[++i]; 
+    if (strcmp(ppArgv[i], "-dem") == 0 && i + 1 < argc)
+      pDemPath = ppArgv[++i]; 
+  }
+
+  if (pDemPath[0] == '\0')
     ExitWithMessage(0, "Need the parameter for the DEM file!");
 
   uint8_t *pIData = nullptr;
-
-  if (argc < 4)
+  if (pImagePath[0] != '\0')
   {
-    pIData = stbi_load(ppArgv[2], &width, &height, &channels, 3);
+    pIData = stbi_load(pImagePath, &width, &height, &channels, 3);
     printf("Image Loaded %dx%d\n", width, height);
   }
 
@@ -205,7 +210,7 @@ int main(int argc, char **ppArgv)
   int numberOfCols = 0;
   int expectedRows = 0;
 
-  if (udFile_Load(ppArgv[1], &pData) == udR_Success)
+  if (udFile_Load(pDemPath, &pData) == udR_Success)
   {
     int coordSystem = udStrAtoi(&pData[156]);
     int utmZone = udStrAtoi(&pData[162]);
@@ -264,8 +269,7 @@ int main(int argc, char **ppArgv)
   udContext *pContext = nullptr;
 
   // Resume Session or Login
-  if (udContext_TryResume(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, false) != udE_Success)
-    udResult = udContext_Connect(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, s_udStreamPassword);
+  udResult = BasicParseLogin(argc, ppArgv);
 
   if (udResult != udE_Success)
     ExitWithMessage(udResult, "Could not login!");
@@ -318,7 +322,7 @@ int main(int argc, char **ppArgv)
   item.boundsKnown = false;
   item.pointCount = ((pIData == nullptr) ? (numberOfCols * expectedRows) : (width * height));
   item.pointCountIsEstimate = true;// false;
-  item.sourceProjection = udCSP_SourceCartesian;
+  item.srid = srid;
   item.sourceResolution = 10.0;
 
   udAttributeSet_Create(&item.attributes, udSAC_ARGB, 0);

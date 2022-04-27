@@ -57,7 +57,7 @@ bool Render(std::string inputPath, udSDK::Context &context)
       int color = pColorBuffer[x + y * width];
       int newColor = 0;
 
-      // Flip R and B - STBI expects ARGB and pColorBuffer is ABGR
+      // Flip R and B - STBI expects ABGR (documented as ARGB) and pColorBuffer is ARGB
       newColor = newColor | (((color >> 24) & 0xFF) << 24);
       newColor = newColor | (((color >> 16) & 0xFF) << 0);
       newColor = newColor | (((color >> 8) & 0xFF) << 8);

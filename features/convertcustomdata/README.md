@@ -21,7 +21,6 @@ _No additional resources or libraries required_
 ## How to use the sample
 <!-- TODO: Explain how this sample can be used and what is required to get it running -->
 1. Create the project in the sample root directory (see instructions there for more information)
-2. Set User information in the `udSDKFeatureSamples.h` file (if updating a sample, be careful not to push these back upstream)
-3. Run the sample and observe a UDS is output from the data provided in CustomConvertTest_ReadFloat
+2. Run the sample and observe a UDS is output from the data provided in CustomConvertTest_ReadFloat
 
 <!-- End -->

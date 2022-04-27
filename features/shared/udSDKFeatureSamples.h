@@ -6,9 +6,6 @@
 // Euclideon does NOT recommend storing user credentials in this format
 // This is only done to simplify the feature demonstrations
 
-constexpr char s_udStreamServer[] = "https://udstream.euclideon.com";
-constexpr char s_udStreamEmail[] = "";
-constexpr char s_udStreamPassword[] = "";
 
 udContext *g_pContext = nullptr;
 const char *g_pUsername = "";

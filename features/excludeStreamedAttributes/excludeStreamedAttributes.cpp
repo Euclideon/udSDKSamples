@@ -4,13 +4,23 @@
 #include "udContext.h"
 #include "udPointCloud.h"
 #include <string.h>
+#include <stdlib.h>
 
 
-int main(int argc, char **argv)
+int main(int argc, char **ppArgv)
 {
   udError result = udE_Success;
-  BasicParseLogin(argc, argv); // handle log in to udCloud / udServer
+  BasicParseLogin(argc, ppArgv); // handle log in to udCloud / udServer
   const char *modelLocation = "";
+  for (int i = 0; i < argc; ++i)
+  {
+    if (strcmp(ppArgv[i], "-m") == 0 && i + 1 < argc)
+      modelLocation = ppArgv[++i]; 
+  }
+
+  if(modelLocation[0] == '\n')
+    ExitWithMessage(0, "Need the parameter for the model to be loaded!");
+
 
   udPointCloud *pCloudAllAttributes = nullptr;
   udPointCloud *pCloudRGBOnly = nullptr;
@@ -25,15 +35,15 @@ int main(int argc, char **argv)
   udPointCloud_GetSourceAttributes(pCloudAllAttributes, &presentAttributes);
   for (uint32_t i = 0; i < presentAttributes.count; ++i)
   {
-    // we set the attributes corresponding to those we want to keep from the original attribute set to 1, in this case the colour channel. See udAttribute.h for details on attribute system
-    limitedAttributes[i] = !strcmp("udRGB", presentAttributes.pDescriptors[i].name); 
+    // we set the attributes corresponding to those we want to keep from the original attribute set to 1, in this case the colour channel
+    limitedAttributes[i] = !strcmp("udRGB", presentAttributes.pDescriptors[i].name); //udRGB is the channel name we wish to retain when reopening the uds
   }
   loadOptions.pLimitedAttributes = limitedAttributes;
 
   // finally we can load the model with only the RGB stream requested:
   udPointCloud_LoadAdv(g_pContext, &pCloudRGBOnly, modelLocation, nullptr, &loadOptions);
 
-  // 
+  // the model is now loaded with only RGB being streamed
 
 epilogue:
   udPointCloud_Unload(&pCloudAllAttributes);
