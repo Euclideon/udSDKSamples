@@ -113,9 +113,9 @@ namespace udSDK
   }
 
   // Vault::PointCloud
-  PointCloud::PointCloud(Context *pContext, std::string modelLocation, udPointCloudLoadOptions *pOptions)
+  PointCloud::PointCloud(Context *pContext, std::string modelLocation)
   {
-    udError error = udPointCloud_LoadAdv(pContext->m_pContext, &m_pModel, modelLocation.c_str(), &m_header, pOptions);
+    udError error = udPointCloud_Load(pContext->m_pContext, &m_pModel, modelLocation.c_str(), &m_header);
 
     if (error != udE_Success)
       throw "Could not load point cloud!";

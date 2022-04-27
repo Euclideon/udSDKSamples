@@ -65,7 +65,7 @@ namespace udSDK
   class PointCloud
   {
   public:
-    PointCloud(Context *pContext, std::string modelLocation, udPointCloudLoadOptions *pOptions = nullptr);
+    PointCloud(Context *pContext, std::string modelLocation);
     ~PointCloud();
 
     udError GetMetadata(std::string *pJSONMetadata);

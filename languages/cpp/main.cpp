@@ -41,30 +41,7 @@ bool Render(std::string inputPath, udSDK::Context &context)
   udSDK::RenderContext renderer(&context);
   udSDK::RenderTarget renderView(&context, &renderer, width, height);
 
-  // example showing how to limit attributes on load - this increases streaming speed at the expense of needing to reload the model to view the ignored attributes for models with a large number of channels
-  // this is an optional step and may be skipped by passing pLoadOptions = nullptr to the pointcloud constructor
-  bool restrictToRGBAttribute = true;
-  udPointCloudLoadOptions *pLoadOptions = nullptr;
-  if (restrictToRGBAttribute)
-  {
-    udPointCloudLoadOptions loadOptions = {};
-    loadOptions.numberAttributesLimited = 64;
-    uint32_t limitedAttributes[64] = {}; // this is copied when passed to udPointCloud_LoadAdv so only needs to exist until that function is called
-
-    // the cloud is initialially loaded with all attributes present - we do not actually use this copy of the cloud for rendering, just to extract the list of attributes from the file
-    udSDK::PointCloud pointcloudOriginal(&context, inputPath);
-    udAttributeSet presentAttributes = {};
-    pointcloudOriginal.GetOriginalAttributes(&presentAttributes); //here we retrieve the attributes present
-    for (uint32_t i = 0; i < presentAttributes.count; ++i)
-    {
-      // we set the attributes corresponding to those we want to keep from the original attribute set to 1, in this case the colour channel. See udAttribute.h for details on attribute system
-      limitedAttributes[i] = !strcmp("udRGB", presentAttributes.pDescriptors[i].name); 
-    }
-    loadOptions.pLimitedAttributes = limitedAttributes;
-    pLoadOptions = &loadOptions;
-  }
-
-  udSDK::PointCloud pointcloud(&context, inputPath, pLoadOptions);
+  udSDK::PointCloud pointcloud(&context, inputPath);
 
   models.push_back(&pointcloud);
 
