@@ -150,14 +150,14 @@ namespace udSDK
         Disconnect();
     }
 
-    public void Connect(string pURL, string pApplicationName, string pEmail, string pPassword)
+    public void Connect(string pURL, string pApplicationName, string pVersion, string pKey)
     {
       udError error = udError.udE_Failure;
 
-      error = udContext_TryResume(ref pContext, pURL, pApplicationName, pEmail, 0); //Set to 1 to try use the dongle
+      error = udContext_TryResume(ref pContext, pURL, pApplicationName, null, 0); //Set to 1 to try use the dongle
 
       if (error != udError.udE_Success)
-        udContext_Connect(ref pContext, pURL, pApplicationName, pEmail, pPassword);
+        udContext_ConnectWithKey(ref pContext, pURL, pApplicationName, pVersion, pKey);
 
       if (error == udError.udE_ConnectionFailure)
         throw new Exception("Could not connect to server.");
@@ -185,7 +185,7 @@ namespace udSDK
     [DllImport("udSDK")]
     private static extern udError udContext_TryResume(ref IntPtr ppContext, string pURL, string pApplicationName, string pEmail, int tryDongle);
     [DllImport("udSDK")]
-    private static extern udError udContext_Connect(ref IntPtr ppContext, string pURL, string pApplicationName, string pEmail, string pPassword);
+    private static extern udError udContext_ConnectWithKey(ref IntPtr ppContext, string pURL, string pApplicationName, string pVersion, string pKey);
     [DllImport("udSDK")]
     private static extern udError udContext_Disconnect(ref IntPtr ppContext, int endSession);
   }

@@ -25,18 +25,15 @@ int main(int argc, char **ppArgv)
   int x, y;
   const int width = 1280;
   const int height = 720;
-  char *pServerPath = "https://udstream.euclideon.com";
-  char *pUsername = "Username";
-  char *pPassword = "Password";
+  char *pServerPath = "https://udcloud.euclideon.com";
+  char *pKey = "udCloudKey";
   char *pModelName = "DirCube.uds";
   int pause = 0;
 
   for (int i = 0; i < argc; ++i)
   {
-    if (strcmp(ppArgv[i], "-u") == 0 && i + 1 < argc)
-      pUsername = ppArgv[++i];
-    else if (strcmp(ppArgv[i], "-p") == 0 && i + 1 < argc)
-      pPassword = ppArgv[++i];
+    if (strcmp(ppArgv[i], "-k") == 0 && i + 1 < argc)
+      pKey = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-s") == 0 && i + 1 < argc)
       pServerPath = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-m") == 0 && i + 1 < argc)
@@ -67,10 +64,10 @@ int main(int argc, char **ppArgv)
   memset(&header, 0, sizeof(header));
   memset(&options, 0, sizeof(options));
 
-  error = udContext_TryResume(&pContext, pServerPath, "CClient", pUsername, 0);
+  error = udContext_TryResume(&pContext, pServerPath, "CClient", NULL, 0);
 
   if (error != udE_Success)
-    error = udContext_Connect(&pContext, pServerPath, "CClient", pUsername, pPassword);
+    error = udContext_ConnectWithKey(&pContext, pServerPath, "CClient", "1.0", pKey);
 
   if (error != udE_Success)
     goto epilogue;

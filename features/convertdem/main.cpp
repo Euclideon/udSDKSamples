@@ -44,7 +44,7 @@ struct DEMConvert
   double outputResolution;
 };
 
-udError DEMConvertTest_Open(struct udConvertCustomItem * pConvertInput, uint32_t /*everyNth*/, const double /*origin*/[3], double pointResolution, enum udConvertCustomItemFlags /*flags*/)
+udError DEMConvertTest_Open(struct udConvertCustomItem * pConvertInput, uint32_t /*everyNth*/, double pointResolution, enum udConvertCustomItemFlags /*flags*/)
 {
   DEMConvert *pItem = (DEMConvert *)pConvertInput->pData;
   pItem->outputResolution = pointResolution;
@@ -168,9 +168,8 @@ void DEMConvertTest_Close(struct udConvertCustomItem * /*pConvertInput*/)
 
 int main(int argc, char **ppArgv)
 {
-  // This confirms that the statics have been configured correctly
-  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in udSDKFeatureSamples.h");
-  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in udSDKFeatureSamples.h");
+  // This confirms that the static key have been configured
+  static_assert(s_udCloudKey[0] != '\0', "udCloud key needs to be configured in udSDKFeatureSamples.h");
 
   int width = 0;
   int height = 0;
@@ -262,10 +261,10 @@ int main(int argc, char **ppArgv)
   // Define our variables
   udError udResult = udE_Success;
   udContext *pContext = nullptr;
-
+  
   // Resume Session or Login
-  if (udContext_TryResume(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, false) != udE_Success)
-    udResult = udContext_Connect(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, s_udStreamPassword);
+  if (udContext_TryResume(&pContext, "udcloud.euclideon.com", "ConvertDEMSample", nullptr, false) != udE_Success)
+    udResult = udContext_ConnectWithKey(&pContext, "udcloud.euclideon.com", "ConvertDEMSample", "1.0", s_udCloudKey);
 
   if (udResult != udE_Success)
     ExitWithMessage(udResult, "Could not login!");
@@ -317,8 +316,7 @@ int main(int argc, char **ppArgv)
   item.pName = "DEM Item";
   item.boundsKnown = false;
   item.pointCount = ((pIData == nullptr) ? (numberOfCols * expectedRows) : (width * height));
-  item.pointCountIsEstimate = true;// false;
-  item.sourceProjection = udCSP_SourceCartesian;
+  item.pointCountIsEstimate = true;
   item.sourceResolution = 10.0;
 
   udAttributeSet_Create(&item.attributes, udSAC_ARGB, 0);

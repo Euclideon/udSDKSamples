@@ -37,9 +37,8 @@ uint32_t CustomVoxelShader(struct udPointCloud *pPointCloud, const udVoxelID *pV
 
 int main(int argc, char **ppArgv)
 {
-  // This confirms that the statics have been configured correctly
-  static_assert(s_udStreamEmail[0] != '\0', "Email needs to be configured in udSDKFeatureSamples.h");
-  static_assert(s_udStreamPassword[0] != '\0', "Password needs to be configured in udSDKFeatureSamples.h");
+  // This confirms that the static key have been configured
+  static_assert(s_udCloudKey[0] != '\0', "udCloud key needs to be configured in udSDKFeatureSamples.h");
 
   // Define our variables
   const double cameraMatrix[] = {
@@ -65,8 +64,8 @@ int main(int argc, char **ppArgv)
   float *pDepthBuffer = new float[Width * Height];
 
   // Resume Session or Login
-  if (udContext_TryResume(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, false) != udE_Success)
-    vdkResult = udContext_Connect(&pContext, s_udStreamServer, s_SampleName, s_udStreamEmail, s_udStreamPassword);
+  if (udContext_TryResume(&pContext, "udcloud.euclideon.com", "RenderingCustomVoxelShaderSample", nullptr, false) != udE_Success)
+    vdkResult = udContext_ConnectWithKey(&pContext, "udcloud.euclideon.com", "RenderingCustomVoxelShaderSample", "1.0", s_udCloudKey);
 
   if (vdkResult != udE_Success)
     ExitWithMessage(vdkResult, "Could not login!");

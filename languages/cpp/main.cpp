@@ -77,24 +77,21 @@ bool Render(std::string inputPath, udSDK::Context &context)
 
 int main(int argc, char **ppArgv)
 {
-  std::string serverPath = "https://udstream.euclideon.com";
-  std::string email = "";
-  std::string password = "";
+  std::string serverPath = "https://udcloud.euclideon.com";
+  std::string key = "";
   std::string modelName = "https://models.euclideon.com/DirCube.uds"; //Can be any local or remote file
 
   for (int i = 0; i < argc; ++i)
   {
-    if (strcmp(ppArgv[i], "-u") == 0 && i + 1 < argc)
-      email = ppArgv[++i];
-    else if (strcmp(ppArgv[i], "-p") == 0 && i + 1 < argc)
-      password = ppArgv[++i];
+    if (strcmp(ppArgv[i], "-k") == 0 && i + 1 < argc)
+      key = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-s") == 0 && i + 1 < argc)
       serverPath = ppArgv[++i];
     else if (strcmp(ppArgv[i], "-m") == 0 && i + 1 < argc)
       modelName = ppArgv[++i];
   }
 
-  udSDK::Context context(serverPath, "C++ Sample", email, password);
+  udSDK::Context context(serverPath, "C++ Sample", "1.0", key);
 
   bool vRender = Render(modelName, context);
   bool vConvert = Convert(modelName, modelName + ".uds", context);
