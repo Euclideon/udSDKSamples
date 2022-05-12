@@ -20,18 +20,15 @@ namespace udSDKSample
       uint[] colorBuffer = new uint[width * height];
       float[] depthBuffer = new float[width * height];
 
-      string server = "https://udstream.euclideon.com";
-      string email = "";
-      string password = "";
+      string server = "https://udcloud.euclideon.com";
+      string key = "";
       string modelName = "https://models.euclideon.com/DirCube.uds"; // Can be local or remote
       bool pause = false;
 
       for (int i = 0; i < args.Length; ++i)
       {
-        if (args[i] == "-u" && i + 1 < args.Length)
-          email = args[++i];
-        else if (args[i] == "-p" && i + 1 < args.Length)
-          password = args[++i];
+        if (args[i] == "-k" && i + 1 < args.Length)
+          key = args[++i];
         else if (args[i] == "-s" && i + 1 < args.Length)
           server = args[++i];
         else if (args[i] == "-m" && i + 1 < args.Length)
@@ -42,7 +39,7 @@ namespace udSDKSample
 
       try
       {
-        context.Connect(server, "C# Sample", email, password);
+        context.Connect(server, "CSSample", key);
 
         renderer.Create(context);
         renderView.Create(context, renderer, width, height);

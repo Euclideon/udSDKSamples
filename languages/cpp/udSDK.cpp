@@ -3,14 +3,14 @@
 
 namespace udSDK
 {
-  Context::Context(std::string URL, std::string applicationName, std::string email, std::string password)
+  Context::Context(std::string URL, std::string applicationName, std::string version, std::string key)
   {
     udError result = udE_Failure;
 
-    result = udContext_TryResume(&m_pContext, URL.c_str(), applicationName.c_str(), email.c_str(), 0); // Set to 1 to try use the dongle (doesn't work in debug)
+    result = udContext_TryResume(&m_pContext, URL.c_str(), applicationName.c_str(), NULL, 0); // Set to 1 to try use the dongle (doesn't work in debug)
 
     if (result != udE_Success)
-      result = udContext_Connect(&m_pContext, URL.c_str(), applicationName.c_str(), email.c_str(), password.c_str());
+      result = udContext_ConnectWithKey(&m_pContext, URL.c_str(), applicationName.c_str(), version.c_str(), key.c_str());
 
     if (result != udE_Success)
       throw "Did not login!";
