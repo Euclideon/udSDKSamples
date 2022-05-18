@@ -146,6 +146,9 @@ namespace udSDK
   {
     ~udContext()
     {
+      if (pContextPartial != IntPtr.Zero)
+        Cancel();
+
       if (pContext != IntPtr.Zero)
         Disconnect();
     }
@@ -173,6 +176,62 @@ namespace udSDK
         throw new Exception("Unknown error occurred, please try again later.");
     }
 
+    public void ConnectStart(string pURL, string pApplicationName, string pApplicationVersion, ref string ppApprovePath, ref string ppApproveCode)
+    {
+      udError error = udError.udE_Failure;
+
+      error = udContext_TryResume(ref pContext, pURL, pApplicationName, null, 0); //Set to 1 to try use the dongle
+
+      if (error != udError.udE_Success)
+      {
+        IntPtr approvePath = IntPtr.Zero;
+        IntPtr approveCode = IntPtr.Zero;
+        error = udContext_ConnectStart(ref pContextPartial, pURL, pApplicationName, pApplicationVersion, ref approvePath, ref approveCode);
+        ppApprovePath = Marshal.PtrToStringUTF8(approvePath);
+        ppApproveCode = Marshal.PtrToStringUTF8(approveCode);
+      }
+
+      if (error == udError.udE_ConnectionFailure)
+        throw new Exception("Could not connect to server.");
+      else if (error == udError.udE_AuthFailure)
+        throw new Exception("Username or Password incorrect.");
+      else if (error == udError.udE_OutOfSync)
+        throw new Exception("Your clock doesn't match the remote server clock.");
+      else if (error == udError.udE_SecurityFailure)
+        throw new Exception("Could not open a secure channel to the server.");
+      else if (error == udError.udE_ServerFailure)
+        throw new Exception("Unable to negotiate with server, please confirm the server address");
+      else if (error != udError.udE_Success)
+        throw new Exception("Unknown error occurred, please try again later.");
+    }
+
+    public void ConnectComplete()
+    {
+      udError error = udError.udE_Failure;
+
+      error = udContext_ConnectComplete(ref pContext, ref pContextPartial);
+
+      if (error == udError.udE_ConnectionFailure)
+        throw new Exception("Could not connect to server.");
+      else if (error == udError.udE_AuthFailure)
+        throw new Exception("Username or Password incorrect.");
+      else if (error == udError.udE_OutOfSync)
+        throw new Exception("Your clock doesn't match the remote server clock.");
+      else if (error == udError.udE_SecurityFailure)
+        throw new Exception("Could not open a secure channel to the server.");
+      else if (error == udError.udE_ServerFailure)
+        throw new Exception("Unable to negotiate with server, please confirm the server address");
+      else if (error != udError.udE_Success)
+        throw new Exception("Unknown error occurred, please try again later.");
+    }
+
+    public void ConnectCancel()
+    {
+      udError error = udContext_ConnectCancel(ref pContextPartial);
+      if (error != udError.udE_Success)
+        throw new Exception("udContext.Cancel failed.");
+    }
+
     public void Disconnect()
     {
       udError error = udContext_Disconnect(ref pContext, 0);
@@ -181,11 +240,18 @@ namespace udSDK
     }
     
     public IntPtr pContext = IntPtr.Zero;
+    public IntPtr pContextPartial = IntPtr.Zero;
 
     [DllImport("udSDK")]
     private static extern udError udContext_TryResume(ref IntPtr ppContext, string pURL, string pApplicationName, string pEmail, int tryDongle);
     [DllImport("udSDK")]
     private static extern udError udContext_ConnectWithKey(ref IntPtr ppContext, string pURL, string pApplicationName, string pVersion, string pKey);
+    [DllImport("udSDK")]
+    private static extern udError udContext_ConnectStart(ref IntPtr ppPartialContext, string pURL, string pApplicationName, string pApplicationVersion, ref IntPtr ppApprovePath, ref IntPtr ppApproveCode);
+    [DllImport("udSDK")]
+    private static extern udError udContext_ConnectComplete(ref IntPtr ppContext, ref IntPtr ppPartialContext);
+    [DllImport("udSDK")]
+    private static extern udError udContext_ConnectCancel(ref IntPtr ppContext);
     [DllImport("udSDK")]
     private static extern udError udContext_Disconnect(ref IntPtr ppContext, int endSession);
   }
