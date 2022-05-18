@@ -147,7 +147,7 @@ namespace udSDK
     ~udContext()
     {
       if (pContextPartial != IntPtr.Zero)
-        Cancel();
+        ConnectCancel();
 
       if (pContext != IntPtr.Zero)
         Disconnect();
