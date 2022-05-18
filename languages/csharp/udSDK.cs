@@ -142,7 +142,7 @@ namespace udSDK
   }
 
 
-  class udContext
+  public class udContext
   {
     ~udContext()
     {
@@ -190,7 +190,7 @@ namespace udSDK
     private static extern udError udContext_Disconnect(ref IntPtr ppContext, int endSession);
   }
 
-  class udRenderContext
+  public class udRenderContext
   {
     public void Create(udContext context)
     {
@@ -226,7 +226,7 @@ namespace udSDK
     private static extern udError udRenderContext_Render(IntPtr pRenderer, IntPtr pRenderView, udRenderInstance[] pModels, int modelCount, IntPtr options);
   }
 
-  class udRenderTarget
+  public class udRenderTarget
   {
     public void Create(udContext context, udRenderContext renderer, UInt32 width, UInt32 height)
     {
@@ -300,7 +300,7 @@ namespace udSDK
     private static extern udError udRenderTarget_SetMatrix(IntPtr pRenderView, RenderViewMatrix matrixType, double[] cameraMatrix);
   }
 
-  class udPointCloud
+  public class udPointCloud
   {
     public void Load(udContext context, string modelLocation, ref udPointCloudHeader header)
     {
@@ -338,7 +338,7 @@ namespace udSDK
     private static extern udError udPointCloud_GetMetadata(IntPtr pModel, ref string ppJSONMetadata);
   }
 
-  class udConvertContext
+  public class udConvertContext
   {
     public void Create(udContext context)
     {
