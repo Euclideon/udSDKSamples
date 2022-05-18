@@ -157,7 +157,7 @@ namespace udSDK
       error = udContext_TryResume(ref pContext, pURL, pApplicationName, null, 0); //Set to 1 to try use the dongle
 
       if (error != udError.udE_Success)
-        udContext_ConnectWithKey(ref pContext, pURL, pApplicationName, "1.0", pKey);
+        error = udContext_ConnectWithKey(ref pContext, pURL, pApplicationName, "1.0", pKey);
 
       if (error == udError.udE_ConnectionFailure)
         throw new Exception("Could not connect to server.");
