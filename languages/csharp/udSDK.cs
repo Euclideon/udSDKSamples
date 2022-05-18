@@ -459,4 +459,25 @@ namespace udSDK
     private static extern udError udConvert_DoConvert(IntPtr pConvertContext);
 
   }
+
+  public class udServerAPI
+  {
+    public static string Query(udContext context, string API, string JSON)
+    {
+      IntPtr response = IntPtr.Zero;
+      udError error = udServerAPI_Query(context.pContext, API, JSON, ref response);
+      if (error != udError.udE_Success)
+        throw new Exception("udServerAPI.Query failed.");
+
+      string responseStr = Marshal.PtrToStringUTF8(response);
+      udServerAPI_ReleaseResult(ref response);
+      return responseStr;
+    }
+
+    [DllImport("udSDK")]
+    private static extern udError udServerAPI_Query(IntPtr pContext, string pAPIAddress, string pJSON, ref IntPtr ppResult);
+
+    [DllImport("udSDK")]
+    private static extern udError udServerAPI_ReleaseResult(ref IntPtr ppResult);
+  }
 }
