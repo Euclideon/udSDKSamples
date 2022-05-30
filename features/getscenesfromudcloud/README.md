@@ -1,7 +1,7 @@
-## Converting Custom Data Formats
+## Pulling Scenes and Files from a udCloud Project
 
 <!-- TODO: Write a brief abstract explaining this sample -->
-Feature sample to pull scenes from udCloud
+Feature sample to pull scenes and files from udCloud
 
 <!-- TODO: Fill this section below with metadata about this sample-->
 ```
@@ -22,6 +22,6 @@ _No additional resources or libraries required_
 <!-- TODO: Explain how this sample can be used and what is required to get it running -->
 1. Create the project in the sample root directory (see instructions there for more information)
 2. Set User information in the `udSDKFeatureSamples.h` file (if updating a sample, be careful not to push these back upstream)
-3. Run the sample and observe a your scenes being listed
+3. Run the sample and observe your scenes and files being listed
 
 <!-- End -->
