@@ -86,6 +86,31 @@ namespace udSDK
     udE_Count //!< Internally used to verify return values
   };
 
+  public class UDException : Exception
+  {
+    public UDException(string message) : base(message)
+    {
+    }
+  };
+
+  public class udErrorUtils
+  {
+    [DllImport("udSDK")]
+    private static extern IntPtr udError_GetErrorString(udError code);
+
+    public static string To_String(udError code)
+    {
+      return Marshal.PtrToStringUTF8(udError_GetErrorString(code));
+    }
+
+    public static void ThrowOnUnsuccessful(udError code)
+    {
+      if(code != udError.udE_Success)
+        throw new UDException(To_String(code));
+
+    }
+  };
+
   public enum RenderViewMatrix
   {
     Camera,     // The local to world-space transform of the camera (View is implicitly set as the inverse)
@@ -204,18 +229,16 @@ namespace udSDK
       if (error != udError.udE_Success)
         error = udContext_ConnectWithKey(ref pContext, pURL, pApplicationName, "1.0", pKey);
 
-      if (error == udError.udE_ConnectionFailure)
-        throw new Exception("Could not connect to server.");
-      else if (error == udError.udE_AuthFailure)
-        throw new Exception("Username or Password incorrect.");
-      else if (error == udError.udE_OutOfSync)
-        throw new Exception("Your clock doesn't match the remote server clock.");
-      else if (error == udError.udE_SecurityFailure)
-        throw new Exception("Could not open a secure channel to the server.");
-      else if (error == udError.udE_ServerFailure)
-        throw new Exception("Unable to negotiate with server, please confirm the server address");
-      else if (error != udError.udE_Success)
-        throw new Exception("Unknown error occurred, please try again later.");
+      if (error != udError.udE_Success)
+      { 
+        string approvePath = "";
+        string approveCode = "";
+        ConnectStart(pURL, pApplicationName, "1.0", ref approvePath, ref approveCode);
+        ConnectComplete();
+        error = udError.udE_Success;
+      }
+
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void ConnectStart(string pURL, string pApplicationName, string pApplicationVersion, ref string ppApprovePath, ref string ppApproveCode)
@@ -233,18 +256,7 @@ namespace udSDK
         ppApproveCode = Marshal.PtrToStringUTF8(approveCode);
       }
 
-      if (error == udError.udE_ConnectionFailure)
-        throw new Exception("Could not connect to server.");
-      else if (error == udError.udE_AuthFailure)
-        throw new Exception("Username or Password incorrect.");
-      else if (error == udError.udE_OutOfSync)
-        throw new Exception("Your clock doesn't match the remote server clock.");
-      else if (error == udError.udE_SecurityFailure)
-        throw new Exception("Could not open a secure channel to the server.");
-      else if (error == udError.udE_ServerFailure)
-        throw new Exception("Unable to negotiate with server, please confirm the server address");
-      else if (error != udError.udE_Success)
-        throw new Exception("Unknown error occurred, please try again later.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void ConnectComplete()
@@ -253,32 +265,20 @@ namespace udSDK
 
       error = udContext_ConnectComplete(ref pContext, ref pContextPartial);
 
-      if (error == udError.udE_ConnectionFailure)
-        throw new Exception("Could not connect to server.");
-      else if (error == udError.udE_AuthFailure)
-        throw new Exception("Username or Password incorrect.");
-      else if (error == udError.udE_OutOfSync)
-        throw new Exception("Your clock doesn't match the remote server clock.");
-      else if (error == udError.udE_SecurityFailure)
-        throw new Exception("Could not open a secure channel to the server.");
-      else if (error == udError.udE_ServerFailure)
-        throw new Exception("Unable to negotiate with server, please confirm the server address");
-      else if (error != udError.udE_Success)
-        throw new Exception("Unknown error occurred, please try again later.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void ConnectCancel()
     {
       udError error = udContext_ConnectCancel(ref pContextPartial);
       if (error != udError.udE_Success)
-        throw new Exception("udContext.Cancel failed.");
+        throw new Exception(udErrorUtils.To_String(error));
     }
 
     public void Disconnect()
     {
       udError error = udContext_Disconnect(ref pContext, 0);
-      if (error != udError.udE_Success)
-        throw new Exception("udContext.Disconnect failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
     
     public IntPtr pContext = IntPtr.Zero;
@@ -303,8 +303,7 @@ namespace udSDK
     public void Create(udContext context)
     {
       udError error = udRenderContext_Create(context.pContext, ref pRenderer);
-      if (error != udError.udE_Success)
-        throw new Exception("udRenderContext.Create failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
 
       this.context = context;
     }
@@ -312,15 +311,13 @@ namespace udSDK
     public void Destroy()
     {
       udError error = udRenderContext_Destroy(ref pRenderer);
-      if (error != udError.udE_Success)
-        throw new Exception("udRenderContext.Destroy failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void Render(udRenderTarget renderView, udRenderInstance[] pModels, int modelCount)
     {
       udError error = udRenderContext_Render(pRenderer, renderView.pRenderTarget, pModels, modelCount, (IntPtr)0);
-      if (error != udError.udE_Success)
-        throw new Exception("udRenderContext.Render failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public IntPtr pRenderer = IntPtr.Zero;
@@ -339,8 +336,7 @@ namespace udSDK
     public void Create(udContext context, udRenderContext renderer, UInt32 width, UInt32 height)
     {
       udError error = udRenderTarget_Create(context.pContext, ref pRenderTarget, renderer.pRenderer, width, height);
-      if (error != udError.udE_Success)
-        throw new Exception("udRenderTarget.Create failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
 
       this.context = context;
     }
@@ -353,8 +349,7 @@ namespace udSDK
         depthBufferHandle.Free();
 
       udError error = udRenderTarget_Destroy(ref pRenderTarget);
-      if (error != udError.udE_Success)
-        throw new Exception("udRenderTarget.Destroy failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void SetTargets(ref UInt32[] colorBuffer, UInt32 clearColor, ref float[] depthBuffer)
@@ -368,22 +363,19 @@ namespace udSDK
       depthBufferHandle = GCHandle.Alloc(depthBuffer, GCHandleType.Pinned);
 
       udError error = udRenderTarget_SetTargets(pRenderTarget, colorBufferHandle.AddrOfPinnedObject(), clearColor, depthBufferHandle.AddrOfPinnedObject());
-      if (error != udError.udE_Success)
-        throw new Exception("udRenderTarget.SetTargets failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void GetMatrix(RenderViewMatrix matrixType, double[] cameraMatrix)
     {
       udError error = udRenderTarget_GetMatrix(pRenderTarget, matrixType, cameraMatrix);
-      if (error != udError.udE_Success)
-        throw new Exception("udRenderTarget.GetMatrix failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void SetMatrix(RenderViewMatrix matrixType, double[] cameraMatrix)
     {
       udError error = udRenderTarget_SetMatrix(pRenderTarget, matrixType, cameraMatrix);
-      if (error != udError.udE_Success)
-        throw new Exception("udRenderTarget.SetMatrix failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public IntPtr pRenderTarget = IntPtr.Zero;
@@ -413,8 +405,7 @@ namespace udSDK
     public void Load(udContext context, string modelLocation, ref udPointCloudHeader header)
     {
       udError error = udPointCloud_Load(context.pContext, ref pModel, modelLocation, ref header);
-      if (error != udError.udE_Success)
-        throw new Exception("udPointCloud.Load failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
 
       this.context = context;
     }
@@ -422,15 +413,13 @@ namespace udSDK
     public void Unload()
     {
       udError error = udPointCloud_Unload(ref pModel);
-      if (error != udError.udE_Success)
-        throw new Exception("udPointCloud.Unload failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void GetMetadata(ref string ppJSONMetadata)
     {
       udError error = udPointCloud_GetMetadata(pModel, ref ppJSONMetadata);
-      if (error != udError.udE_Success)
-        throw new Exception("udPointCloud.GetMetadata failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public IntPtr pModel = IntPtr.Zero;
@@ -451,36 +440,31 @@ namespace udSDK
     public void Create(udContext context)
     {
       udError error = udConvert_CreateContext(context.pContext, ref pConvertContext);
-      if (error != udError.udE_Success)
-        throw new Exception("udConvertContext.Create failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void Destroy()
     {
       udError error = udConvert_DestroyContext(ref pConvertContext);
-      if (error != udError.udE_Success)
-        throw new Exception("udConvertContext.Destroy failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
 
     public void AddFile(string fileName)
     {
       udError error = udConvert_AddItem(pConvertContext, fileName);
-      if (error != udError.udE_Success)
-        throw new Exception("udConvertContext.AddItem failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
     public void SetFileName(string fileName)
     {
       udError error = udConvert_SetOutputFilename(pConvertContext, fileName);
-      if (error != udError.udE_Success)
-        throw new Exception("udConvertContext.SetOutputFilename failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public void DoConvert()
     {
       udError error = udConvert_DoConvert(pConvertContext);
-      if (error != udError.udE_Success)
-        throw new Exception("udConvertContext.DoConvert failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
     }
 
     public IntPtr pConvertContext;
@@ -508,8 +492,7 @@ namespace udSDK
     {
       IntPtr response = IntPtr.Zero;
       udError error = udServerAPI_Query(context.pContext, API, JSON, ref response);
-      if (error != udError.udE_Success)
-        throw new Exception("udServerAPI.Query failed.");
+      udErrorUtils.ThrowOnUnsuccessful(error);
 
       string responseStr = Marshal.PtrToStringUTF8(response);
       udServerAPI_ReleaseResult(ref response);
