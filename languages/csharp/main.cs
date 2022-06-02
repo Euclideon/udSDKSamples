@@ -2,6 +2,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Drawing;
+using udSDK =  Euclideon.udSDK;
 
 namespace udSDKSample
 {
@@ -13,10 +14,10 @@ namespace udSDKSample
       const int height = 720;
 
       udSDK.udContext context = new udSDK.udContext();
-      udSDK.udRenderContext renderer = new udSDK.udRenderContext();
-      udSDK.udRenderTarget renderView = new udSDK.udRenderTarget();
-      udSDK.udPointCloud udModel = new udSDK.udPointCloud();
-      udSDK.udPointCloudHeader header = new udSDK.udPointCloudHeader();
+      udSDK.Render.udRenderContext renderer = new udSDK.Render.udRenderContext();
+      udSDK.Render.udRenderTarget renderView = new udSDK.Render.udRenderTarget();
+      udSDK.PointCloud.udPointCloud udModel = new udSDK.PointCloud.udPointCloud();
+      udSDK.PointCloud.udPointCloudHeader header = new udSDK.PointCloud.udPointCloudHeader();
       uint[] colorBuffer = new uint[width * height];
       float[] depthBuffer = new float[width * height];
 
@@ -53,20 +54,20 @@ namespace udSDKSample
           0,-5,0,1
         };
 
-        renderView.SetMatrix(udSDK.RenderViewMatrix.Camera, cameraMatrix);
+        renderView.SetMatrix(udSDK.Render.RenderViewMatrix.Camera, cameraMatrix);
 
-        udSDK.udRenderInstance item = new udSDK.udRenderInstance();
+        udSDK.Render.udRenderInstance item = new udSDK.Render.udRenderInstance();
         item.pointCloud = udModel.pModel;
         item.worldMatrix = header.storedMatrix;
 
-        udSDK.udRenderInstance itemFlipped = new udSDK.udRenderInstance();
+        udSDK.Render.udRenderInstance itemFlipped = new udSDK.Render.udRenderInstance();
         itemFlipped.pointCloud = udModel.pModel;
         itemFlipped.worldMatrix = header.storedMatrix;
         itemFlipped.worldMatrix[0] = -itemFlipped.worldMatrix[0];
         itemFlipped.worldMatrix[5] = -itemFlipped.worldMatrix[5];
         itemFlipped.worldMatrix[10] = -itemFlipped.worldMatrix[10];
 
-        udSDK.udRenderInstance[] modelArray = new udSDK.udRenderInstance[]{ item, itemFlipped };
+        udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{ item, itemFlipped };
 
         for (int i = 0; i < 10; i++)
           renderer.Render(renderView, modelArray, modelArray.Length);
@@ -95,7 +96,7 @@ namespace udSDKSample
 
     static void Convert(string inputPath, string outputPath, udSDK.udContext context)
     {
-      udSDK.udConvertContext convertContext = new udSDK.udConvertContext();
+      udSDK.Convert.udConvertContext convertContext = new udSDK.Convert.udConvertContext();
       convertContext.Create(context);
 
       convertContext.AddFile(inputPath);

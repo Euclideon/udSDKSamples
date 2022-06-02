@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace udSDK
+namespace Euclideon.udSDK
 {
   public enum udError
   {
@@ -111,103 +111,191 @@ namespace udSDK
     }
   };
 
-  public enum RenderViewMatrix
-  {
-    Camera,     // The local to world-space transform of the camera (View is implicitly set as the inverse)
-    View,       // The view-space transform for the model (does not need to be set explicitly)
-    Projection, // The projection matrix (default is 60 degree LH)
-    Viewport,   // Viewport scaling matrix (default width and height of viewport)
+  namespace Render
+  { 
+    public enum RenderViewMatrix
+    {
+      Camera,     // The local to world-space transform of the camera (View is implicitly set as the inverse)
+      View,       // The view-space transform for the model (does not need to be set explicitly)
+      Projection, // The projection matrix (default is 60 degree LH)
+      Viewport,   // Viewport scaling matrix (default width and height of viewport)
 
-    Count,
-  };
+      Count,
+    };
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct udRenderInstance
+    {
+      public IntPtr pointCloud;
+      [MarshalAs(UnmanagedType.ByValArray, SizeConst=16)]
+      public double[] worldMatrix;
 
-  public enum StandardAttribute
-  {
-    GPSTime,
-    ARGB,
-    Normal,
-    Intensity,
-    NIR,
-    ScanAngle,
-    PointSourceID,
-    Classification,
-    ReturnNumber,
-    NumberOfReturns,
-    ClassificationFlags,
-    ScannerChannel,
-    ScanDirection,
-    EdgeOfFlightLine,
-    ScanAngleRank,
-    LASUserData,
+      public IntPtr filter;
+      public IntPtr voxelShader;
+      public IntPtr voxelUserData;
+      public double opacity;
+      public uint skipRender;
+    }
+    public class udRenderContext
+    {
+      public void Create(udContext context)
+      {
+        udError error = udRenderContext_Create(context.pContext, ref pRenderer);
+        udErrorUtils.ThrowOnUnsuccessful(error);
 
-    Count
-  };
+        this.context = context;
+      }
 
-  public enum StandardAttributeContent
-  {
-    None = (0),
-    GPSTime = (1 << StandardAttribute.GPSTime),
-    ARGB = (1 << StandardAttribute.ARGB),
-    Normal = (1 << StandardAttribute.Normal),
-    Intensity = (1 << StandardAttribute.Intensity),
-    NIR = (1 << StandardAttribute.NIR),
-    ScanAngle = (1 << StandardAttribute.ScanAngle),
-    PointSourceID = (1 << StandardAttribute.PointSourceID),
-    Classification = (1 << StandardAttribute.Classification),
-    ReturnNumber = (1 << StandardAttribute.ReturnNumber),
-    NumberOfReturns = (1 << StandardAttribute.NumberOfReturns),
-    ClassificationFlags = (1 << StandardAttribute.ClassificationFlags),
-    ScannerChannel = (1 << StandardAttribute.ScannerChannel),
-    ScanDirection = (1 << StandardAttribute.ScanDirection),
-    EdgeOfFlightLine = (1 << StandardAttribute.EdgeOfFlightLine),
-    ScanAngleRank = (1 << StandardAttribute.ScanAngleRank),
-    LasUserData = (1 << StandardAttribute.LASUserData),
-  };
+      public void Destroy()
+      {
+        udError error = udRenderContext_Destroy(ref pRenderer);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
 
-  [StructLayout(LayoutKind.Sequential)]
-  public struct udRenderInstance
-  {
-    public IntPtr pointCloud;
-    [MarshalAs(UnmanagedType.ByValArray, SizeConst=16)]
-    public double[] worldMatrix;
+      public void Render(udRenderTarget renderView, udRenderInstance[] pModels, int modelCount)
+      {
+        udError error = udRenderContext_Render(pRenderer, renderView.pRenderTarget, pModels, modelCount, (IntPtr)0);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
 
-    public IntPtr filter;
-    public IntPtr voxelShader;
-    public IntPtr voxelUserData;
-    public double opacity;
-    public uint skipRender;
+      public IntPtr pRenderer = IntPtr.Zero;
+      private udContext context;
+
+      [DllImport("udSDK")]
+      private static extern udError udRenderContext_Create(IntPtr pContext, ref IntPtr ppRenderer);
+      [DllImport("udSDK")]
+      private static extern udError udRenderContext_Destroy(ref IntPtr ppRenderer);
+      [DllImport("udSDK")]
+      private static extern udError udRenderContext_Render(IntPtr pRenderer, IntPtr pRenderView, udRenderInstance[] pModels, int modelCount, IntPtr options);
+    }
+
+    public class udRenderTarget
+    {
+      public void Create(udContext context, udRenderContext renderer, UInt32 width, UInt32 height)
+      {
+        udError error = udRenderTarget_Create(context.pContext, ref pRenderTarget, renderer.pRenderer, width, height);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+
+        this.context = context;
+      }
+
+      public void Destroy()
+      {
+        if (colorBufferHandle.IsAllocated)
+          colorBufferHandle.Free();
+        if (depthBufferHandle.IsAllocated)
+          depthBufferHandle.Free();
+
+        udError error = udRenderTarget_Destroy(ref pRenderTarget);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+      public void SetTargets(ref UInt32[] colorBuffer, UInt32 clearColor, ref float[] depthBuffer)
+      {
+        if (colorBufferHandle.IsAllocated)
+          colorBufferHandle.Free();
+        if (depthBufferHandle.IsAllocated)
+          depthBufferHandle.Free();
+
+        colorBufferHandle = GCHandle.Alloc(colorBuffer, GCHandleType.Pinned);
+        depthBufferHandle = GCHandle.Alloc(depthBuffer, GCHandleType.Pinned);
+
+        udError error = udRenderTarget_SetTargets(pRenderTarget, colorBufferHandle.AddrOfPinnedObject(), clearColor, depthBufferHandle.AddrOfPinnedObject());
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+      public void GetMatrix(RenderViewMatrix matrixType, double[] cameraMatrix)
+      {
+        udError error = udRenderTarget_GetMatrix(pRenderTarget, matrixType, cameraMatrix);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+      public void SetMatrix(RenderViewMatrix matrixType, double[] cameraMatrix)
+      {
+        udError error = udRenderTarget_SetMatrix(pRenderTarget, matrixType, cameraMatrix);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+      public IntPtr pRenderTarget = IntPtr.Zero;
+      private udContext context;
+
+      private GCHandle colorBufferHandle;
+      private GCHandle depthBufferHandle;
+
+      [DllImport("udSDK")]
+      private static extern udError udRenderTarget_Create(IntPtr pContext, ref IntPtr ppRenderView, IntPtr pRenderer, UInt32 width, UInt32 height);
+
+      [DllImport("udSDK")]
+      private static extern udError udRenderTarget_Destroy(ref IntPtr ppRenderView);
+
+      [DllImport("udSDK")]
+      private static extern udError udRenderTarget_SetTargets(IntPtr pRenderView, IntPtr pColorBuffer, UInt32 colorClearValue, IntPtr pDepthBuffer);
+
+      [DllImport("udSDK")]
+      private static extern udError udRenderTarget_GetMatrix(IntPtr pRenderView, RenderViewMatrix matrixType, double[] cameraMatrix);
+
+      [DllImport("udSDK")]
+      private static extern udError udRenderTarget_SetMatrix(IntPtr pRenderView, RenderViewMatrix matrixType, double[] cameraMatrix);
+    }
   }
 
-  [StructLayout(LayoutKind.Sequential)]
-  public struct udAttributeSet
+  namespace PointCloud
   {
-    public StandardAttributeContent standardContent; //!< Which standard attributes are available (used to optimize lookups internally), they still appear in the descriptors
-    public uint count; //!< How many udAttributeDescriptor objects are used in pDescriptors
-    public uint allocated; //!< How many udAttributeDescriptor objects are allocated to be used in pDescriptors
-    public IntPtr pDescriptors; //!< this contains the actual information on the attributes
-  };
+    [StructLayout(LayoutKind.Sequential)]
+    public struct udPointCloudHeader
+    {
+      public double scaledRange; //!< The point cloud's range multiplied by the voxel size
+      public double unitMeterScale; //!< The scale to apply to convert to/from metres (after scaledRange is applied to the unitCube)
+      public uint totalLODLayers; //!< The total number of LOD layers in this octree
+      public double convertedResolution; //!< The resolution this model was converted at
+      [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+      public double[] storedMatrix; //!< This matrix is the 'default' internal matrix to go from a unit cube to the full size
 
-  [StructLayout(LayoutKind.Sequential)]
-  public struct udPointCloudHeader
-  {
-    public double scaledRange; //!< The point cloud's range multiplied by the voxel size
-    public double unitMeterScale; //!< The scale to apply to convert to/from metres (after scaledRange is applied to the unitCube)
-    public uint totalLODLayers; //!< The total number of LOD layers in this octree
-    public double convertedResolution; //!< The resolution this model was converted at
-    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
-    public double[] storedMatrix; //!< This matrix is the 'default' internal matrix to go from a unit cube to the full size
+      public Attributes.udAttributeSet attributes;   //!< The attributes contained in this pointcloud
 
-    public udAttributeSet attributes;   //!< The attributes contained in this pointcloud
+      [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
+      public double[] baseOffset; //!< The offset to the root of the pointcloud in unit cube space
+      [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
+      public double[] pivot; //!< The pivot point of the model, in unit cube space
+      [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
+      public double[] boundingBoxCenter; //!< The center of the bounding volume, in unit cube space
+      [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
+      public double[] boundingBoxExtents; //!< The extents of the bounding volume, in unit cube space  }
+    }
+    public class udPointCloud
+    {
+      public void Load(udContext context, string modelLocation, ref udPointCloudHeader header)
+      {
+        udError error = udPointCloud_Load(context.pContext, ref pModel, modelLocation, ref header);
+        udErrorUtils.ThrowOnUnsuccessful(error);
 
-    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
-    public double[] baseOffset; //!< The offset to the root of the pointcloud in unit cube space
-    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
-    public double[] pivot; //!< The pivot point of the model, in unit cube space
-    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
-    public double[] boundingBoxCenter; //!< The center of the bounding volume, in unit cube space
-    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
-    public double[] boundingBoxExtents; //!< The extents of the bounding volume, in unit cube space  }
+        this.context = context;
+      }
+
+      public void Unload()
+      {
+        udError error = udPointCloud_Unload(ref pModel);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+      public void GetMetadata(ref string ppJSONMetadata)
+      {
+        udError error = udPointCloud_GetMetadata(pModel, ref ppJSONMetadata);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+      public IntPtr pModel = IntPtr.Zero;
+      private udContext context;
+
+      [DllImport("udSDK")]
+      private static extern udError udPointCloud_Load(IntPtr pContext, ref IntPtr ppModel, string modelLocation, ref udPointCloudHeader header);
+
+      [DllImport("udSDK")]
+      private static extern udError udPointCloud_Unload(ref IntPtr ppModel);
+
+      [DllImport("udSDK")]
+      private static extern udError udPointCloud_GetMetadata(IntPtr pModel, ref string ppJSONMetadata);
+    }
   }
 
 
@@ -300,211 +388,80 @@ namespace udSDK
     private static extern udError udContext_Disconnect(ref IntPtr ppContext, int endSession);
   }
 
-  public class udRenderContext
+  namespace Convert
   {
-    public void Create(udContext context)
+    public class udConvertContext
     {
-      udError error = udRenderContext_Create(context.pContext, ref pRenderer);
-      udErrorUtils.ThrowOnUnsuccessful(error);
+      public void Create(udContext context)
+      {
+        udError error = udConvert_CreateContext(context.pContext, ref pConvertContext);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
 
-      this.context = context;
+      public void Destroy()
+      {
+        udError error = udConvert_DestroyContext(ref pConvertContext);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+
+      public void AddFile(string fileName)
+      {
+        udError error = udConvert_AddItem(pConvertContext, fileName);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+      public void SetFileName(string fileName)
+      {
+        udError error = udConvert_SetOutputFilename(pConvertContext, fileName);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+      public void DoConvert()
+      {
+        udError error = udConvert_DoConvert(pConvertContext);
+        udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+      public IntPtr pConvertContext;
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_CreateContext(IntPtr pContext, ref IntPtr ppConvertContext);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_DestroyContext(ref IntPtr ppConvertContext);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_AddItem(IntPtr pConvertContext, string fileName);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetOutputFilename(IntPtr pConvertContext, string fileName);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_DoConvert(IntPtr pConvertContext);
+
     }
-
-    public void Destroy()
-    {
-      udError error = udRenderContext_Destroy(ref pRenderer);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public void Render(udRenderTarget renderView, udRenderInstance[] pModels, int modelCount)
-    {
-      udError error = udRenderContext_Render(pRenderer, renderView.pRenderTarget, pModels, modelCount, (IntPtr)0);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public IntPtr pRenderer = IntPtr.Zero;
-    private udContext context;
-
-    [DllImport("udSDK")]
-    private static extern udError udRenderContext_Create(IntPtr pContext, ref IntPtr ppRenderer);
-    [DllImport("udSDK")]
-    private static extern udError udRenderContext_Destroy(ref IntPtr ppRenderer);
-    [DllImport("udSDK")]
-    private static extern udError udRenderContext_Render(IntPtr pRenderer, IntPtr pRenderView, udRenderInstance[] pModels, int modelCount, IntPtr options);
   }
 
-  public class udRenderTarget
+  namespace ServerAPI
   {
-    public void Create(udContext context, udRenderContext renderer, UInt32 width, UInt32 height)
+    public class udServerAPI
     {
-      udError error = udRenderTarget_Create(context.pContext, ref pRenderTarget, renderer.pRenderer, width, height);
-      udErrorUtils.ThrowOnUnsuccessful(error);
+      public static string Query(udContext context, string API, string JSON)
+      {
+        IntPtr response = IntPtr.Zero;
+        udError error = udServerAPI_Query(context.pContext, API, JSON, ref response);
+        udErrorUtils.ThrowOnUnsuccessful(error);
 
-      this.context = context;
+        string responseStr = Marshal.PtrToStringUTF8(response);
+        udServerAPI_ReleaseResult(ref response);
+        return responseStr;
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udServerAPI_Query(IntPtr pContext, string pAPIAddress, string pJSON, ref IntPtr ppResult);
+
+      [DllImport("udSDK")]
+      private static extern udError udServerAPI_ReleaseResult(ref IntPtr ppResult);
     }
-
-    public void Destroy()
-    {
-      if (colorBufferHandle.IsAllocated)
-        colorBufferHandle.Free();
-      if (depthBufferHandle.IsAllocated)
-        depthBufferHandle.Free();
-
-      udError error = udRenderTarget_Destroy(ref pRenderTarget);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public void SetTargets(ref UInt32[] colorBuffer, UInt32 clearColor, ref float[] depthBuffer)
-    {
-      if (colorBufferHandle.IsAllocated)
-        colorBufferHandle.Free();
-      if (depthBufferHandle.IsAllocated)
-        depthBufferHandle.Free();
-
-      colorBufferHandle = GCHandle.Alloc(colorBuffer, GCHandleType.Pinned);
-      depthBufferHandle = GCHandle.Alloc(depthBuffer, GCHandleType.Pinned);
-
-      udError error = udRenderTarget_SetTargets(pRenderTarget, colorBufferHandle.AddrOfPinnedObject(), clearColor, depthBufferHandle.AddrOfPinnedObject());
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public void GetMatrix(RenderViewMatrix matrixType, double[] cameraMatrix)
-    {
-      udError error = udRenderTarget_GetMatrix(pRenderTarget, matrixType, cameraMatrix);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public void SetMatrix(RenderViewMatrix matrixType, double[] cameraMatrix)
-    {
-      udError error = udRenderTarget_SetMatrix(pRenderTarget, matrixType, cameraMatrix);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public IntPtr pRenderTarget = IntPtr.Zero;
-    private udContext context;
-
-    private GCHandle colorBufferHandle;
-    private GCHandle depthBufferHandle;
-
-    [DllImport("udSDK")]
-    private static extern udError udRenderTarget_Create(IntPtr pContext, ref IntPtr ppRenderView, IntPtr pRenderer, UInt32 width, UInt32 height);
-
-    [DllImport("udSDK")]
-    private static extern udError udRenderTarget_Destroy(ref IntPtr ppRenderView);
-
-    [DllImport("udSDK")]
-    private static extern udError udRenderTarget_SetTargets(IntPtr pRenderView, IntPtr pColorBuffer, UInt32 colorClearValue, IntPtr pDepthBuffer);
-
-    [DllImport("udSDK")]
-    private static extern udError udRenderTarget_GetMatrix(IntPtr pRenderView, RenderViewMatrix matrixType, double[] cameraMatrix);
-
-    [DllImport("udSDK")]
-    private static extern udError udRenderTarget_SetMatrix(IntPtr pRenderView, RenderViewMatrix matrixType, double[] cameraMatrix);
-  }
-
-  public class udPointCloud
-  {
-    public void Load(udContext context, string modelLocation, ref udPointCloudHeader header)
-    {
-      udError error = udPointCloud_Load(context.pContext, ref pModel, modelLocation, ref header);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-
-      this.context = context;
-    }
-
-    public void Unload()
-    {
-      udError error = udPointCloud_Unload(ref pModel);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public void GetMetadata(ref string ppJSONMetadata)
-    {
-      udError error = udPointCloud_GetMetadata(pModel, ref ppJSONMetadata);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public IntPtr pModel = IntPtr.Zero;
-    private udContext context;
-
-    [DllImport("udSDK")]
-    private static extern udError udPointCloud_Load(IntPtr pContext, ref IntPtr ppModel, string modelLocation, ref udPointCloudHeader header);
-
-    [DllImport("udSDK")]
-    private static extern udError udPointCloud_Unload(ref IntPtr ppModel);
-
-    [DllImport("udSDK")]
-    private static extern udError udPointCloud_GetMetadata(IntPtr pModel, ref string ppJSONMetadata);
-  }
-
-  public class udConvertContext
-  {
-    public void Create(udContext context)
-    {
-      udError error = udConvert_CreateContext(context.pContext, ref pConvertContext);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public void Destroy()
-    {
-      udError error = udConvert_DestroyContext(ref pConvertContext);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-
-    public void AddFile(string fileName)
-    {
-      udError error = udConvert_AddItem(pConvertContext, fileName);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-    public void SetFileName(string fileName)
-    {
-      udError error = udConvert_SetOutputFilename(pConvertContext, fileName);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public void DoConvert()
-    {
-      udError error = udConvert_DoConvert(pConvertContext);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-    }
-
-    public IntPtr pConvertContext;
-
-    [DllImport("udSDK")]
-    private static extern udError udConvert_CreateContext(IntPtr pContext, ref IntPtr ppConvertContext);
-
-    [DllImport("udSDK")]
-    private static extern udError udConvert_DestroyContext(ref IntPtr ppConvertContext);
-
-    [DllImport("udSDK")]
-    private static extern udError udConvert_AddItem(IntPtr pConvertContext, string fileName);
-
-    [DllImport("udSDK")]
-    private static extern udError udConvert_SetOutputFilename(IntPtr pConvertContext, string fileName);
-
-    [DllImport("udSDK")]
-    private static extern udError udConvert_DoConvert(IntPtr pConvertContext);
-
-  }
-
-  public class udServerAPI
-  {
-    public static string Query(udContext context, string API, string JSON)
-    {
-      IntPtr response = IntPtr.Zero;
-      udError error = udServerAPI_Query(context.pContext, API, JSON, ref response);
-      udErrorUtils.ThrowOnUnsuccessful(error);
-
-      string responseStr = Marshal.PtrToStringUTF8(response);
-      udServerAPI_ReleaseResult(ref response);
-      return responseStr;
-    }
-
-    [DllImport("udSDK")]
-    private static extern udError udServerAPI_Query(IntPtr pContext, string pAPIAddress, string pJSON, ref IntPtr ppResult);
-
-    [DllImport("udSDK")]
-    private static extern udError udServerAPI_ReleaseResult(ref IntPtr ppResult);
   }
 }
