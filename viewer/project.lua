@@ -8,6 +8,7 @@ project "Viewer"
 
 	--Files to include
 	files { "*.h", "*.cpp", "*.md", "*.lua" }
+	files { "../external/imgui/*.cpp", "../external/imgui/*.h" }
 	includedirs { "../external/stb", "../features/shared" }
 	
 	includedirs { "../external/udcore/Include" }
@@ -15,6 +16,10 @@ project "Viewer"
 
 	includedirs { "../external/imgui" }
 	
+	--This project includes
+	IncludeUDSDK()
+
+	-- filters
 	includedirs { "../external/sdl2/include"}
 	filter { "system:windows" }
 		libdirs { "../external/sdl2/lib/x64" }
@@ -22,10 +27,6 @@ project "Viewer"
 	filter { "system:linux" }
 		links { "SDL2" }
 
-	--This project includes
-	IncludeUDSDK()
-
-	-- filters
 	filter { "configurations:Debug" }
 		symbols "On"
 		optimize "Debug"
@@ -35,7 +36,7 @@ project "Viewer"
 		optimize "Full"
 
 	filter { "system:windows" }
-		links { "udSDK" }
+		links { "udSDK", "winmm.lib" }
 		postbuildcommands { 'XCOPY /f /d /y "' .. _OPTIONS["udsdk"] .. '\\lib\\win_x64\\udSDK.dll" "$(TargetDir)\\"' }
 
 	filter { "system:linux" }
