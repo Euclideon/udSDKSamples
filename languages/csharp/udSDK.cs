@@ -88,9 +88,11 @@ namespace Euclideon.udSDK
 
   public class UDException : Exception
   {
-    public UDException(string message) : base(message)
+    public UDException(string message, udError code) : base(message)
     {
+      this.code = code;
     }
+    public udError code;
   };
 
   public class udErrorUtils
@@ -106,141 +108,25 @@ namespace Euclideon.udSDK
     public static void ThrowOnUnsuccessful(udError code)
     {
       if(code != udError.udE_Success)
-        throw new UDException(To_String(code));
+        throw new UDException(To_String(code), code);
 
     }
   };
 
-  namespace Render
-  { 
-    public enum RenderViewMatrix
-    {
-      Camera,     // The local to world-space transform of the camera (View is implicitly set as the inverse)
-      View,       // The view-space transform for the model (does not need to be set explicitly)
-      Projection, // The projection matrix (default is 60 degree LH)
-      Viewport,   // Viewport scaling matrix (default width and height of viewport)
-
-      Count,
-    };
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct udRenderInstance
-    {
-      public IntPtr pointCloud;
-      [MarshalAs(UnmanagedType.ByValArray, SizeConst=16)]
-      public double[] worldMatrix;
-
-      public IntPtr filter;
-      public IntPtr voxelShader;
-      public IntPtr voxelUserData;
-      public double opacity;
-      public uint skipRender;
-    }
-    public class udRenderContext
-    {
-      public void Create(udContext context)
-      {
-        udError error = udRenderContext_Create(context.pContext, ref pRenderer);
-        udErrorUtils.ThrowOnUnsuccessful(error);
-
-        this.context = context;
-      }
-
-      public void Destroy()
-      {
-        udError error = udRenderContext_Destroy(ref pRenderer);
-        udErrorUtils.ThrowOnUnsuccessful(error);
-      }
-
-      public void Render(udRenderTarget renderView, udRenderInstance[] pModels, int modelCount)
-      {
-        udError error = udRenderContext_Render(pRenderer, renderView.pRenderTarget, pModels, modelCount, (IntPtr)0);
-        udErrorUtils.ThrowOnUnsuccessful(error);
-      }
-
-      public IntPtr pRenderer = IntPtr.Zero;
-      private udContext context;
-
-      [DllImport("udSDK")]
-      private static extern udError udRenderContext_Create(IntPtr pContext, ref IntPtr ppRenderer);
-      [DllImport("udSDK")]
-      private static extern udError udRenderContext_Destroy(ref IntPtr ppRenderer);
-      [DllImport("udSDK")]
-      private static extern udError udRenderContext_Render(IntPtr pRenderer, IntPtr pRenderView, udRenderInstance[] pModels, int modelCount, IntPtr options);
-    }
-
-    public class udRenderTarget
-    {
-      public void Create(udContext context, udRenderContext renderer, UInt32 width, UInt32 height)
-      {
-        udError error = udRenderTarget_Create(context.pContext, ref pRenderTarget, renderer.pRenderer, width, height);
-        udErrorUtils.ThrowOnUnsuccessful(error);
-
-        this.context = context;
-      }
-
-      public void Destroy()
-      {
-        if (colorBufferHandle.IsAllocated)
-          colorBufferHandle.Free();
-        if (depthBufferHandle.IsAllocated)
-          depthBufferHandle.Free();
-
-        udError error = udRenderTarget_Destroy(ref pRenderTarget);
-        udErrorUtils.ThrowOnUnsuccessful(error);
-      }
-
-      public void SetTargets(ref UInt32[] colorBuffer, UInt32 clearColor, ref float[] depthBuffer)
-      {
-        if (colorBufferHandle.IsAllocated)
-          colorBufferHandle.Free();
-        if (depthBufferHandle.IsAllocated)
-          depthBufferHandle.Free();
-
-        colorBufferHandle = GCHandle.Alloc(colorBuffer, GCHandleType.Pinned);
-        depthBufferHandle = GCHandle.Alloc(depthBuffer, GCHandleType.Pinned);
-
-        udError error = udRenderTarget_SetTargets(pRenderTarget, colorBufferHandle.AddrOfPinnedObject(), clearColor, depthBufferHandle.AddrOfPinnedObject());
-        udErrorUtils.ThrowOnUnsuccessful(error);
-      }
-
-      public void GetMatrix(RenderViewMatrix matrixType, double[] cameraMatrix)
-      {
-        udError error = udRenderTarget_GetMatrix(pRenderTarget, matrixType, cameraMatrix);
-        udErrorUtils.ThrowOnUnsuccessful(error);
-      }
-
-      public void SetMatrix(RenderViewMatrix matrixType, double[] cameraMatrix)
-      {
-        udError error = udRenderTarget_SetMatrix(pRenderTarget, matrixType, cameraMatrix);
-        udErrorUtils.ThrowOnUnsuccessful(error);
-      }
-
-      public IntPtr pRenderTarget = IntPtr.Zero;
-      private udContext context;
-
-      private GCHandle colorBufferHandle;
-      private GCHandle depthBufferHandle;
-
-      [DllImport("udSDK")]
-      private static extern udError udRenderTarget_Create(IntPtr pContext, ref IntPtr ppRenderView, IntPtr pRenderer, UInt32 width, UInt32 height);
-
-      [DllImport("udSDK")]
-      private static extern udError udRenderTarget_Destroy(ref IntPtr ppRenderView);
-
-      [DllImport("udSDK")]
-      private static extern udError udRenderTarget_SetTargets(IntPtr pRenderView, IntPtr pColorBuffer, UInt32 colorClearValue, IntPtr pDepthBuffer);
-
-      [DllImport("udSDK")]
-      private static extern udError udRenderTarget_GetMatrix(IntPtr pRenderView, RenderViewMatrix matrixType, double[] cameraMatrix);
-
-      [DllImport("udSDK")]
-      private static extern udError udRenderTarget_SetMatrix(IntPtr pRenderView, RenderViewMatrix matrixType, double[] cameraMatrix);
-    }
-  }
-
   namespace PointCloud
   {
+    //!
+    //! @struct udVoxelID
+    //! Combines the traverse context and node index to uniquely identify a node
+    //!
+    [StructLayout(LayoutKind.Sequential)]
+    struct udVoxelID
+    {
+      UInt64 index; //!< Internal index value
+      IntPtr pTrav; //!< Internal traverse info
+      IntPtr pRenderInfo; //!< Internal render info
+    };
+
     [StructLayout(LayoutKind.Sequential)]
     public struct udPointCloudHeader
     {
@@ -264,7 +150,12 @@ namespace Euclideon.udSDK
     }
     public class udPointCloud
     {
-      public void Load(udContext context, string modelLocation, ref udPointCloudHeader header)
+      public udPointCloud(udContext context, string path)
+      {
+        Load(context, path, ref this.header);
+      }
+
+      private void Load(udContext context, string modelLocation, ref udPointCloudHeader header)
       {
         udError error = udPointCloud_Load(context.pContext, ref pModel, modelLocation, ref header);
         udErrorUtils.ThrowOnUnsuccessful(error);
@@ -272,10 +163,15 @@ namespace Euclideon.udSDK
         this.context = context;
       }
 
-      public void Unload()
+      private void Unload()
       {
         udError error = udPointCloud_Unload(ref pModel);
         udErrorUtils.ThrowOnUnsuccessful(error);
+      }
+
+      ~udPointCloud()
+      {
+        Unload();
       }
 
       public void GetMetadata(ref string ppJSONMetadata)
@@ -286,6 +182,7 @@ namespace Euclideon.udSDK
 
       public IntPtr pModel = IntPtr.Zero;
       private udContext context;
+      public udPointCloudHeader header;
 
       [DllImport("udSDK")]
       private static extern udError udPointCloud_Load(IntPtr pContext, ref IntPtr ppModel, string modelLocation, ref udPointCloudHeader header);
@@ -310,25 +207,49 @@ namespace Euclideon.udSDK
         Disconnect();
     }
 
-    public void Connect(string pURL, string pApplicationName, string pKey)
+    public void Connect(string pURL, string pApplicationName, string pKey=null, bool useDongle = false)
     {
       udError error = udError.udE_Failure;
 
-      error = udContext_TryResume(ref pContext, pURL, pApplicationName, null, 0); //Set to 1 to try use the dongle
+      error = udContext_TryResume(ref pContext, pURL, pApplicationName, null, System.Convert.ToInt32(useDongle)); //Set to 1 to try use the dongle
 
-      if (error != udError.udE_Success)
+      if (pKey != null && error != udError.udE_Success)
         error = udContext_ConnectWithKey(ref pContext, pURL, pApplicationName, "1.0", pKey);
 
       if (error != udError.udE_Success)
-      { 
-        string approvePath = "";
-        string approveCode = "";
-        ConnectStart(pURL, pApplicationName, "1.0", ref approvePath, ref approveCode);
-        ConnectComplete();
-        error = udError.udE_Success;
+      {
+        ConnectInteractive(pURL, pApplicationName, true);
       }
-
       udErrorUtils.ThrowOnUnsuccessful(error);
+    }
+
+
+    public void ConnectInteractive(string serverURL, string applicationName, bool openBrowserAutomatically)
+    {
+
+      string approvePath = "";
+      string approveCode = "";
+      ConnectStart(serverURL, applicationName, "1.0", ref approvePath, ref approveCode);
+      if (openBrowserAutomatically)
+      {
+        System.Diagnostics.Process.Start(approvePath);
+      }
+      else
+      {
+        Console.WriteLine("Navigate to " + approvePath + " on this device to complete udCloud login");
+        Console.WriteLine("Altenatively navigate to " + serverURL + "/link on any device and enter " + approveCode);
+        Console.WriteLine("Press any key to continue...");
+        Console.ReadKey();
+      }
+      try
+      {
+        ConnectComplete();
+      }
+      catch(UDException e)
+      {
+        Console.WriteLine("udCloud Login failed: " + e.Message);
+        throw e;
+      }
     }
 
     public void ConnectStart(string pURL, string pApplicationName, string pApplicationVersion, ref string ppApprovePath, ref string ppApproveCode)
