@@ -7,9 +7,9 @@
 #include "udSDKFeatureSamples.h"
 
 // external
-#include "SDL2/SDL.h"
+#include "SDL.h"
 #include "imgui.h"
-//#include "imgui_impl_sdl_gl3.h"
+#include "backends/imgui_impl_sdl.h"
 
 // udcore
 #include "udChunkedArray.h"
@@ -67,11 +67,24 @@ int main(int argc, char **args)
   if (!pWindow)
     goto epilogue;
 
-  SDL_GLContext pGLContext = SDL_GL_CreateContext(pWindow);
+  uint32_t render_flags = SDL_RENDERER_ACCELERATED;
+  SDL_Renderer *pSdlRenderer = SDL_CreateRenderer(pWindow, -1, render_flags);
   ImGui::CreateContext();
-  //ImGui_ImplSdlGL3_Init(pWindow);
+  ImGui_ImplSDL2_InitForSDLRenderer(pWindow, pSdlRenderer);
+  SDL_Texture *pSdlTexture = SDL_CreateTexture(pSdlRenderer,
+    SDL_PIXELFORMAT_BGRA8888,
+    SDL_TEXTUREACCESS_STREAMING,
+    g_windowWidth,
+    g_windowHeight);
 
-  camera = camera.identity();
+  //camera = camera.identity();
+  camera = {
+    +1.0,+0.0,+0.0,0,
+    +0.0,+0.5,-0.5,0,
+    +0.0,+0.5,+0.5,0,
+
+    +50.0,-55.0,+55.0,1
+  };
 
   if (udRenderContext_Create(pContext, &pRenderer) != udE_Success)
   {
@@ -85,24 +98,24 @@ int main(int argc, char **args)
     goto epilogue;
   }
 
-  if (udPointCloud_Load(pContext, &pModel, "../samplefiles/DirCube.uds", &header) != udE_Success)
+  //udError res = udPointCloud_Load(pContext, &pModel, "../../samplefiles/DirCube.uds", &header);
+  udError res = udPointCloud_Load(pContext, &pModel, "../../samplefiles/HistogramTest.uds", &header);
+  if (res != udE_Success)
   {
     printf("Could not load sample UDS file\n");
     goto epilogue;
   }
 
-  instance.pPointCloud = pModel;
-  memcpy(instance.matrix, header.storedMatrix, sizeof(header.storedMatrix));
-  //instance.pVoxelShader = CustomVoxelShader;
-  //instance.pVoxelUserData = &vsData;
-
-  options.flags = udRCF_None;
-
-  if (udPointCloud_GetHeader(pModel, &header) != udE_Success)
+  if (udRenderTarget_SetTargets(pRenderView, pColorBuffer, 0, pDepthBuffer) != udE_Success)
   {
-    printf("Could not get uds header\n");
+    printf("Could not set render target buffers\n");
     goto epilogue;
   }
+
+  instance.pPointCloud = pModel;
+  memcpy(instance.matrix, header.storedMatrix, sizeof(header.storedMatrix));
+
+  options.flags = udRCF_None;
 
   while (isRunning)
   {
@@ -114,7 +127,7 @@ int main(int argc, char **args)
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
-      //ImGui_ImplSdlGL3_ProcessEvent(&event);
+      ImGui_ImplSDL2_ProcessEvent(&event);
       if (event.type == SDL_QUIT)
         isRunning = false;
 
@@ -131,19 +144,28 @@ int main(int argc, char **args)
     }
 
     float moveScaler = (moveScale < 0) ? -1.f / moveScale : moveScale + 1;
+    void *pSdlPixels;
     udUpdateCamera(camera.a, yaw, pitch, tx * moveScaler, ty * moveScaler, tz * moveScaler);
+    SDL_LockTexture(pSdlTexture,
+      NULL,      // NULL means the *whole texture* here.
+      &pSdlPixels,
+      &g_windowWidth);
 
-    if (udRenderTarget_SetTargets(pRenderView, pColorBuffer, 0, pDepthBuffer) != udE_Success)
-      printf("Could not set render target buffers\n");
     if (udRenderTarget_SetMatrix(pRenderView, udRTM_Camera, camera.a) != udE_Success)
       printf("Could not set render target matrix\n");
 
     if (udRenderContext_Render(pRenderer, pRenderView, &instance, 1, &options) != udE_Success)
       printf("Rendering failed!\n");
+
+    //bind pColorBuffer to SDL_window
+    memcpy(pSdlPixels, pColorBuffer, g_windowWidth * g_windowHeight);
+    SDL_UnlockTexture(pSdlTexture);
+    SDL_RenderClear(pSdlRenderer);
+    SDL_RenderCopy(pSdlRenderer, pSdlTexture, NULL, NULL);
+    SDL_RenderPresent(pSdlRenderer);
   }
 
 epilogue:
-
   // Clean up
   delete pDepthBuffer;
   delete pColorBuffer;
@@ -151,6 +173,10 @@ epilogue:
   udRenderTarget_Destroy(&pRenderView);
   udRenderContext_Destroy(&pRenderer);
   udContext_Disconnect(&pContext, true);
+
+  SDL_DestroyTexture(pSdlTexture);
+  SDL_DestroyRenderer(pSdlRenderer);
+  SDL_DestroyWindow(pWindow);
 
   return 0;
 }
