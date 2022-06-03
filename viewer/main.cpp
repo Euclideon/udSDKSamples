@@ -10,6 +10,7 @@
 #include "SDL.h"
 #include "imgui.h"
 #include "backends/imgui_impl_sdl.h"
+#include "backends/imgui_impl_sdlrenderer.h"
 
 // udcore
 #include "udChunkedArray.h"
@@ -38,14 +39,16 @@ int main(int argc, char **args)
   udPointCloud *pModel = nullptr;
   udPointCloudHeader header;
 
+  float menuBarHeight = 0;
+
   // Resume Session or Login
-  if (udContext_TryResume(&pContext, "udcloud.euclideon.com", "udViewer", nullptr, false) != udE_Success)
-    udResult = udContext_ConnectWithKey(&pContext, "udcloud.euclideon.com", "udViewer", "1.0", s_udCloudKey);
+  if (udContext_TryResume(&pContext, "staging.udcloud.euclideon.com", "udViewer", nullptr, false) != udE_Success)
+    udResult = udContext_ConnectWithKey(&pContext, "staging.udcloud.euclideon.com", "udViewer", "1.0", s_udCloudKey);
 
   if (udResult != udE_Success)
     ExitWithMessage(udResult, "Could not login!");
 
-  uint32_t windowFlags = SDL_WINDOW_SHOWN;// | SDL_WINDOW_RESIZABLE;
+  uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;// | SDL_WINDOW_RESIZABLE;
   bool isRunning = true;
   uint32_t lastRenderTime = udGetTimeMs() - 16;
   double dt = 1000.f / 60.f;
@@ -70,7 +73,10 @@ int main(int argc, char **args)
   uint32_t render_flags = SDL_RENDERER_ACCELERATED;
   SDL_Renderer *pSdlRenderer = SDL_CreateRenderer(pWindow, -1, render_flags);
   ImGui::CreateContext();
+  ImGuiIO &io = ImGui::GetIO(); (void)io;
+  ImGui::StyleColorsDark();
   ImGui_ImplSDL2_InitForSDLRenderer(pWindow, pSdlRenderer);
+  ImGui_ImplSDLRenderer_Init(pSdlRenderer);
   SDL_Texture *pSdlTexture = SDL_CreateTexture(pSdlRenderer,
     SDL_PIXELFORMAT_BGRA8888,
     SDL_TEXTUREACCESS_STREAMING,
@@ -160,13 +166,40 @@ int main(int argc, char **args)
     //bind pColorBuffer to SDL_window
     memcpy(pSdlPixels, pColorBuffer, g_windowWidth * g_windowHeight);
     SDL_UnlockTexture(pSdlTexture);
+
+    //ImGUI
+    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::ShowDemoWindow();
+
+    //if (ImGui::BeginMainMenuBar())
+    //{
+    //  menuBarHeight = ImGui::GetContentRegionMax().y - 2;
+    //  if (ImGui::BeginMenu("File"))
+    //  {
+    //    if (ImGui::MenuItem("Convert Files", nullptr, nullptr))
+    //      printf("File");
+    //    ImGui::EndMenu();
+    //  }
+    //  ImGui::EndMainMenuBar();
+    //}
+    //ImGui::Begin("Image");
+    //ImGui::Image(pTexture, ImVec2(100, 100));
+    //ImGui::End();
+
+    ImGui::Render();
     SDL_RenderClear(pSdlRenderer);
     SDL_RenderCopy(pSdlRenderer, pSdlTexture, NULL, NULL);
+    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(pSdlRenderer);
   }
 
 epilogue:
   // Clean up
+  //ImGuiSDL::Deinitialize();
+
   delete pDepthBuffer;
   delete pColorBuffer;
   udPointCloud_Unload(&pModel);
