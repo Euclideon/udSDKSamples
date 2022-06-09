@@ -12,6 +12,9 @@ namespace udSDKSample
       const int width = 1280;
       const int height = 720;
 
+      const string applicationName = "CSSample";
+      const string appversion = "1.0";
+
       udSDK.udContext context = new udSDK.udContext();
       udSDK.udRenderContext renderer = new udSDK.udRenderContext();
       udSDK.udRenderTarget renderView = new udSDK.udRenderTarget();
@@ -21,7 +24,7 @@ namespace udSDKSample
       float[] depthBuffer = new float[width * height];
 
       string server = "https://udcloud.euclideon.com";
-      string key = "";
+      string key = null;
       string modelName = "https://models.euclideon.com/DirCube.uds"; // Can be local or remote
       bool pause = false;
 
@@ -39,7 +42,14 @@ namespace udSDKSample
 
       try
       {
-        context.Connect(server, "CSSample", key);
+        if (key == null)
+        {
+          context.ConnectInteractive(server, applicationName, appversion);
+        }
+        else
+        {
+          context.ConnectWithKey(server, key, applicationName, appversion);
+        }
 
         renderer.Create(context);
         renderView.Create(context, renderer, width, height);
