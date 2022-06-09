@@ -77,6 +77,7 @@ namespace udSDKSample
         itemFlipped.worldMatrix[10] = 10 * itemFlipped.worldMatrix[10];
 
 
+
         //udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{ item, itemFlipped };
         udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{ item};
 
