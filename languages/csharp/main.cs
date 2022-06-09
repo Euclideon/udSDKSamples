@@ -17,8 +17,8 @@ namespace udSDKSample
       const string appversion = "1.0";
 
       udSDK.udContext context = new udSDK.udContext();
-      udSDK.udRenderContext renderer = new udSDK.udRenderContext();
-      udSDK.udRenderTarget renderView = new udSDK.udRenderTarget();
+      udSDK.Render.udRenderContext renderer = new udSDK.Render.udRenderContext();
+      udSDK.Render.udRenderTarget renderView = new udSDK.Render.udRenderTarget();
       udSDK.udPointCloud udModel = new udSDK.udPointCloud();
       udSDK.udPointCloudHeader header = new udSDK.udPointCloudHeader();
       uint[] colorBuffer = new uint[width * height];
@@ -64,7 +64,7 @@ namespace udSDKSample
           0,-5,0,1
         };
 
-        renderView.SetMatrix(udSDK.RenderViewMatrix.Camera, cameraMatrix);
+        renderView.SetMatrix(udSDK.Render.RenderViewMatrix.Camera, cameraMatrix);
 
         udSDK.udRenderInstance item = new udSDK.udRenderInstance();
         item.pointCloud = udModel.pModel;
@@ -106,7 +106,7 @@ namespace udSDKSample
 
     static void Convert(string inputPath, string outputPath, udSDK.udContext context)
     {
-      udSDK.udConvertContext convertContext = new udSDK.udConvertContext();
+      udSDK.Convert.udConvertContext convertContext = new udSDK.Convert.udConvertContext();
       convertContext.Create(context);
 
       convertContext.AddFile(inputPath);
