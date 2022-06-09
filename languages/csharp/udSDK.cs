@@ -108,6 +108,8 @@ namespace udSDK
     public IntPtr filter;
     public IntPtr voxelShader;
     public IntPtr voxelUserData;
+    public double opacity;
+    public uint skipRender;
   }
 
   [StructLayout(LayoutKind.Sequential)]
