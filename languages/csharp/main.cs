@@ -17,7 +17,7 @@ namespace udSDKSample
       const string appversion = "1.0";
 
       udSDK.udContext context = new udSDK.udContext();
-      udSDK.PointCloud.udPointCloud udModel;
+      udSDK.udPointCloud udModel;
       udSDK.Render.udRenderContext renderer;
       udSDK.Render.udRenderTarget renderView;
 
@@ -55,7 +55,7 @@ namespace udSDKSample
         renderer = new udSDK.Render.udRenderContext(context);
         renderView = new udSDK.Render.udRenderTarget(context, renderer, width, height);
 
-        udModel = new udSDK.PointCloud.udPointCloud(context, modelName);
+        udModel = new udSDK.udPointCloud(context, modelName);
 
         renderView.SetTargets(ref colorBuffer, 0, ref depthBuffer);
 
