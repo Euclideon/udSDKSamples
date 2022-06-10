@@ -80,30 +80,23 @@ namespace Euclideon.udSDK
 
     public class udConvertContext
     {
-      public void Create(udContext context)
+      public udConvertContext(udContext context)
       {
         udError error = udConvert_CreateContext(context.pContext, ref pConvertContext);
         if (error != udError.udE_Success)
           throw new UDException(error);
       }
 
-      public void Destroy()
+      ~udConvertContext()
       {
         udError error = udConvert_DestroyContext(ref pConvertContext);
         if (error != udError.udE_Success)
           throw new UDException(error);
       }
 
-
       public void AddFile(string fileName)
       {
         udError error = udConvert_AddItem(pConvertContext, fileName);
-        if (error != udError.udE_Success)
-          throw new UDException(error);
-      }
-      public void SetFileName(string fileName)
-      {
-        udError error = udConvert_SetOutputFilename(pConvertContext, fileName);
         if (error != udError.udE_Success)
           throw new UDException(error);
       }
@@ -114,6 +107,184 @@ namespace Euclideon.udSDK
         if (error != udError.udE_Success)
           throw new UDException(error);
       }
+
+      udConvertInfo info
+      {
+        get { return Marshal.PtrToStructure<udConvertInfo>(pInfo); }
+      }
+
+      public string OutputFile
+      {
+        get { return info.pOutputName; }
+        set
+        {
+          udError code = udConvert_SetOutputFilename(pConvertContext, value);
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+
+      public string TempDirectory
+      {
+        get { return info.pTempFilesPrefix; }
+        set
+        {
+          udError code = udConvert_SetTempDirectory(pConvertContext, value);
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+
+      public double PointResolution
+      {
+        get { return info.pointResolution; }
+        set
+        {
+          udError code = udConvert_SetPointResolution(pConvertContext, 1, value);
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+
+      public bool OverridePointResolution
+      {
+        get { return System.Convert.ToBoolean(info.overrideResolution); }
+        set
+        {
+          if (!value)
+          {
+            udError code = udConvert_SetPointResolution(pConvertContext, 0, 0);
+            if (code != udError.udE_Success)
+              throw new UDException(code); 
+          }
+          else
+          {
+            throw new ArgumentException("Override resolution must be set using the PointResolution Property");
+          }
+        }
+      }
+
+      public int SRID
+      {
+        get { return info.srid; }
+        set
+        {
+          udError code = udConvert_SetSRID(pConvertContext, 1, value);
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+
+      public bool OverrideSRID
+      {
+        get { return System.Convert.ToBoolean(info.overrideSRID); }
+        set
+        {
+          if (!value)
+          {
+            udError code = udConvert_SetSRID(pConvertContext, 0, 0);
+            if (code != udError.udE_Success)
+              throw new UDException(code); 
+          }
+          else
+          {
+            throw new ArgumentException("Override SRID must be set using the SRID Property");
+          }
+        }
+      }
+
+      public string WellKnownText
+      {
+        get { return info.pWKT; }
+        set
+        {
+          udError code = udConvert_SetWKT(pConvertContext, value);
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+
+      public double[] GlobalOffset
+      {
+        get { return info.globalOffset; }
+        set
+        {
+          udError code = udConvert_SetGlobalOffset(pConvertContext, value);
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+      public bool SkipErrors
+      {
+        get { return System.Convert.ToBoolean(info.skipErrorsWherePossible); }
+        set
+        {
+          udError code = udConvert_SetSkipErrorsWherePossible(pConvertContext, System.Convert.ToUInt32(value));
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+      public uint EveryNth
+      {
+        get { return info.everyNth; }
+        set
+        {
+          udError code = udConvert_SetEveryNth(pConvertContext, value);
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+      public bool PolygonVerticesOnly
+      {
+        get { return System.Convert.ToBoolean(info.polygonVerticesOnly); }
+        set
+        {
+          udError code = udConvert_SetPolygonVerticesOnly(pConvertContext, System.Convert.ToUInt32(value));
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+
+      public bool RetainPrimitives
+      {
+        get { return System.Convert.ToBoolean(info.retainPrimitives); }
+        set
+        {
+          udError code = udConvert_SetRetainPrimitives(pConvertContext, System.Convert.ToUInt32(value));
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+      public bool BakeLighting
+      {
+        get { return System.Convert.ToBoolean(info.bakeLighting); }
+        set
+        {
+          udError code = udConvert_SetBakeLighting(pConvertContext, System.Convert.ToUInt32(value));
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+      public bool ExportOtherEmbeddedAssets
+      {
+        get { return System.Convert.ToBoolean(info.exportOtherEmbeddedAssets); }
+        set
+        {
+          udError code = udConvert_SetExportOtherEmbeddedAssets(pConvertContext, System.Convert.ToUInt32(value));
+          if (code != udError.udE_Success)
+            throw new UDException(code);
+        }
+      }
+
+      // TODO: Metadata setting
+      public string MetaData
+      {
+        get { return info.pMetadata; }
+        //set { udErrorUtils.ThrowOnUnsuccessful(udConvert_SetMetadata(pConvertContext, value)); }
+      }
+
+
+      private IntPtr pInfo;
 
       public IntPtr pConvertContext;
 
@@ -130,8 +301,85 @@ namespace Euclideon.udSDK
       private static extern udError udConvert_SetOutputFilename(IntPtr pConvertContext, string fileName);
 
       [DllImport("udSDK")]
+      private static extern udError udConvert_SetTempDirectory(IntPtr pConvertContext, string pFolder);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetPointResolution(IntPtr pConvertContext, UInt32 newVal, double pointResolutionMeters);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_IgnoreAttribute(IntPtr pConvertContext, string pAttributeName);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_RestoreAttribute(IntPtr pConvertContext, string pAttributeName);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetAttributePrefix(IntPtr pConvertContext, string pAttributeName, string pPrefix);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetAttributeSuffix(IntPtr pConvertContext, string pAttributeName, string pSuffix);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetSRID(IntPtr pConvertContext, UInt32 newVal, int srid);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetWKT(IntPtr pConvertContext, string pWKT);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetGlobalOffset(IntPtr pConvertContext, double[] globalOffset);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetSkipErrorsWherePossible(IntPtr pConvertContext, UInt32 ignoreParseErrorsWherePossible);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetEveryNth(IntPtr pConvertContext, UInt32 everyNth);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetPolygonVerticesOnly(IntPtr pConvertContext, UInt32 polygonVerticesOnly);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetRetainPrimitives(IntPtr pConvertContext, UInt32 retainPrimitives);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetBakeLighting(IntPtr pConvertContext, UInt32 bakeLighting);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetExportOtherEmbeddedAssets(IntPtr pConvertContext, UInt32 exportImages);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetMetadata(IntPtr pConvertContext, string pMetadataKey, string pMetadataValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_RemoveItem(IntPtr pConvertContext, UInt64 index);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetInputSourceProjection(IntPtr pConvertContext, UInt64 index, int srid);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_Cancel(IntPtr pConvertContext);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_Reset(IntPtr pConvertContext);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_GeneratePreview(IntPtr pConvertContext, ref IntPtr ppCloud);
+
+      //[DllImport("udSDK")]
+      //private static extern udError udConvert_SetPostProcessCallback(IntPtr pContext, PostProcessCallback callback, void *pUserData, void(*pCleanUpUserData)(void*));
+
+      //[DllImport("udSDK")]
+      //private static extern udError udConvert_AddOutputAttribute(IntPtr pContext, struct udAttributeDescriptor *pAttribute);
+
+      //[DllImport("udSDK")]
+      //private static extern udError udConvert_RemoveOutputAttribute(IntPtr pContext, UInt32 index);
+
+      [DllImport("udSDK")]
       private static extern udError udConvert_DoConvert(IntPtr pConvertContext);
 
+      [DllImport("udSDK")]
+      private static extern udError udConvert_GetInfo(IntPtr pConvertContext, ref IntPtr ppInfo);
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_GetItemInfo(IntPtr pConvertContext, UInt64 index, ref udConvertItemInfo pInfo);
     }
   }
 }
