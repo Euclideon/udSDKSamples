@@ -218,6 +218,14 @@ namespace udSDK
         Disconnect();
     }
 
+    public void TryResume(string pURL, string pApplicationName, string email=null, bool useDongle = false)
+    {
+      udError error = udContext_TryResume(ref pContext, pURL, pApplicationName, email, System.Convert.ToInt32(useDongle)); //Set to 1 to try use the dongle
+      if (error != udError.udE_Success)
+        throw new UDException(error);
+      
+    }
+
     public void ConnectWithKey(string pURL, string pKey, string pApplicationName, string appVersion, bool useDongle = false)
     {
       udError error = udError.udE_Failure;
@@ -230,32 +238,6 @@ namespace udSDK
       if (error != udError.udE_Success)
         throw new UDException(error);
 
-    }
-
-    public void ConnectInteractive(string serverURL, string applicationName, string appversion)
-    {
-
-      string approvePath = "";
-      string approveCode = "";
-      udError error = udContext_TryResume(ref pContext, serverURL, applicationName, appversion, 0); //Set to 1 to try use the dongle
-      if (error != udError.udE_Success)
-      {
-        ConnectStart(serverURL, applicationName, appversion, ref approvePath, ref approveCode);
-        Console.WriteLine("Navigate to " + approvePath + " on this device to complete udCloud login");
-        Console.WriteLine("Altenatively navigate to " + serverURL + "/link on any device and enter " + approveCode);
-        Console.WriteLine("Press any key to continue...");
-        Console.ReadKey();
-
-        try
-        {
-          ConnectComplete();
-        }
-        catch (UDException e)
-        {
-          Console.WriteLine("udCloud Login failed: " + e.Message);
-          throw e;
-        }
-      }
     }
 
     public void ConnectStart(string pURL, string pApplicationName, string pApplicationVersion, ref string ppApprovePath, ref string ppApproveCode)
