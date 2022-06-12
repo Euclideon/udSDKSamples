@@ -12,6 +12,9 @@ namespace udSDKSample
       const int width = 1280;
       const int height = 720;
 
+      const string applicationName = "CSSample";
+      const string appversion = "1.0";
+
       udSDK.udContext context = new udSDK.udContext();
       udSDK.udRenderContext renderer = new udSDK.udRenderContext();
       udSDK.udRenderTarget renderView = new udSDK.udRenderTarget();
@@ -21,7 +24,7 @@ namespace udSDKSample
       float[] depthBuffer = new float[width * height];
 
       string server = "https://udcloud.euclideon.com";
-      string key = "";
+      string key = null;
       string modelName = "https://models.euclideon.com/DirCube.uds"; // Can be local or remote
       bool pause = false;
 
@@ -39,7 +42,14 @@ namespace udSDKSample
 
       try
       {
-        context.Connect(server, "CSSample", key);
+        if (key == null)
+        {
+          ConnectInteractive(ref context, server, applicationName, appversion);
+        }
+        else
+        {
+          context.ConnectWithKey(server, key, applicationName, appversion);
+        }
 
         renderer.Create(context);
         renderView.Create(context, renderer, width, height);
@@ -126,5 +136,34 @@ namespace udSDKSample
 
       bmp.Save(path);
     }
+    static void ConnectInteractive(ref udSDK.udContext udContext, string serverURL, string applicationName, string appversion)
+    {
+      try
+      {
+        udContext.TryResume(serverURL, applicationName);
+      }
+      catch (udSDK.UDException e)
+      {
+        string approvePath = "";
+        string approveCode = "";
+
+        udContext.ConnectStart(serverURL, applicationName, appversion, ref approvePath, ref approveCode);
+        Console.WriteLine("Navigate to " + approvePath + " on this device to complete udCloud login");
+        Console.WriteLine("Altenatively navigate to " + serverURL + "/link on any device and enter " + approveCode);
+        Console.WriteLine("Press any key to continue...");
+        Console.ReadKey();
+
+        try
+        {
+          udContext.ConnectComplete();
+        }
+        catch (udSDK.UDException fatalError)
+        {
+          Console.WriteLine("udCloud Login failed: " + fatalError.Message);
+          throw e;
+        }
+      }
+    }
   }
 }
+

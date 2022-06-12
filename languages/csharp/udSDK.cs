@@ -218,24 +218,32 @@ namespace udSDK
         Disconnect();
     }
 
-    public void Connect(string pURL, string pApplicationName, string pKey)
+    public void TryResume(string pURL, string pApplicationName, string email=null, bool useDongle = false)
+    {
+      udError error = udContext_TryResume(ref pContext, pURL, pApplicationName, email, System.Convert.ToInt32(useDongle)); //Set to 1 to try use the dongle
+      if (error != udError.udE_Success)
+        throw new UDException(error);
+      
+    }
+
+    public void ConnectWithKey(string pURL, string pKey, string pApplicationName, string appVersion, bool useDongle = false)
     {
       udError error = udError.udE_Failure;
 
-      error = udContext_TryResume(ref pContext, pURL, pApplicationName, null, 0); //Set to 1 to try use the dongle
+      error = udContext_TryResume(ref pContext, pURL, pApplicationName, null, System.Convert.ToInt32(useDongle)); //Set to 1 to try use the dongle
 
       if (error != udError.udE_Success)
-        error = udContext_ConnectWithKey(ref pContext, pURL, pApplicationName, "1.0", pKey);
+        error = udContext_ConnectWithKey(ref pContext, pURL, pApplicationName, appVersion, pKey);
 
       if (error != udError.udE_Success)
         throw new UDException(error);
+
     }
 
     public void ConnectStart(string pURL, string pApplicationName, string pApplicationVersion, ref string ppApprovePath, ref string ppApproveCode)
     {
       udError error = udError.udE_Failure;
 
-      error = udContext_TryResume(ref pContext, pURL, pApplicationName, null, 0); //Set to 1 to try use the dongle
 
       if (error != udError.udE_Success)
       {
@@ -264,16 +272,17 @@ namespace udSDK
     {
       udError error = udContext_ConnectCancel(ref pContextPartial);
       if (error != udError.udE_Success)
-        throw new Exception(udErrorUtils.ToString(error));
-    }
-
-    public void Disconnect()
-    {
-      udError error = udContext_Disconnect(ref pContext, 0);
-      if (error != udError.udE_Success)
         throw new UDException(error);
     }
-    
+
+    public void Disconnect(bool endSession=false)
+    {
+      udError error = udContext_Disconnect(ref pContext, System.Convert.ToInt32(endSession));
+      // ignore outstanding references as the garbage collector will destroy objects inits own time
+      if (error != udError.udE_Success && error != udError.udE_OutstandingReferences)
+        throw new UDException(error);
+    }
+
     public IntPtr pContext = IntPtr.Zero;
     public IntPtr pContextPartial = IntPtr.Zero;
 
