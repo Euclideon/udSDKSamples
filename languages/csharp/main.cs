@@ -84,10 +84,8 @@ namespace udSDKSample
         udSDK.Render.udRenderSettings renderSettings = new udSDK.Render.udRenderSettings();
         renderSettings.flags = udSDK.Render.udRenderContextFlags.udRCF_BlockingStreaming;
 
-        udSDK.Render.udRenderPicking pick = new udSDK.Render.udRenderPicking();
-        pick.x = 2* width / 3;
-        pick.y = height / 3;
-        renderSettings.pick = pick;
+        renderSettings.pick.x = 2* width / 3;
+        renderSettings.pick.y = height / 3;
 
 
         for (int i = 0; i < 10; i++)
