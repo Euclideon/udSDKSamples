@@ -232,7 +232,9 @@ namespace Euclideon.udSDK
         IntPtr intPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(UInt32)));
         IntPtr selfPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(udAttributeSetInternal)));
         Marshal.StructureToPtr(this, selfPtr, false);
-        udErrorUtils.ThrowOnUnsuccessful(udAttributeSet_GetOffsetOfStandardAttribute(selfPtr, i, intPtr));
+        udError code = udAttributeSet_GetOffsetOfStandardAttribute(selfPtr, i, intPtr);
+        if(code != udError.udE_Success)
+          throw new UDException(code);
         UInt32 offset = Marshal.PtrToStructure<UInt32>(intPtr);
         Marshal.FreeHGlobal(intPtr);
         Marshal.FreeHGlobal(selfPtr);
@@ -244,7 +246,9 @@ namespace Euclideon.udSDK
         IntPtr intPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(UInt32)));
         IntPtr selfPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(udAttributeSetInternal)));
         Marshal.StructureToPtr(this, selfPtr, false);
-        udErrorUtils.ThrowOnUnsuccessful(udAttributeSet_GetOffsetOfNamedAttribute(selfPtr, i, intPtr));
+        udError code = udAttributeSet_GetOffsetOfNamedAttribute(selfPtr, i, intPtr);
+        if(code != udError.udE_Success)
+          throw new UDException(code);
         UInt32 offset = Marshal.PtrToStructure<UInt32>(intPtr);
         Marshal.FreeHGlobal(intPtr);
         Marshal.FreeHGlobal(selfPtr);
@@ -284,7 +288,9 @@ namespace Euclideon.udSDK
           IntPtr intPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(udAttributeDescriptor)));
           IntPtr selfPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(udAttributeSetInternal)));
           Marshal.StructureToPtr(this, selfPtr, false);
-          udErrorUtils.ThrowOnUnsuccessful(udAttributeSet_GetDescriptorOfNamedAttribute(selfPtr, i, intPtr));
+          udError code = udAttributeSet_GetDescriptorOfNamedAttribute(selfPtr, i, intPtr);
+          if(code != udError.udE_Success)
+            throw new UDException(code);
           Marshal.FreeHGlobal(selfPtr);
           udAttributeDescriptor ret =  Marshal.PtrToStructure<udAttributeDescriptor>(intPtr);
           Marshal.FreeHGlobal(intPtr);
@@ -329,14 +335,20 @@ namespace Euclideon.udSDK
       bool manuallyCreated;
       public AttributeSetWrapper(StandardAttributeContent standardContent, UInt32 additionalContent)
       {
-        udErrorUtils.ThrowOnUnsuccessful(udAttributeSet_Create(pAttributeSet, standardContent, additionalContent));
+        udError code = udAttributeSet_Create(pAttributeSet, standardContent, additionalContent);
+        if(code != udError.udE_Success)
+          throw new UDException(code);
         manuallyCreated = true;
       }
 
       ~AttributeSetWrapper()
       {
         if (manuallyCreated)
-          udErrorUtils.ThrowOnUnsuccessful(udAttributeSet_Destroy(pAttributeSet));
+        {
+          udError code = udAttributeSet_Destroy(pAttributeSet);
+          if(code != udError.udE_Success)
+            throw new UDException(code);
+        }
       }
 
       //this is a read only copy of the internal structure:

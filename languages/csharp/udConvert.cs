@@ -34,7 +34,7 @@ namespace Euclideon.udSDK
       [MarshalAs(UnmanagedType.LPUTF8Str)]
       public string pMetadata; //!< The metadata that will be added to this model (in JSON format)
 
-      public Attributes.udAttributeSet attributes; //!< The attributes in this model
+      public Attributes.udAttributeSetInternal attributes; //!< The attributes in this model
 
       public Int32 ignoredAttributesLength; //!< The length of the ignored attributes list
       public IntPtr ppIgnoredAttributes; //!< The list of ignored attributes
