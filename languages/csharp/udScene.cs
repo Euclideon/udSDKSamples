@@ -29,7 +29,7 @@ namespace Euclideon.udSDK
     //! This represents the type of data stored in the node.
     //! @note The `itemtypeStr` in the udSceneNode is a string version. This enum serves to simplify the reading of standard types. The the string in brackets at the end of the comment is the string.
     //!
-    enum udSceneNodeType
+    public enum udSceneNodeType
     {
       udPNT_Custom, //!< Need to check the itemtypeStr string manually
 
@@ -181,7 +181,7 @@ namespace Euclideon.udSDK
     //!
     //! This represents where the scene was loaded from/saved to most recently and where future calls to udScene_Save will go
     //!
-    enum udSceneLoadSource
+    public enum udSceneLoadSource
     {
       udSceneLoadSource_Memory, //!< The scene source exists in memory; udScene_CreateInMemory, udScene_LoadFromMemory or udScene_SaveToMemory
       udSceneLoadSource_Server, //!< The scene source exists from the server; udScene_CreateInServer, udScene_LoadFromServer or udScene_SaveToServer
@@ -213,6 +213,268 @@ namespace Euclideon.udSDK
       IntPtr pReceivedMessages; //udMessage //!< The list of messages
       UInt32 receivedMessagesCount; //!< The length of pReceivedMessages
     };
-  
+
+    public class udScene
+    {
+      IntPtr pScene;
+      udContext context;
+      udSceneUpdateInfo updateInfo;
+      public udScene(udContext context)
+      {
+        this.context = context;
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_Release(ref IntPtr ppScene);
+      ~udScene()
+      {
+        udScene_Release(ref pScene);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_CreateInMemory(IntPtr pContext, ref IntPtr ppScene, string pName);
+      public void CreateInMemory(string name)
+      {
+        udError error = udScene_CreateInMemory(context.pContext, ref pScene, name);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_CreateInFile(IntPtr pContext, ref IntPtr ppScene, string pName, string pFilename);
+      public void CreateInFile(string name, string filename)
+      {
+        udError error = udScene_CreateInFile(context.pContext, ref pScene, name, filename);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_CreateInServer(IntPtr pContext, ref IntPtr ppScene, string pName, string pGroupID);
+      public void CreateInServer(string name, string groupID)
+      {
+        udError error = udScene_CreateInServer(context.pContext, ref pScene, name, groupID);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_LoadFromMemory(IntPtr pContext, ref IntPtr ppScene, string pGeoJSON);
+      public void LoadFromMemory(string geoJSONString)
+      {
+        udError error = udScene_LoadFromMemory(context.pContext, ref pScene, geoJSONString);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_LoadFromFile(IntPtr pContext, ref IntPtr ppScene, string pFilename);
+      public void LoadFromFile(string filename)
+      {
+        udError error = udScene_LoadFromFile(context.pContext, ref pScene, filename);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_LoadFromServer(IntPtr pContext, ref IntPtr ppScene, string pSceneUUID, string pGroupID);
+      public void LoadFromServer(string sceneUUID, string groupID)
+      {
+        udError error = udScene_LoadFromServer(context.pContext, ref pScene, sceneUUID, groupID);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_Save(IntPtr pScene);
+      public void Save()
+      {
+        udScene_Save(pScene);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_Update(IntPtr pScene, ref udSceneUpdateInfo pUpdateInfo);
+      public void Update()
+      {
+        udScene_Update(pScene, ref updateInfo);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_SaveToMemory(IntPtr pContext, IntPtr pScene, ref string ppMemory);
+      public void SaveToMemory(string name)
+      {
+        string geoJSON = null;
+        udError error = udScene_SaveToMemory(context.pContext, pScene, ref geoJSON);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_SaveToFile(IntPtr pContext, IntPtr pScene, string pPath);
+      public void SaveToFile(string filename)
+      {
+        udError error = udScene_SaveToFile(context.pContext, pScene, filename);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_SaveToServer(IntPtr pContext, IntPtr pScene, string pGroupID);
+      public void SaveToServer(string name, string groupID)
+      {
+        udError error = udScene_SaveToServer(context.pContext, pScene, groupID);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_GetProjectRoot(IntPtr pScene, ref IntPtr ppRootNode);
+      public SceneNode RootNode
+      {
+        get
+        {
+          SceneNode projectRoot = new SceneNode();
+          udError error = udScene_GetProjectRoot(pScene, ref projectRoot.pNode);
+          if (error != udError.udE_Success)
+            throw new UDException(error);
+          return projectRoot;
+        }
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_GetProjectUUID(IntPtr pScene, ref string ppSceneUUID);
+      public string UUID
+      {
+        get
+        {
+          string ret = null;
+          udError error = udScene_GetProjectUUID(pScene, ref ret);
+          if(error != udError.udE_Success)
+          {
+            throw new UDException(error);
+          }
+          return ret;
+        }
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_HasUnsavedChanges(IntPtr pScene);
+      public bool HasUnsavedChanges
+      {
+        get
+        {
+          udError error = udScene_HasUnsavedChanges(pScene);
+          if (error == udError.udE_NotFound)
+            return false;
+          if (error == udError.udE_Success)
+            return true;
+          throw new UDException(error);
+        }
+      }
+
+      [DllImport("udSDK")]
+      private static extern IntPtr udScene_GetTypeName( udSceneNodeType itemtype); // Might return NULL
+      public static string GetTypeName(udSceneNodeType nodeType)
+      {
+        IntPtr ptr =  udScene_GetTypeName(nodeType);
+        if (ptr == IntPtr.Zero)
+          return null;
+        return Marshal.PtrToStringUTF8(ptr);
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_GetLoadSource(IntPtr pScene, ref udSceneLoadSource pSource);
+      public udSceneLoadSource LoadSource
+      {
+        get
+        {
+          udSceneLoadSource ret = udSceneLoadSource.udSceneLoadSource_Count;
+          udError error = udScene_GetLoadSource(pScene, ref ret);
+          if(error != udError.udE_Success)
+          {
+            throw new UDException(error);
+          }
+          return ret;
+          
+        }
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_DeleteServerProject(IntPtr pContext, string pSceneUUID, string pGroupID);
+      public static void DeleteServerProject(udContext context, string sceneUUID, string groupID)
+      {
+          udError error = udScene_DeleteServerProject(context.pContext, sceneUUID, groupID);
+          if(error != udError.udE_Success)
+          {
+            throw new UDException(error);
+          }
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_SetLinkShareStatus(IntPtr pContext, string pSceneUUID, UInt32 isSharableToAnyoneWithTheLink, string pGroupID);
+      public static void SetLinkShareStatus(udContext context, bool sharableWithAnyoneWithLink, string sceneUUID, string groupID)
+      {
+          udError error = udScene_SetLinkShareStatus(context.pContext, sceneUUID, System.Convert.ToUInt32(sharableWithAnyoneWithLink), groupID);
+          if(error != udError.udE_Success)
+          {
+            throw new UDException(error);
+          }
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_GetSessionID(IntPtr pScene, ref IntPtr ppSessionID);
+      public string SessionID
+      {
+        get
+        {
+          IntPtr ret = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(IntPtr)));
+          udError error = udScene_GetSessionID(pScene, ref ret);
+
+          if(error != udError.udE_Success)
+          {
+            throw new UDException(error);
+          }
+          string o = Marshal.PtrToStringUTF8(ret);
+          Marshal.FreeHGlobal(ret);
+          return o;
+        }
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_QueueMessage(IntPtr pScene, string pTargetSessionID, string pMessageType, string pMessagePayload);
+      public void QueueMessage(string targetSessionID, string messageType, string messagePayload)
+      {
+        udError error = udScene_QueueMessage(pScene, targetSessionID, messageType, messagePayload);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udScene_SaveThumbnail(IntPtr pScene, string pImageBase64);
+      public void SaveThumbnail(string imageBase64)
+      {
+        udError error = udScene_SaveThumbnail(pScene, imageBase64);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+
+      }
+    }
+
+    public class SceneNode
+    {
+      public udScene scene;
+      public IntPtr pNode;
+      private udSceneNode node;
+
+      public void Update()
+      {
+        node = Marshal.PtrToStructure<udSceneNode>(pNode);
+      }
+
+    }
   }
 }
