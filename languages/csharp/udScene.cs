@@ -468,13 +468,75 @@ namespace Euclideon.udSDK
     {
       public udScene scene;
       public IntPtr pNode;
-      private udSceneNode node;
+      //private udSceneNode node;
 
-      public void Update()
+      private udSceneNode InternalNode
       {
-        node = Marshal.PtrToStructure<udSceneNode>(pNode);
+        get
+        {
+          return Marshal.PtrToStructure<udSceneNode>(pNode);
+        }
       }
 
+      [DllImport("udSDK")]
+      private static extern udError udScene_SaveThumbnail(IntPtr pScene, string pImageBase64);
+
+      [DllImport("udSDK")]
+      public static extern udError udSceneNode_Create(IntPtr pScene, ref IntPtr ppNode, IntPtr pParent, string pType, string pName, string pURI, IntPtr pUserData);
+      
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_MoveChild(IntPtr pScene, IntPtr pCurrentParent, IntPtr pNewParent, IntPtr pNode, IntPtr pInsertBeforeChild);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_RemoveChild(IntPtr pScene, IntPtr pParentNode, IntPtr pNode);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetName(IntPtr pScene, IntPtr pNode, string pNodeName);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetVisibility(IntPtr pNode, int visibility);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetURI(IntPtr pScene, IntPtr pNode, string pNodeURI);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetBoundingBox(IntPtr pScene, IntPtr pNode, IntPtr boundingBox);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetGeometry(IntPtr pScene, IntPtr pNode, udSceneGeometryType nodeType, int geometryCount, IntPtr pCoordinates);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_GetMetadataInt(IntPtr pNode, string pMetadataKey, IntPtr pInt, Int32 defaultValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetMetadataInt(IntPtr pNode, string pMetadataKey, Int32 iValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_GetMetadataUint(IntPtr pNode, string pMetadataKey, IntPtr pInt, UInt32 defaultValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetMetadataUint(IntPtr pNode, string pMetadataKey, UInt32 iValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_GetMetadataInt64(IntPtr pNode, string pMetadataKey, IntPtr pInt64, Int64 defaultValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_GetMetadataDouble(IntPtr pNode, string pMetadataKey, IntPtr pDouble, double defaultValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetMetadataDouble(IntPtr pNode, string pMetadataKey, double doubleValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_GetMetadataBool(IntPtr pNode, string pMetadataKey, IntPtr pBool, UInt32 defaultValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetMetadataBool(IntPtr pNode, string pMetadataKey, UInt32 boolValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_GetMetadataString(IntPtr pNode, string pMetadataKey, IntPtr ppString, string pDefaultValue);
+
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetMetadataString(IntPtr pNode, string pMetadataKey, string pString);
     }
   }
 }
