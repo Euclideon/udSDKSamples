@@ -103,7 +103,7 @@ namespace udSDKSample
         }
 
         //! Uncomment the following line to test the convert API
-        //Convert(modelName, modelName + ".uds", context);
+        //Convert(modelName, "testConvert" + ".uds", context);
       }
       finally
       {
@@ -113,15 +113,40 @@ namespace udSDKSample
 
     static void Convert(string inputPath, string outputPath, udSDK.udContext context)
     {
-      udSDK.Convert.udConvertContext convertContext = new udSDK.Convert.udConvertContext();
-      convertContext.Create(context);
+      udSDK.Convert.udConvertContext convertContext = new udSDK.Convert.udConvertContext(context);
 
       convertContext.AddFile(inputPath);
-      convertContext.SetFileName(outputPath);
 
+      convertContext.OutputFile = outputPath;
+      convertContext.TempDirectory = "./customTemp/";
+      convertContext.PointResolution = 0.1;
+      convertContext.SRID = 28356;
+      convertContext.SkipErrors = true;
+      convertContext.GlobalOffset = new double[] { 1,2,3};
+
+      // The following function demonstrates printing the conversion status as the converion is running in a separate thread:
+      // PrintConvertProgress(convertContext);
+
+      // Begin the conversion:
       convertContext.DoConvert();
 
-      convertContext.Destroy();
+    }
+
+    static void PrintConvertProgress(udSDK.Convert.udConvertContext convertContext)
+    {
+      System.Threading.Thread conversionThread = new System.Threading.Thread(new System.Threading.ThreadStart(convertContext.DoConvert));
+      conversionThread.Start();
+      ulong currentItem = 1;
+      while(!conversionThread.Join(50))
+      {
+        if(currentItem != convertContext.Status.currentInputItem)
+        {
+          currentItem = convertContext.Status.currentInputItem;
+          Console.Write("\n");
+        }
+        string fn = Marshal.PtrToStringUTF8(convertContext.CurrentItem.pFilename);
+        Console.Write("\rReading {0} ({1}/{2}): {3}/{4} points read ({5} total read)", fn, convertContext.Status.currentInputItem + 1, convertContext.Status.totalItems, convertContext.CurrentItem.pointsRead, convertContext.CurrentItem.pointsCount, convertContext.Status.totalPointsRead);
+      }
     }
 
     static void SaveColorImage(string path, int width, int height, uint[] colorBufferArr)

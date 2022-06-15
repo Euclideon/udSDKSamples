@@ -80,9 +80,16 @@ namespace Euclideon.udSDK
 
     public class udConvertContext
     {
+
+      public ConvertStatus Status
+      {
+        get { return info.status; }
+      }
+
       public udConvertContext(udContext context)
       {
         udError error = udConvert_CreateContext(context.pContext, ref pConvertContext);
+        udConvert_GetInfo(pConvertContext, ref pInfo);
         if (error != udError.udE_Success)
           throw new UDException(error);
       }
@@ -270,9 +277,27 @@ namespace Euclideon.udSDK
         get { return System.Convert.ToBoolean(info.exportOtherEmbeddedAssets); }
         set
         {
-          udError code = udConvert_SetExportOtherEmbeddedAssets(pConvertContext, System.Convert.ToUInt32(value));
-          if (code != udError.udE_Success)
-            throw new UDException(code);
+          udError error = udConvert_SetExportOtherEmbeddedAssets(pConvertContext, System.Convert.ToUInt32(value));
+          if (error != udError.udE_Success)
+            throw new UDException(error);
+        }
+      }
+
+      public udConvertItemInfo CurrentItem
+      {
+        get
+        {
+          udConvertItemInfo itemInfo = new udConvertItemInfo();
+          //itemInfo.pFilename = "";
+          // copy this value to avoid race condition later:
+          ulong curr = Status.currentInputItem;
+          if (curr >= Status.totalItems)
+            curr = Status.totalItems - 1;
+
+          udError error =udConvert_GetItemInfo(pConvertContext, curr, ref itemInfo);
+          if (error != udError.udE_Success)
+            throw new UDException(error);
+          return itemInfo;
         }
       }
 
