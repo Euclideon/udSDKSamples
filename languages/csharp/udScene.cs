@@ -8,7 +8,7 @@ namespace Euclideon.udSDK
     //!
     //! These are the geometry types for nodes
     //!
-    enum udSceneGeometryType
+    public enum udSceneGeometryType
     {
       udPGT_None, //!< There is no geometry associated with this node
 
@@ -142,40 +142,40 @@ namespace Euclideon.udSDK
     struct udSceneNode
     {
       // Node header data
-      int isVisible; //!< Non-zero if the node is visible and should be drawn in the scene
+      public int isVisible; //!< Non-zero if the node is visible and should be drawn in the scene
       [MarshalAs(UnmanagedType.ByValArray, SizeConst =37 )]
-      char[] UUID; //!< Unique identifier for this node "id"
-      double lastUpdate; //!< The last time this node was updated in UTC
+      public char[] UUID; //!< Unique identifier for this node "id"
+      public double lastUpdate; //!< The last time this node was updated in UTC
 
-      udSceneNodeType itemtype; //!< The type of this node, see udSceneNodeType for more information
+      public udSceneNodeType itemtype; //!< The type of this node, see udSceneNodeType for more information
       [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-      char[] itemtypeStr; //!< The string representing the type of node. If its a known type during node creation `itemtype` will be set to something other than udPNT_Custom
+      public char[] itemtypeStr; //!< The string representing the type of node. If its a known type during node creation `itemtype` will be set to something other than udPNT_Custom
 
       [MarshalAs(UnmanagedType.LPUTF8Str)]
-      string pName; //!< Human readable name of the item
+      public string pName; //!< Human readable name of the item
       [MarshalAs(UnmanagedType.LPUTF8Str)]
-      string pURI; //!< The address or filename that the resource can be found.
+      public string pURI; //!< The address or filename that the resource can be found.
 
-      UInt32 hasBoundingBox; //!< Set to not 0 if this nodes boundingBox item is filled out
+      public UInt32 hasBoundingBox; //!< Set to not 0 if this nodes boundingBox item is filled out
       [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
-      double[] boundingBox; //!< The bounds of this model, ordered as [West, South, Floor, East, North, Ceiling]
+      public double[] boundingBox; //!< The bounds of this model, ordered as [West, South, Floor, East, North, Ceiling]
 
       // Geometry Info
-      udSceneGeometryType geomtype; //!< Indicates what geometry can be found in this model. See the udSceneGeometryType documentation for more information.
-      int geomCount; //!< How many geometry items can be found on this model
-      IntPtr pCoordinates; // (double*)!< The positions of the geometry of this node (NULL this this node doesn't have points). The format is [X0,Y0,Z0,...Xn,Yn,Zn]
+      public udSceneGeometryType geomtype; //!< Indicates what geometry can be found in this model. See the udSceneGeometryType documentation for more information.
+      public int geomCount; //!< How many geometry items can be found on this model
+      public IntPtr pCoordinates; // (double*)!< The positions of the geometry of this node (NULL this this node doesn't have points). The format is [X0,Y0,Z0,...Xn,Yn,Zn]
 
       // Parent node
-      IntPtr pParent; //udSceneNode //!< This is the parent item of the current node (NULL if root node)
+      public IntPtr pParent; //udSceneNode //!< This is the parent item of the current node (NULL if root node)
 
       // Next nodes
-      IntPtr pNextSibling; //udSceneNode //!< This is the next item in the scene (NULL if no further siblings)
-      IntPtr pFirstChild; //udSceneNode //!< Some types ("folder", "collection", "polygon"...) have children nodes, NULL if there are no children.
+      public IntPtr pNextSibling; //udSceneNode //!< This is the next item in the scene (NULL if no further siblings)
+      public IntPtr pFirstChild; //udSceneNode //!< Some types ("folder", "collection", "polygon"...) have children nodes, NULL if there are no children.
 
       // Node Data
-      IntPtr pUserDataCleanup;//void (*pUserDataCleanup)(struct udSceneNode *pNode, void *pUserData); //!< When a project node is deleted, this function is called first
-      IntPtr pUserData; // (void*)!< This is application specific user data. The application should traverse the tree to release these before releasing the udScene
-      IntPtr pInternalData; //udInternalProjectNode //!< Internal udSDK specific state for this node
+      public IntPtr pUserDataCleanup;//void (*pUserDataCleanup)(struct udSceneNode *pNode, void *pUserData); //!< When a project node is deleted, this function is called first
+      public IntPtr pUserData; // (void*)!< This is application specific user data. The application should traverse the tree to release these before releasing the udScene
+      public IntPtr pInternalData; //udInternalProjectNode //!< Internal udSDK specific state for this node
     };
 
     //!
@@ -195,7 +195,7 @@ namespace Euclideon.udSDK
     //! This represents the update info given/received to/by udScene_Update
     //! @warning Memory is Freed on next call of udScene_Updte()
     //! 
-    struct udSceneUpdateInfo
+    public struct udSceneUpdateInfo
     {
       UInt32 forceSync; //!< If this is non-zero the sync to the server will happen immediately and the update call will block
 
@@ -216,12 +216,13 @@ namespace Euclideon.udSDK
 
     public class udScene
     {
-      IntPtr pScene;
+      public IntPtr pScene;
       udContext context;
-      udSceneUpdateInfo updateInfo;
+      public udSceneUpdateInfo updateInfo;
       public udScene(udContext context)
       {
         this.context = context;
+        updateInfo = new udSceneUpdateInfo();
       }
 
       [DllImport("udSDK")]
@@ -336,7 +337,7 @@ namespace Euclideon.udSDK
       {
         get
         {
-          SceneNode projectRoot = new SceneNode();
+          SceneNode projectRoot = new SceneNode(this, IntPtr.Zero);
           udError error = udScene_GetProjectRoot(pScene, ref projectRoot.pNode);
           if (error != udError.udE_Success)
             throw new UDException(error);
@@ -468,7 +469,12 @@ namespace Euclideon.udSDK
     {
       public udScene scene;
       public IntPtr pNode;
-      //private udSceneNode node;
+
+      public SceneNode(udScene scene, IntPtr pNode)
+      {
+        this.scene = scene;
+        this.pNode = pNode;
+      }
 
       private udSceneNode InternalNode
       {
@@ -478,65 +484,394 @@ namespace Euclideon.udSDK
         }
       }
 
-      [DllImport("udSDK")]
-      private static extern udError udScene_SaveThumbnail(IntPtr pScene, string pImageBase64);
+      public double LastUpdate
+      {
+        get
+        {
+          return InternalNode.lastUpdate;
+        }
+      }
+
+      public bool HasBoundingBox
+      {
+        get { return System.Convert.ToBoolean(InternalNode.hasBoundingBox); }
+      }
+
+      public SceneNode FirstChild
+      {
+        get
+        {
+          udSceneNode node = InternalNode;
+          if (node.pFirstChild != IntPtr.Zero)
+            return new SceneNode(this.scene, InternalNode.pFirstChild);
+          else
+            return null;
+        }
+      }
+
+      public SceneNode NextSibling
+      {
+        get
+        {
+          udSceneNode node = InternalNode;
+          if (node.pNextSibling != IntPtr.Zero)
+            return new SceneNode(this.scene, InternalNode.pNextSibling);
+          else
+            return null;
+        }
+      }
+
+      public SceneNode Parent
+      {
+        get
+        {
+          udSceneNode node = InternalNode;
+          if (node.pParent != IntPtr.Zero)
+            return new SceneNode(this.scene, InternalNode.pParent);
+          else
+            return null;
+        }
+      }
 
       [DllImport("udSDK")]
       public static extern udError udSceneNode_Create(IntPtr pScene, ref IntPtr ppNode, IntPtr pParent, string pType, string pName, string pURI, IntPtr pUserData);
+      public SceneNode(SceneNode parent, string type, string name, string URI, IntPtr? userData=null)
+      {
+        this.scene = parent.scene;
+        udError error = udSceneNode_Create(scene.pScene, ref pNode, parent.pNode, type, name, URI, userData ?? IntPtr.Zero);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
       
       [DllImport("udSDK")]
       private static extern udError udSceneNode_MoveChild(IntPtr pScene, IntPtr pCurrentParent, IntPtr pNewParent, IntPtr pNode, IntPtr pInsertBeforeChild);
+      public void Move(SceneNode newParent, SceneNode beforeNode)
+      {
+        udSceneNode node = InternalNode;
+
+        udError error = udSceneNode_MoveChild(scene.pScene, node.pParent, newParent.pNode, pNode, beforeNode.pNode);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
 
       [DllImport("udSDK")]
       private static extern udError udSceneNode_RemoveChild(IntPtr pScene, IntPtr pParentNode, IntPtr pNode);
+      public void Remove(SceneNode newParent, SceneNode beforeNode)
+      {
+        udSceneNode node = InternalNode;
+
+        udError error = udSceneNode_RemoveChild(scene.pScene, node.pParent, pNode);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
 
       [DllImport("udSDK")]
       private static extern udError udSceneNode_SetName(IntPtr pScene, IntPtr pNode, string pNodeName);
+      public string Name
+      {
+        get
+        {
+          return InternalNode.pName;
+        }
+        set
+        {
+          udError error = udSceneNode_SetName(scene.pScene, pNode, value);
+          if (error != udError.udE_Success)
+            throw new UDException(error);
+        }
+      }
 
       [DllImport("udSDK")]
       private static extern udError udSceneNode_SetVisibility(IntPtr pNode, int visibility);
+      public bool Visibility
+      {
+        get
+        {
+          return System.Convert.ToBoolean(InternalNode.isVisible);
+        }
+        set
+        {
+          udError error = udSceneNode_SetVisibility(pNode, System.Convert.ToInt32(value));
+          if (error != udError.udE_Success)
+            throw new UDException(error);
+        }
+      }
 
       [DllImport("udSDK")]
       private static extern udError udSceneNode_SetURI(IntPtr pScene, IntPtr pNode, string pNodeURI);
+      public string URI
+      {
+        get
+        {
+          return InternalNode.pURI;
+        }
+        set
+        {
+          udError error = udSceneNode_SetURI(scene.pScene, pNode, value);
+          if (error != udError.udE_Success)
+            throw new UDException(error);
+        }
+      }
 
       [DllImport("udSDK")]
       private static extern udError udSceneNode_SetBoundingBox(IntPtr pScene, IntPtr pNode, IntPtr boundingBox);
+      public double[] BoundingBox
+      {
+        get
+        {
+          return InternalNode.boundingBox;
+        }
+        set
+        {
+          IntPtr set = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(double)) *6);
+          Marshal.StructureToPtr<double[]>(value, set, false);
+          udError error = udSceneNode_SetBoundingBox(scene.pScene, pNode, set);
+          Marshal.FreeHGlobal(set);
+          if (error != udError.udE_Success)
+            throw new UDException(error);
+        }
+      }
+
+      public udSceneNodeType ItemType { get { return InternalNode.itemtype; } }
+      public string ItemTypeStr { get { return new string(InternalNode.itemtypeStr); } }
+
+      private udSceneGeometryType? changeType = null;
+      public udSceneGeometryType GeometryType
+      {
+        get { return InternalNode.geomtype; }
+        set { changeType = value; Geometry = Geometry; changeType = null; }
+      }
 
       [DllImport("udSDK")]
-      private static extern udError udSceneNode_SetGeometry(IntPtr pScene, IntPtr pNode, udSceneGeometryType nodeType, int geometryCount, IntPtr pCoordinates);
+      private static extern udError udSceneNode_SetGeometry(IntPtr pScene, IntPtr pNode, udSceneGeometryType nodeType, int geometryCount, [In, Out] double[] pCoordinates);
+      public double[] Geometry
+      {
+        get
+        {
+          udSceneNode node = InternalNode;
+          double[] ret = new double[node.geomCount *3];
+          Marshal.Copy(node.pCoordinates, ret, 0, node.geomCount * 3);
+          return ret;
+        }
+        set
+        {
+          udError error = udSceneNode_SetGeometry(scene.pScene, pNode, changeType?? InternalNode.geomtype, value.Length/3, value);
+          if (error != udError.udE_Success)
+            throw new UDException(error);
+        }
+      }
+      public abstract class Metadata<T>
+      {
+        protected SceneNode node;
+        public Metadata(SceneNode node)
+        {
+          this.node = node;
+        }
+        public abstract T this[string key] { get; set; }
+      }
 
       [DllImport("udSDK")]
-      private static extern udError udSceneNode_GetMetadataInt(IntPtr pNode, string pMetadataKey, IntPtr pInt, Int32 defaultValue);
-
+      private static extern udError udSceneNode_GetMetadataInt(IntPtr pNode, string pMetadataKey, ref Int32 pInt, Int32 defaultValue);
       [DllImport("udSDK")]
       private static extern udError udSceneNode_SetMetadataInt(IntPtr pNode, string pMetadataKey, Int32 iValue);
+      public class MetadataIntCls :Metadata<Int32?>
+      {
+        public MetadataIntCls(SceneNode node) : base(node) { }
+        override public Int32? this[string key]
+        {
+          get
+          {
+            Int32 retVal = 0;
+            udError error = udSceneNode_GetMetadataInt(node.pNode, key, ref retVal, 0);
+            if (error == udError.udE_NotFound)
+              return null;
+            else
+            {
+              if (error != udError.udE_Success)
+                throw new UDException(error);
+              return retVal;
+            }
+          }
+          set
+          {
+            udError error = udSceneNode_SetMetadataInt(node.pNode, key, value?? 0);
+            if (error != udError.udE_Success)
+              throw new UDException(error);
+          }
+        }
+      }
+
+      public Metadata<Int32?> MetadataAsInt { get { return new MetadataIntCls(this); } }
 
       [DllImport("udSDK")]
-      private static extern udError udSceneNode_GetMetadataUint(IntPtr pNode, string pMetadataKey, IntPtr pInt, UInt32 defaultValue);
+      private static extern udError udSceneNode_GetMetadataUint(IntPtr pNode, string pMetadataKey, ref UInt32 pInt, UInt32 defaultValue);
 
       [DllImport("udSDK")]
       private static extern udError udSceneNode_SetMetadataUint(IntPtr pNode, string pMetadataKey, UInt32 iValue);
+      public class MetadataUIntCls : Metadata<UInt32?>
+      {
+        public MetadataUIntCls(SceneNode node) : base(node) { }
+        override public UInt32? this[string key]
+        {
+          get
+          {
+            UInt32 retVal = 0;
+            udError error = udSceneNode_GetMetadataUint(node.pNode, key, ref retVal, 0);
+            if (error == udError.udE_NotFound)
+              return null;
+            else
+            {
+              if (error != udError.udE_Success)
+                throw new UDException(error);
+              return retVal;
+            }
+          }
+          set
+          {
+            udError error = udSceneNode_SetMetadataUint(node.pNode, key, value?? 0);
+            if (error != udError.udE_Success)
+              throw new UDException(error);
+          }
+        }
+      }
+
+      public Metadata<UInt32?> MetadataAsUInt { get { return new MetadataUIntCls(this); } }
 
       [DllImport("udSDK")]
-      private static extern udError udSceneNode_GetMetadataInt64(IntPtr pNode, string pMetadataKey, IntPtr pInt64, Int64 defaultValue);
+      private static extern udError udSceneNode_GetMetadataInt64(IntPtr pNode, string pMetadataKey, ref Int64 pInt64, Int64 defaultValue);
+      [DllImport("udSDK")]
+      private static extern udError udSceneNode_SetMetadataInt64(IntPtr pNode, string pMetadataKey, Int64 doubleValue);
+      public class MetadataInt64Cls : Metadata<Int64?>
+      {
+        public MetadataInt64Cls(SceneNode node) : base(node) { }
+        override public Int64? this[string key]
+        {
+          get
+          {
+            Int64 retVal = 0;
+            udError error = udSceneNode_GetMetadataInt64(node.pNode, key, ref retVal, 0);
+            if (error == udError.udE_NotFound)
+              return null;
+            else
+            {
+              if (error != udError.udE_Success)
+                throw new UDException(error);
+              return retVal;
+            }
+          }
+          set
+          {
+            udError error = udSceneNode_SetMetadataInt64(node.pNode, key, value?? 0);
+            if (error != udError.udE_Success)
+              throw new UDException(error);
+          }
+        }
+      }
+
+      public Metadata<Int64?> MetadataAsInt64 { get { return new MetadataInt64Cls(this); } }
 
       [DllImport("udSDK")]
-      private static extern udError udSceneNode_GetMetadataDouble(IntPtr pNode, string pMetadataKey, IntPtr pDouble, double defaultValue);
+      private static extern udError udSceneNode_GetMetadataDouble(IntPtr pNode, string pMetadataKey, ref double pDouble, double defaultValue);
 
       [DllImport("udSDK")]
       private static extern udError udSceneNode_SetMetadataDouble(IntPtr pNode, string pMetadataKey, double doubleValue);
+      public class MetadataDoubleCls : Metadata<double?>
+      {
+        public MetadataDoubleCls(SceneNode node) : base(node) { }
+        override public double? this[string key]
+        {
+          get
+          {
+            double retVal = 0;
+            udError error = udSceneNode_GetMetadataDouble(node.pNode, key, ref retVal, 0);
+            if (error == udError.udE_NotFound)
+              return null;
+            else
+            {
+              if (error != udError.udE_Success)
+                throw new UDException(error);
+              return retVal;
+            }
+          }
+          set
+          {
+            udError error = udSceneNode_SetMetadataDouble(node.pNode, key, value?? 0);
+            if (error != udError.udE_Success)
+              throw new UDException(error);
+          }
+        }
+      }
+
+      public Metadata<double?> MetadataAsDouble { get { return new MetadataDoubleCls(this); } }
 
       [DllImport("udSDK")]
-      private static extern udError udSceneNode_GetMetadataBool(IntPtr pNode, string pMetadataKey, IntPtr pBool, UInt32 defaultValue);
+      private static extern udError udSceneNode_GetMetadataBool(IntPtr pNode, string pMetadataKey, ref UInt32 pBool, UInt32 defaultValue);
 
       [DllImport("udSDK")]
       private static extern udError udSceneNode_SetMetadataBool(IntPtr pNode, string pMetadataKey, UInt32 boolValue);
+      public class MetadataBoolCls : Metadata<bool?>
+      {
+        public MetadataBoolCls(SceneNode node) : base(node) { }
+        override public bool? this[string key]
+        {
+          get
+          {
+            UInt32 retVal = 0;
+            udError error = udSceneNode_GetMetadataBool(node.pNode, key, ref retVal, 0);
+            if (error == udError.udE_NotFound)
+              return null;
+            else
+            {
+              if (error != udError.udE_Success)
+                throw new UDException(error);
+              return System.Convert.ToBoolean(retVal);
+            }
+          }
+          set
+          {
+            udError error = udSceneNode_SetMetadataBool(node.pNode, key, System.Convert.ToUInt32(value?? false));
+            if (error != udError.udE_Success)
+              throw new UDException(error);
+          }
+        }
+      }
+
+      public Metadata<bool?> MetadataAsBool { get { return new MetadataBoolCls(this); } }
 
       [DllImport("udSDK")]
-      private static extern udError udSceneNode_GetMetadataString(IntPtr pNode, string pMetadataKey, IntPtr ppString, string pDefaultValue);
+      private static extern udError udSceneNode_GetMetadataString(IntPtr pNode, string pMetadataKey, ref IntPtr ppString, string pDefaultValue);
 
       [DllImport("udSDK")]
       private static extern udError udSceneNode_SetMetadataString(IntPtr pNode, string pMetadataKey, string pString);
+      public class MetadataStringCls : Metadata<string>
+      {
+        public MetadataStringCls(SceneNode node) : base(node) { }
+        override public string this[string key]
+        {
+          get
+          {
+            IntPtr intPtr = IntPtr.Zero;
+            udError error = udSceneNode_GetMetadataString(node.pNode, key, ref intPtr, "");
+            string val = Marshal.PtrToStringUTF8(intPtr);
+            if (error == udError.udE_NotFound)
+              return null;
+            else
+            {
+              if (error != udError.udE_Success)
+                throw new UDException(error);
+              return val;
+            }
+          }
+          set
+          {
+            udError error = udSceneNode_SetMetadataString(node.pNode, key, value?? "");
+            if (error != udError.udE_Success)
+              throw new UDException(error);
+          }
+        }
+      }
+
+      public Metadata<string> MetadataAsString { get { return new MetadataStringCls(this); } }
     }
   }
 }
