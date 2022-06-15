@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace udSDK
+namespace Euclideon.udSDK
 {
   public enum udError
   {
