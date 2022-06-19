@@ -107,6 +107,18 @@ namespace Euclideon.udSDK
     }
   };
 
+  //!
+  //! @struct udVoxelID
+  //! Combines the traverse context and node index to uniquely identify a node
+  //!
+  [StructLayout(LayoutKind.Sequential)]
+  struct udVoxelID
+  {
+    UInt64 index; //!< Internal index value
+    IntPtr pTrav; //!< Internal traverse info
+    IntPtr pRenderInfo; //!< Internal render info
+  };
+
   [StructLayout(LayoutKind.Sequential)]
   public struct udPointCloudHeader
   {
@@ -129,6 +141,54 @@ namespace Euclideon.udSDK
     public double[] boundingBoxExtents; //!< The extents of the bounding volume, in unit cube space  }
   }
 
+  public class udPointCloud
+  {
+    public udPointCloud(udContext context, string path)
+    {
+      Load(context, path, ref this.header);
+    }
+
+    private void Load(udContext context, string modelLocation, ref udPointCloudHeader header)
+    {
+      udError error = udPointCloud_Load(context.pContext, ref pModel, modelLocation, ref header);
+      if (error != udError.udE_Success)
+        throw new UDException(error);
+
+      this.context = context;
+    }
+
+    private void Unload()
+    {
+      udError error = udPointCloud_Unload(ref pModel);
+      if (error != udError.udE_Success)
+        throw new UDException(error);
+    }
+
+    ~udPointCloud()
+    {
+      Unload();
+    }
+
+    public void GetMetadata(ref string ppJSONMetadata)
+    {
+      udError error = udPointCloud_GetMetadata(pModel, ref ppJSONMetadata);
+      if (error != udError.udE_Success)
+        throw new UDException(error);
+    }
+
+    public IntPtr pModel = IntPtr.Zero;
+    private udContext context;
+    public udPointCloudHeader header;
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_Load(IntPtr pContext, ref IntPtr ppModel, string modelLocation, ref udPointCloudHeader header);
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_Unload(ref IntPtr ppModel);
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_GetMetadata(IntPtr pModel, ref string ppJSONMetadata);
+  }
 
   public class udContext
   {
@@ -222,46 +282,6 @@ namespace Euclideon.udSDK
     [DllImport("udSDK")]
     private static extern udError udContext_Disconnect(ref IntPtr ppContext, int endSession);
   }
-
-
-  public class udPointCloud
-  {
-    public void Load(udContext context, string modelLocation, ref udPointCloudHeader header)
-    {
-      udError error = udPointCloud_Load(context.pContext, ref pModel, modelLocation, ref header);
-      if (error != udError.udE_Success)
-        throw new UDException(error);
-
-      this.context = context;
-    }
-
-    public void Unload()
-    {
-      udError error = udPointCloud_Unload(ref pModel);
-      if (error != udError.udE_Success)
-        throw new UDException(error);
-    }
-
-    public void GetMetadata(ref string ppJSONMetadata)
-    {
-      udError error = udPointCloud_GetMetadata(pModel, ref ppJSONMetadata);
-      if (error != udError.udE_Success)
-        throw new UDException(error);
-    }
-
-    public IntPtr pModel = IntPtr.Zero;
-    private udContext context;
-
-    [DllImport("udSDK")]
-    private static extern udError udPointCloud_Load(IntPtr pContext, ref IntPtr ppModel, string modelLocation, ref udPointCloudHeader header);
-
-    [DllImport("udSDK")]
-    private static extern udError udPointCloud_Unload(ref IntPtr ppModel);
-
-    [DllImport("udSDK")]
-    private static extern udError udPointCloud_GetMetadata(IntPtr pModel, ref string ppJSONMetadata);
-  }
-
 
   public class udServerAPI
   {
