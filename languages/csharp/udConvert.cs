@@ -80,6 +80,8 @@ namespace Euclideon.udSDK
 
     public class udConvertContext
     {
+      private IntPtr pInfo;
+      public IntPtr pConvertContext;
 
       public ConvertStatus Status
       {
@@ -221,6 +223,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public bool SkipErrors
       {
         get { return System.Convert.ToBoolean(info.skipErrorsWherePossible); }
@@ -231,6 +234,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public uint EveryNth
       {
         get { return info.everyNth; }
@@ -241,6 +245,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public bool PolygonVerticesOnly
       {
         get { return System.Convert.ToBoolean(info.polygonVerticesOnly); }
@@ -262,6 +267,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public bool BakeLighting
       {
         get { return System.Convert.ToBoolean(info.bakeLighting); }
@@ -272,6 +278,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public bool ExportOtherEmbeddedAssets
       {
         get { return System.Convert.ToBoolean(info.exportOtherEmbeddedAssets); }
@@ -307,11 +314,6 @@ namespace Euclideon.udSDK
         get { return info.pMetadata; }
         //set { udErrorUtils.ThrowOnUnsuccessful(udConvert_SetMetadata(pConvertContext, value)); }
       }
-
-
-      private IntPtr pInfo;
-
-      public IntPtr pConvertContext;
 
       [DllImport("udSDK")]
       private static extern udError udConvert_CreateContext(IntPtr pContext, ref IntPtr ppConvertContext);
