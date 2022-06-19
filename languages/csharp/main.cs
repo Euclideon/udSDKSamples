@@ -17,10 +17,10 @@ namespace udSDKSample
       const string appversion = "1.0";
 
       udSDK.udContext context = new udSDK.udContext();
-      udSDK.Render.udRenderContext renderer = new udSDK.Render.udRenderContext();
-      udSDK.Render.udRenderTarget renderView = new udSDK.Render.udRenderTarget();
-      udSDK.udPointCloud udModel = new udSDK.udPointCloud();
-      udSDK.udPointCloudHeader header = new udSDK.udPointCloudHeader();
+      udSDK.PointCloud.udPointCloud udModel;
+      udSDK.Render.udRenderContext renderer;
+      udSDK.Render.udRenderTarget renderView;
+
       uint[] colorBuffer = new uint[width * height];
       float[] depthBuffer = new float[width * height];
 
@@ -52,35 +52,46 @@ namespace udSDKSample
           context.ConnectWithKey(server, key, applicationName, appversion);
         }
 
-        renderer.Create(context);
-        renderView.Create(context, renderer, width, height);
-        udModel.Load(context, modelName, ref header);
+        renderer = new udSDK.Render.udRenderContext(context);
+        renderView = new udSDK.Render.udRenderTarget(context, renderer, width, height);
+
+        udModel = new udSDK.PointCloud.udPointCloud(context, modelName);
+
         renderView.SetTargets(ref colorBuffer, 0, ref depthBuffer);
 
         double[] cameraMatrix = {
           1,0,0,0,
           0,1,0,0,
           0,0,1,0,
-          0,-5,0,1
+          0, 0,5,1
         };
 
-        renderView.SetMatrix(udSDK.Render.RenderViewMatrix.Camera, cameraMatrix);
+        renderView.cameraMatrix = cameraMatrix;
 
-        udSDK.udRenderInstance item = new udSDK.udRenderInstance();
-        item.pointCloud = udModel.pModel;
-        item.worldMatrix = header.storedMatrix;
+        udSDK.Render.udRenderInstance item = new udSDK.Render.udRenderInstance(udModel);
 
-        udSDK.udRenderInstance itemFlipped = new udSDK.udRenderInstance();
-        itemFlipped.pointCloud = udModel.pModel;
-        itemFlipped.worldMatrix = header.storedMatrix;
-        itemFlipped.worldMatrix[0] = -itemFlipped.worldMatrix[0];
-        itemFlipped.worldMatrix[5] = -itemFlipped.worldMatrix[5];
-        itemFlipped.worldMatrix[10] = -itemFlipped.worldMatrix[10];
+        // modifying the transformation of the model and rendering it as a separate instance:
+        udSDK.Render.udRenderInstance itemFlipped = new udSDK.Render.udRenderInstance(udModel);
+        itemFlipped.worldMatrix[0] = 10 *itemFlipped.worldMatrix[0];
+        itemFlipped.worldMatrix[5] = 10 *itemFlipped.worldMatrix[5];
+        itemFlipped.worldMatrix[10] = 10 * itemFlipped.worldMatrix[10];
 
-        udSDK.udRenderInstance[] modelArray = new udSDK.udRenderInstance[]{ item, itemFlipped };
+
+        //udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{ item, itemFlipped };
+        udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{ item};
+
+        udSDK.Render.udRenderSettings renderSettings = new udSDK.Render.udRenderSettings();
+        renderSettings.flags = udSDK.Render.udRenderContextFlags.udRCF_BlockingStreaming;
+
+        udSDK.Render.udRenderPicking pick = new udSDK.Render.udRenderPicking();
+        pick.x = 2* width / 3;
+        pick.y = height / 3;
+        renderSettings.pick = pick;
+
 
         for (int i = 0; i < 10; i++)
-          renderer.Render(renderView, modelArray, modelArray.Length);
+          renderer.Render(renderView, modelArray, modelArray.Length, renderSettings);
+
 
         string imagePath = "tmp.png";
         SaveColorImage(imagePath, width, height, colorBuffer);
@@ -97,9 +108,6 @@ namespace udSDKSample
       }
       finally
       {
-        udModel.Unload();
-        renderView.Destroy();
-        renderer.Destroy();
         context.Disconnect();
       }
     }
