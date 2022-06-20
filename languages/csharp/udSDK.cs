@@ -112,7 +112,7 @@ namespace Euclideon.udSDK
   //! Combines the traverse context and node index to uniquely identify a node
   //!
   [StructLayout(LayoutKind.Sequential)]
-  struct udVoxelID
+  public struct udVoxelID
   {
     UInt64 index; //!< Internal index value
     IntPtr pTrav; //!< Internal traverse info
@@ -129,7 +129,7 @@ namespace Euclideon.udSDK
     [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
     public double[] storedMatrix; //!< This matrix is the 'default' internal matrix to go from a unit cube to the full size
 
-    public Attributes.udAttributeSet attributes;   //!< The attributes contained in this pointcloud
+    public Attributes.udAttributeSetInternal attributes;   //!< The attributes contained in this pointcloud
 
     [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
     public double[] baseOffset; //!< The offset to the root of the pointcloud in unit cube space

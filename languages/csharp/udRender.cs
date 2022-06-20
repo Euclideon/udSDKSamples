@@ -79,7 +79,7 @@ namespace Euclideon.udSDK
 
         udRenderSettings defaultSettings = settings ?? new udRenderSettings();
 
-        udError error = udRenderContext_Render(pRenderer, renderView.pRenderTarget, pModels, modelCount, ref defaultSettings);
+        udError error = udRenderContext_Render(pRenderer, renderView.pRenderTarget, pModels, modelCount, ref defaultSettings.internalStruct);
         if (error != udError.udE_Success)
           throw new UDException(error);
 
@@ -93,7 +93,7 @@ namespace Euclideon.udSDK
       [DllImport("udSDK")]
       private static extern udError udRenderContext_Destroy(ref IntPtr ppRenderer);
       [DllImport("udSDK")]
-      private static extern udError udRenderContext_Render(IntPtr pRenderer, IntPtr pRenderView, udRenderInstance[] pModels, int modelCount, ref udRenderSettings options);
+      private static extern udError udRenderContext_Render(IntPtr pRenderer, IntPtr pRenderView, udRenderInstance[] pModels, int modelCount, ref udRenderSettings_Internal options);
     }
 
     public enum udRenderContextFlags
@@ -112,45 +112,110 @@ namespace Euclideon.udSDK
       udRCF_DisableOrthographic = 1 << 7, //!< Disables the renderer entering high-performance orthographic mode
     };
 
-    //!
-    //! @struct udRenderPicking
-    //! Stores both the input and output of the udSDK picking system
-    //!
+    
     [StructLayout(LayoutKind.Sequential)]
-    public struct udRenderPicking
+    public struct udPickResult
     {
-      // Input variables
-      public uint x; //!< Mouse X position in udRenderTarget space
-      public uint y; //!< Mouse Y position in udRenderTarget space
-
       // Output variables
       public uint hit; //!< Not 0 if a voxel was hit by this pick
       public uint isHighestLOD; //!< Not 0 if this voxel that was hit is as precise as possible
       public uint modelIndex; //!< Index of the model in the ppModels list
       [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3)]
       public double[] pointCenter; //!< The center of the hit voxel in world space
-      udVoxelID voxelID; //!< The ID of the voxel that was hit by the pick; this ID is only valid for a very short period of time- Do any additional work using this ID this frame.
+      public udVoxelID voxelID; //!< The ID of the voxel that was hit by the pick; this ID is only valid for a very short period of time- Do any additional work using this ID this frame.
+    }
+
+    //!
+    //! @struct udRenderPicking
+    //! Stores both the input and output of the udSDK picking system
+    //!
+    [StructLayout(LayoutKind.Sequential)]
+    public struct udRenderPickingInternal
+    {
+      // Input variables
+      public uint x; //!< Mouse X position in udRenderTarget space
+      public uint y; //!< Mouse Y position in udRenderTarget space
+
+      public udPickResult result;
     };
 
+    public struct udRenderPicking
+    {
+      /*
+       * This class updates the pointer pPick when modified - this 'hack' is necessary to maintin a safe context as the pointer pPick cannot be modified directly
+       * instead when the input properties x and y are modified we copy the entire struct to pPick. This greatly simplifies the method for setting picks
+       */
+      udRenderPickingInternal internalStruct;
+      public IntPtr pPick;
+
+      public uint x
+      {
+        get { return internalStruct.x; }
+        set
+        {
+          internalStruct.x = value;
+          Marshal.StructureToPtr<udRenderPickingInternal>(internalStruct, pPick, true);
+        }
+      }
+      public uint y
+      {
+        get { return internalStruct.y; }
+        set
+        {
+          internalStruct.y = value;
+          Marshal.StructureToPtr<udRenderPickingInternal>(internalStruct, pPick, true);
+        }
+      }
+
+      public udPickResult Result
+      {
+        get { return Marshal.PtrToStructure<udRenderPickingInternal>(pPick).result; }
+      }
+    }
+
     [StructLayout(LayoutKind.Sequential)]
-    public struct udRenderSettings
+    public struct udRenderSettings_Internal
     {
       public udRenderContextFlags flags; //!< Optional flags providing information about how to perform this render
-      IntPtr pPick; //!< Optional This provides information about the voxel under the mouse
+      public IntPtr pPick; //!< Optional This provides information about the voxel under the mouse
       public udRenderContextPointMode pointMode; //!< The point mode for this render
       IntPtr pFilter; //!< Optional This filter is applied to all models in the scene
 
       UInt32 pointCount; //!< Optional (GPU Renderer) A hint to the renderer at the upper limit of voxels that are to be rendered.
       float pointThreshold; //!< Optional (GPU Renderer) A hint of the minimum size (in screen space) of a voxel that the renderer will produce.
-      public udRenderPicking pick
+    }
+
+    public class udRenderSettings
+    {
+      /*
+       * This structure exists as a proxy that Marshals C# side versions of structs to the C++ side.
+       * It also ensures that Marshal.SizeOf() returns the correct size for the C++ side of the struct by separating it into an internal member struct.
+       */
+      public udRenderSettings_Internal internalStruct;
+
+      public udRenderPicking pick; // every time this is modified it will copy its contents to pPick
+
+      public udRenderSettings()
       {
-        get { return Marshal.PtrToStructure<udRenderPicking>(pPick); }
-        set
-        {
-          IntPtr intPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(udRenderPicking)));
-          Marshal.StructureToPtr<udRenderPicking>(value, intPtr, true);
-          pPick = intPtr;
-        }
+        internalStruct = new udRenderSettings_Internal();
+        pick = new udRenderPicking();
+        internalStruct.pPick = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(udRenderPicking)));
+        pick.pPick = internalStruct.pPick;
+      }
+
+      ~udRenderSettings()
+      {
+        Marshal.FreeHGlobal(internalStruct.pPick);
+      }
+      public udRenderContextFlags flags
+      {
+        get{ return internalStruct.flags; }
+        set { internalStruct.flags = value; }
+      }
+      public udRenderContextPointMode pointMode
+      {
+        get{ return internalStruct.pointMode; }
+        set { internalStruct.pointMode = value; }
       }
     }
 

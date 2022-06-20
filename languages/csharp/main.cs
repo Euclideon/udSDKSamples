@@ -77,16 +77,15 @@ namespace udSDKSample
         itemFlipped.worldMatrix[10] = 10 * itemFlipped.worldMatrix[10];
 
 
+
         //udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{ item, itemFlipped };
         udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{ item};
 
         udSDK.Render.udRenderSettings renderSettings = new udSDK.Render.udRenderSettings();
         renderSettings.flags = udSDK.Render.udRenderContextFlags.udRCF_BlockingStreaming;
 
-        udSDK.Render.udRenderPicking pick = new udSDK.Render.udRenderPicking();
-        pick.x = 2* width / 3;
-        pick.y = height / 3;
-        renderSettings.pick = pick;
+        renderSettings.pick.x = 2* width / 3;
+        renderSettings.pick.y = height / 3;
 
 
         for (int i = 0; i < 10; i++)
