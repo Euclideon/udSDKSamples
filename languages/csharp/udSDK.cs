@@ -188,6 +188,36 @@ namespace Euclideon.udSDK
 
     [DllImport("udSDK")]
     private static extern udError udPointCloud_GetMetadata(IntPtr pModel, ref string ppJSONMetadata);
+
+    //[DllImport("udSDK")]
+    //private static extern udError udPointCloud_LoadAdv(IntPtr pContext, ref IntPtr ppModel, string modelLocation, ref udPointCloudHeader pHeader, ref udPointCloudLoadOptions pOptions);
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_GetHeader(IntPtr pPointCloud, ref udPointCloudHeader pHeader);
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_Export(IntPtr pModel, string pExportFilename, IntPtr /* udGeometry*/ pFilter, ref float pProgress);
+
+    public void Export(string filename, Geometry.udGeometry geom, ref float pProgress)
+    {
+      udPointCloud_Export(pModel, filename, geom.pGeometry, ref pProgress);
+    }
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_GetNodeColour(IntPtr pModel, ref udVoxelID pVoxelID, ref UInt32 pColour);
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_GetNodeColour64(IntPtr pModel, ref udVoxelID pVoxelID, ref UInt64 pColour);
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_GetAttributeAddress(IntPtr pModel, ref udVoxelID pVoxelID, UInt32 attributeOffset, ref IntPtr ppAttributeAddress);
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_GetStreamingStatus(IntPtr pModel);
+
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_GetSourceAttributes(IntPtr pModel, ref Attributes.udAttributeSetInternal pAttributeSet);
+
   }
 
   public class udContext
