@@ -56,6 +56,7 @@ namespace Euclideon.udSDK
         skipRender = 0;
       }
     }
+
     public class udRenderContext
     {
       public udRenderContext(udContext context)
@@ -157,6 +158,7 @@ namespace Euclideon.udSDK
           Marshal.StructureToPtr<udRenderPickingInternal>(internalStruct, pPick, true);
         }
       }
+
       public uint y
       {
         get { return internalStruct.y; }

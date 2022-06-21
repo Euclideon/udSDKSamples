@@ -54,9 +54,7 @@ namespace udSDKSample
 
         renderer = new udSDK.Render.udRenderContext(context);
         renderView = new udSDK.Render.udRenderTarget(context, renderer, width, height);
-
         udModel = new udSDK.udPointCloud(context, modelName);
-
         renderView.SetTargets(ref colorBuffer, 0, ref depthBuffer);
 
         double[] cameraMatrix = {
@@ -67,19 +65,8 @@ namespace udSDKSample
         };
 
         renderView.cameraMatrix = cameraMatrix;
-
         udSDK.Render.udRenderInstance item = new udSDK.Render.udRenderInstance(udModel);
-
-        // modifying the transformation of the model and rendering it as a separate instance:
-        udSDK.Render.udRenderInstance itemFlipped = new udSDK.Render.udRenderInstance(udModel);
-        itemFlipped.worldMatrix[0] = 10 *itemFlipped.worldMatrix[0];
-        itemFlipped.worldMatrix[5] = 10 *itemFlipped.worldMatrix[5];
-        itemFlipped.worldMatrix[10] = 10 * itemFlipped.worldMatrix[10];
-
-
-
-        //udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{ item, itemFlipped };
-        udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{ item};
+        udSDK.Render.udRenderInstance[] modelArray = new udSDK.Render.udRenderInstance[]{item};
 
         udSDK.Render.udRenderSettings renderSettings = new udSDK.Render.udRenderSettings();
         renderSettings.flags = udSDK.Render.udRenderContextFlags.udRCF_BlockingStreaming;
@@ -87,10 +74,8 @@ namespace udSDKSample
         renderSettings.pick.x = 2* width / 3;
         renderSettings.pick.y = height / 3;
 
-
         for (int i = 0; i < 10; i++)
           renderer.Render(renderView, modelArray, modelArray.Length, renderSettings);
-
 
         string imagePath = "tmp.png";
         SaveColorImage(imagePath, width, height, colorBuffer);
@@ -103,7 +88,7 @@ namespace udSDKSample
         }
 
         //! Uncomment the following line to test the convert API
-        //Convert(modelName, "testConvert" + ".uds", context);
+        Convert(modelName, "testConvert" + ".uds", context);
       }
       finally
       {
@@ -116,20 +101,21 @@ namespace udSDKSample
       udSDK.Convert.udConvertContext convertContext = new udSDK.Convert.udConvertContext(context);
 
       convertContext.AddFile(inputPath);
-
       convertContext.OutputFile = outputPath;
       convertContext.TempDirectory = "./customTemp/";
       convertContext.PointResolution = 0.1;
       convertContext.SRID = 28356;
       convertContext.SkipErrors = true;
       convertContext.GlobalOffset = new double[] { 1,2,3};
-
+      udSDK.Convert.udConvertItemInfo input = convertContext.inputItems[0];
+      input.srid = 28354; // this sets the internal item srid value
+      // metadata can be set in the following way:
+      convertContext.metadata["Copyright"] = "Euclideon Pty";
+      // we can read the current metadata as a string using convertContext.metadata.JsonString
       // The following function demonstrates printing the conversion status as the converion is running in a separate thread:
-      // PrintConvertProgress(convertContext);
-
-      // Begin the conversion:
-      convertContext.DoConvert();
-
+       PrintConvertProgress(convertContext);
+      // Alternatively this runs the conversion in this thread:
+      //convertContext.DoConvert();
     }
 
     static void PrintConvertProgress(udSDK.Convert.udConvertContext convertContext)
@@ -152,7 +138,6 @@ namespace udSDKSample
     static void SaveColorImage(string path, int width, int height, uint[] colorBufferArr)
     {
       Bitmap bmp = new Bitmap(width, height);
-
       for (int y = 0; y < height; y++)
       {
         for (int x = 0; x < width; x++)
@@ -166,7 +151,6 @@ namespace udSDKSample
           bmp.SetPixel(x, y, color);
         }
       }
-
       bmp.Save(path);
     }
     static void ConnectInteractive(ref udSDK.udContext udContext, string serverURL, string applicationName, string appversion)

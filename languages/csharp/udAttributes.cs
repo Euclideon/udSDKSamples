@@ -162,6 +162,7 @@ namespace Euclideon.udSDK
         char[] st = encoding.GetChars(encoding.GetBytes(value));
         Array.Copy(st, buffer, st.Length);
       }
+
       public string name
       {
         get
@@ -175,6 +176,7 @@ namespace Euclideon.udSDK
           StringIntoCharBufferUTF8(ref _name, value);
         }
       }
+
       public string prefix
       {
         get
@@ -188,6 +190,7 @@ namespace Euclideon.udSDK
           StringIntoCharBufferUTF8(ref _prefix, value);
         }
       }
+
       public string suffix
       {
         get
@@ -362,10 +365,9 @@ namespace Euclideon.udSDK
         return Marshal.PtrToStructure<udAttributeSetInternal>(ptr);
       }
 
-
-
       [DllImport("udSDK")]
       private static extern udError udAttributeSet_Create(IntPtr /*udAttributeSet * */pAttributeSet, StandardAttributeContent content, UInt32 additionalCustomAttributes);
+
       [DllImport("udSDK")]
       private static extern udError udAttributeSet_Destroy(IntPtr /*udAttributeSet * */pAttributeSet);
          

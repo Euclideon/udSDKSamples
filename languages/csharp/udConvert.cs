@@ -1,6 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
-
+using System.Text.Json;
 namespace Euclideon.udSDK
 {
   namespace Convert
@@ -65,7 +65,7 @@ namespace Euclideon.udSDK
     //!
     //! @struct udConvertItemInfo
     //! Provides a copy of a subset of a convert item state
-    //!
+    //! @Warning this struct is larger than the C++ side struct, arrays of this struct passed to and from the native library will cause corruption
     [StructLayout(LayoutKind.Sequential)]
     public struct udConvertItemInfo
     {
@@ -75,11 +75,45 @@ namespace Euclideon.udSDK
       public Int64 pointsCount; //!< This might be an estimate, -1 is no estimate is available
       public UInt64 pointsRead; //!< Once conversation begins, this will give an indication of progress
       public double estimatedResolution; //!< The estimated scale of the item
-      public int srid; //!< The calculated geospatial reference ID of the item
+      private int _srid; //!< The calculated geospatial reference ID of the item
+
+      // the following are not included in the c++ header:
+      udConvertContext convertContext;
+      UInt64 index;
+
+      public udConvertItemInfo(udConvertContext context, UInt64 index)
+      {
+        this.convertContext = context;
+        this.index = index;
+        pFilename = IntPtr.Zero;
+        pointsCount = 0;
+        pointsRead = 0;
+        estimatedResolution = 0;
+        _srid = 0;
+      }
+
+      [DllImport("udSDK")]
+      private static extern udError udConvert_SetInputSourceProjection(IntPtr pConvertContext, UInt64 index, int srid);
+      public int srid
+      {
+        get { return _srid; }
+        set
+        {
+          udError error = udConvert_SetInputSourceProjection(convertContext.pConvertContext, index, value);
+          if (error != udError.udE_Success)
+          {
+            throw new UDException(error);
+          }
+        }
+      }
     };
 
     public class udConvertContext
     {
+      private IntPtr pInfo;
+      public IntPtr pConvertContext;
+      public ConversionMetadata metadata;
+      public InputItems inputItems;
 
       public ConvertStatus Status
       {
@@ -90,6 +124,8 @@ namespace Euclideon.udSDK
       {
         udError error = udConvert_CreateContext(context.pContext, ref pConvertContext);
         udConvert_GetInfo(pConvertContext, ref pInfo);
+        metadata = new ConversionMetadata(this);
+        inputItems = new InputItems(this);
         if (error != udError.udE_Success)
           throw new UDException(error);
       }
@@ -221,6 +257,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public bool SkipErrors
       {
         get { return System.Convert.ToBoolean(info.skipErrorsWherePossible); }
@@ -231,6 +268,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public uint EveryNth
       {
         get { return info.everyNth; }
@@ -241,6 +279,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public bool PolygonVerticesOnly
       {
         get { return System.Convert.ToBoolean(info.polygonVerticesOnly); }
@@ -262,6 +301,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public bool BakeLighting
       {
         get { return System.Convert.ToBoolean(info.bakeLighting); }
@@ -272,6 +312,7 @@ namespace Euclideon.udSDK
             throw new UDException(code);
         }
       }
+
       public bool ExportOtherEmbeddedAssets
       {
         get { return System.Convert.ToBoolean(info.exportOtherEmbeddedAssets); }
@@ -287,31 +328,102 @@ namespace Euclideon.udSDK
       {
         get
         {
-          udConvertItemInfo itemInfo = new udConvertItemInfo();
-          //itemInfo.pFilename = "";
-          // copy this value to avoid race condition later:
           ulong curr = Status.currentInputItem;
           if (curr >= Status.totalItems)
             curr = Status.totalItems - 1;
 
-          udError error =udConvert_GetItemInfo(pConvertContext, curr, ref itemInfo);
-          if (error != udError.udE_Success)
-            throw new UDException(error);
-          return itemInfo;
+          return inputItems[(int)curr];
         }
       }
 
-      // TODO: Metadata setting
-      public string MetaData
+      public class InputItems
       {
-        get { return info.pMetadata; }
-        //set { udErrorUtils.ThrowOnUnsuccessful(udConvert_SetMetadata(pConvertContext, value)); }
+        udConvertContext convertContext;
+        public InputItems(udConvertContext convertContext)
+        {
+          this.convertContext = convertContext;
+        }
+        public udConvertItemInfo this[int index]
+        {
+          get
+          {
+            udConvertItemInfo itemInfo = new udConvertItemInfo(convertContext, (ulong) index);
+            udError error = udConvert_GetItemInfo(convertContext.pConvertContext, (UInt32) index, ref itemInfo);
+            if (error != udError.udE_Success)
+              throw new UDException(error);
+            return itemInfo;
+          }
+        }
       }
 
+      public class ConversionMetadata
+      {
+        udConvertContext convertContext;
+        public ConversionMetadata(udConvertContext convertContext)
+        {
+          this.convertContext = convertContext;
+        }
 
-      private IntPtr pInfo;
+        public void Remove(int index)
+        {
+          udConvert_RemoveItem(convertContext.pConvertContext, (ulong) index);
+        }
 
-      public IntPtr pConvertContext;
+        public string JsonString
+        {
+          get { return convertContext.info.pMetadata; }
+        }
+        public string this[string key]
+        {
+          // unfortunately every framework has a different method of parsing json strings in a generic fashion.
+          // a getter for individual elements needs to be therefore specific to the platform
+          set
+          {
+            udError error = udConvert_SetMetadata(convertContext.pConvertContext, key, value);
+            if (error != udError.udE_Success)
+              throw new UDException(error);
+          }
+        }
+      }
+
+      public void Cancel()
+      {
+        udError error = udConvert_Cancel(pConvertContext);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+        
+      }
+
+      public void Reset()
+      {
+        udError error = udConvert_Reset(pConvertContext);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+        
+      }
+
+      public udPointCloud GeneratePreview()
+      {
+        udPointCloud ret = new udPointCloud();
+        udError error = udConvert_GeneratePreview(pConvertContext, ref ret.pModel);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+        return ret;
+      }
+
+      public void IgnoreAttribute(string attributeName)
+      {
+        udError error = udConvert_IgnoreAttribute(pConvertContext, attributeName);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
+
+      public void RestoreAttribute(string attributeName)
+      {
+        udError error = udConvert_RestoreAttribute(pConvertContext, attributeName);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+      }
 
       [DllImport("udSDK")]
       private static extern udError udConvert_CreateContext(IntPtr pContext, ref IntPtr ppConvertContext);
@@ -375,9 +487,6 @@ namespace Euclideon.udSDK
 
       [DllImport("udSDK")]
       private static extern udError udConvert_RemoveItem(IntPtr pConvertContext, UInt64 index);
-
-      [DllImport("udSDK")]
-      private static extern udError udConvert_SetInputSourceProjection(IntPtr pConvertContext, UInt64 index, int srid);
 
       [DllImport("udSDK")]
       private static extern udError udConvert_Cancel(IntPtr pConvertContext);

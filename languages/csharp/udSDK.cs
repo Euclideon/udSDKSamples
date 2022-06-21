@@ -148,6 +148,10 @@ namespace Euclideon.udSDK
       Load(context, path, ref this.header);
     }
 
+    public udPointCloud()
+    {
+    }
+
     private void Load(udContext context, string modelLocation, ref udPointCloudHeader header)
     {
       udError error = udPointCloud_Load(context.pContext, ref pModel, modelLocation, ref header);
@@ -334,3 +338,4 @@ namespace Euclideon.udSDK
     private static extern udError udServerAPI_ReleaseResult(ref IntPtr ppResult);
   }
 }
+
