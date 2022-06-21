@@ -199,29 +199,82 @@ namespace Euclideon.udSDK
     [DllImport("udSDK")]
     private static extern udError udPointCloud_GetHeader(IntPtr pPointCloud, ref udPointCloudHeader pHeader);
 
+    public void GetHeader()
+    {
+      udPointCloudHeader ret = new udPointCloudHeader();
+      udError error = udPointCloud_GetHeader(pModel, ref ret);
+      if (error != udError.udE_Success)
+        throw new UDException(error);
+    }
+
     [DllImport("udSDK")]
     private static extern udError udPointCloud_Export(IntPtr pModel, string pExportFilename, IntPtr /* udGeometry*/ pFilter, ref float pProgress);
 
     public void Export(string filename, Geometry.udGeometry geom, ref float pProgress)
     {
-      udPointCloud_Export(pModel, filename, geom.pGeometry, ref pProgress);
+      udError error = udPointCloud_Export(pModel, filename, geom.pGeometry, ref pProgress);
+      if (error != udError.udE_Success)
+        throw new UDException(error);
     }
 
     [DllImport("udSDK")]
     private static extern udError udPointCloud_GetNodeColour(IntPtr pModel, ref udVoxelID pVoxelID, ref UInt32 pColour);
 
+    public UInt32 GetNodeColour(udVoxelID voxelID)
+    {
+      UInt32 ret = 0;
+      udError error = udPointCloud_GetNodeColour(pModel, ref voxelID, ref ret);
+      if (error != udError.udE_Success)
+        throw new UDException(error);
+      return ret;
+    }
+
     [DllImport("udSDK")]
     private static extern udError udPointCloud_GetNodeColour64(IntPtr pModel, ref udVoxelID pVoxelID, ref UInt64 pColour);
+
+    public UInt64 GetNodeColour64(udVoxelID voxelID)
+    {
+      UInt64 ret = 0;
+      udError error = udPointCloud_GetNodeColour64(pModel, ref voxelID, ref ret);
+      if (error != udError.udE_Success)
+        throw new UDException(error);
+      return ret;
+    }
 
     [DllImport("udSDK")]
     private static extern udError udPointCloud_GetAttributeAddress(IntPtr pModel, ref udVoxelID pVoxelID, UInt32 attributeOffset, ref IntPtr ppAttributeAddress);
 
+    public IntPtr GetAttributeAddress(udVoxelID voxelID, UInt32 attributeOffset)
+    {
+      IntPtr ret = IntPtr.Zero;
+      udError error = udPointCloud_GetAttributeAddress(pModel, ref voxelID, attributeOffset, ref ret);
+      if (error != udError.udE_Success)
+        throw new UDException(error);
+      return ret;
+    }
+
     [DllImport("udSDK")]
     private static extern udError udPointCloud_GetStreamingStatus(IntPtr pModel);
 
-    [DllImport("udSDK")]
-    private static extern udError udPointCloud_GetSourceAttributes(IntPtr pModel, ref Attributes.udAttributeSetInternal pAttributeSet);
+    public udError StreamingStatus
+    {
+      get { return udPointCloud_GetStreamingStatus(pModel); }
+    }
 
+    [DllImport("udSDK")]
+    private static extern udError udPointCloud_GetSourceAttributes(IntPtr pModel, IntPtr pAttributeSet);
+
+    public Attributes.AttributeSet SourceAttributes
+    {
+      get
+      {
+        Attributes.AttributeSet ret = new Attributes.AttributeSet(Attributes.StandardAttributeContent.udSAC_None, 0);
+        udError error = udPointCloud_GetSourceAttributes(pModel, ret.pAttributeSet);
+        if (error != udError.udE_Success)
+          throw new UDException(error);
+        return ret;
+      }
+    }
   }
 
   public class udContext
