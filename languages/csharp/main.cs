@@ -107,13 +107,15 @@ namespace udSDKSample
       convertContext.SRID = 28356;
       convertContext.SkipErrors = true;
       convertContext.GlobalOffset = new double[] { 1,2,3};
+      udSDK.Convert.udConvertItemInfo input = convertContext.inputItems[0];
+      input.srid = 28354; // this sets the internal item srid value
       // metadata can be set in the following way:
       convertContext.metadata["Copyright"] = "Euclideon Pty";
       // we can read the current metadata as a string using convertContext.metadata.JsonString
       // The following function demonstrates printing the conversion status as the converion is running in a separate thread:
-      // PrintConvertProgress(convertContext);
+       PrintConvertProgress(convertContext);
       // Alternatively this runs the conversion in this thread:
-      convertContext.DoConvert();
+      //convertContext.DoConvert();
     }
 
     static void PrintConvertProgress(udSDK.Convert.udConvertContext convertContext)
