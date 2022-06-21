@@ -88,7 +88,7 @@ namespace udSDKSample
         }
 
         //! Uncomment the following line to test the convert API
-        //Convert(modelName, "testConvert" + ".uds", context);
+        Convert(modelName, "testConvert" + ".uds", context);
       }
       finally
       {
@@ -107,6 +107,9 @@ namespace udSDKSample
       convertContext.SRID = 28356;
       convertContext.SkipErrors = true;
       convertContext.GlobalOffset = new double[] { 1,2,3};
+      // metadata can be set in the following way:
+      convertContext.metadata["Copyright"] = "Euclideon Pty";
+      // we can read the current metadata as a string using convertContext.metadata.JsonString
       // The following function demonstrates printing the conversion status as the converion is running in a separate thread:
       // PrintConvertProgress(convertContext);
       // Alternatively this runs the conversion in this thread:

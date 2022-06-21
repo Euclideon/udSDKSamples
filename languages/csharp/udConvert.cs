@@ -1,6 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
-
+using System.Text.Json;
 namespace Euclideon.udSDK
 {
   namespace Convert
@@ -82,6 +82,7 @@ namespace Euclideon.udSDK
     {
       private IntPtr pInfo;
       public IntPtr pConvertContext;
+      public ConversionMetadata metadata;
 
       public ConvertStatus Status
       {
@@ -92,6 +93,7 @@ namespace Euclideon.udSDK
       {
         udError error = udConvert_CreateContext(context.pContext, ref pConvertContext);
         udConvert_GetInfo(pConvertContext, ref pInfo);
+        metadata = new ConversionMetadata(this);
         if (error != udError.udE_Success)
           throw new UDException(error);
       }
@@ -308,11 +310,29 @@ namespace Euclideon.udSDK
         }
       }
 
-      // TODO: Metadata setting
-      public string MetaData
+      public class ConversionMetadata
       {
-        get { return info.pMetadata; }
-        //set { udErrorUtils.ThrowOnUnsuccessful(udConvert_SetMetadata(pConvertContext, value)); }
+        udConvertContext convertContext;
+        public ConversionMetadata(udConvertContext convertContext)
+        {
+          this.convertContext = convertContext;
+        }
+
+        public string JsonString
+        {
+          get { return convertContext.info.pMetadata; }
+        }
+        public string this[string key]
+        {
+          // unfortunately every framework has a different method of parsing json strings in a generic fashion.
+          // a getter for individual elements needs to be therefore specific to the platform
+          set
+          {
+            udError error = udConvert_SetMetadata(convertContext.pConvertContext, key, value);
+            if (error != udError.udE_Success)
+              throw new UDException(error);
+          }
+        }
       }
 
       [DllImport("udSDK")]
