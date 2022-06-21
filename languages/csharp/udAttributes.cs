@@ -332,11 +332,11 @@ namespace Euclideon.udSDK
       [DllImport("udSDK")]
       private static extern udError udAttribute_GetDescriptorOfStandardAttribute(StandardAttribute attribute, IntPtr /*udAttributeDescriptor * */pDescriptor);
     }
-    public class AttributeSetWrapper
+    public class AttributeSet
     {
-      IntPtr pAttributeSet;
+      public IntPtr pAttributeSet;
       bool manuallyCreated;
-      public AttributeSetWrapper(StandardAttributeContent standardContent, UInt32 additionalContent)
+      public AttributeSet(StandardAttributeContent standardContent, UInt32 additionalContent)
       {
         udError code = udAttributeSet_Create(pAttributeSet, standardContent, additionalContent);
         if(code != udError.udE_Success)
@@ -344,7 +344,7 @@ namespace Euclideon.udSDK
         manuallyCreated = true;
       }
 
-      ~AttributeSetWrapper()
+      ~AttributeSet()
       {
         if (manuallyCreated)
         {
