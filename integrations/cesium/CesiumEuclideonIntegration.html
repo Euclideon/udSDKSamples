@@ -46,6 +46,9 @@
     <script>
       var udSDKReady = 0;
 
+      var lineEntityPartA = undefined;
+      var lineEntityPartB = undefined;
+
       var viewer = new Cesium.Viewer("cesiumContainer", {
         scene3DOnly: true,
         imageryProvider: new Cesium.UrlTemplateImageryProvider({
@@ -363,6 +366,78 @@
             }
 
             var myBox = viewer.scene.primitives.add(new VtxfPrimitive());
+
+            function DrawLineTest(positions, rayWidth) {
+              if (lineEntityPartA !== undefined || lineEntityPartB !== undefined)
+              {
+                viewer.entities.remove(lineEntityPartA);
+                viewer.entities.remove(lineEntityPartB);
+              }
+
+              let distance = udSDKJS_IsPointVisible(positions[0], positions[1], rayWidth);
+              console.log("IsVisible:", distance);
+
+              if (distance >= 0.0)
+              {
+                if (distance == 1.0)
+                {
+                  // Add a polyline to the scene. Positions are dynamic.
+                  lineEntityPartA = viewer.entities.add({
+                    polyline: {
+                      positions: positions,
+                      width: 10,
+                      material: new Cesium.PolylineGlowMaterialProperty({
+                        glowPower: 0.2,
+                        color: Cesium.Color.CORNFLOWERBLUE,
+                      }),
+                    },
+                  });
+                }
+                else if (distance == 0.0)
+                {
+                  // Add a polyline to the scene. Positions are dynamic.
+                  lineEntityPartB = viewer.entities.add({
+                    polyline: {
+                      positions: positions,
+                      width: 10,
+                      material: new Cesium.PolylineGlowMaterialProperty({
+                        glowPower: 0.2,
+                        color: Cesium.Color.CRIMSON,
+                      }),
+                    },
+                  });
+                }
+                else
+                {
+                  midPoint = Cesium.Cartesian3.fromElements(0,0,0);
+                  Cesium.Cartesian3.lerp(positions[0], positions[1], distance, midPoint);
+
+                  // Add a polyline to the scene. Positions are dynamic.
+                  lineEntityPartA = viewer.entities.add({
+                    polyline: {
+                      positions: [positions[0], midPoint],
+                      width: 10,
+                      material: new Cesium.PolylineGlowMaterialProperty({
+                        glowPower: 0.2,
+                        color: Cesium.Color.CORNFLOWERBLUE,
+                      }),
+                    },
+                  });
+
+                  // Add a polyline to the scene. Positions are dynamic.
+                  lineEntityPartB = viewer.entities.add({
+                    polyline: {
+                      positions: [midPoint, positions[1]],
+                      width: 10,
+                      material: new Cesium.PolylineGlowMaterialProperty({
+                        glowPower: 0.2,
+                        color: Cesium.Color.CRIMSON,
+                      }),
+                    },
+                  });
+                }
+              }
+            }
 
     </script>
 
