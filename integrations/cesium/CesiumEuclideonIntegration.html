@@ -43,19 +43,13 @@
         <h1>Loading...</h1>
     </div>
     <div id="toolbar"></div>
-    <div id="loginBox">
-        <span id="errorMessage" style="color: red;"></span>
-        <label>Euclideon Login: <input id="usernameTxt" type="text" placeholder="Email" /></label>
-        <label><input id="passwordTxt" type="password" placeholder="Password" /></label>
-        <button id="loginBtn">Login!</login>
-    </div>
     <script>
       var udSDKReady = 0;
 
       var viewer = new Cesium.Viewer("cesiumContainer", {
         scene3DOnly: true,
         imageryProvider: new Cesium.UrlTemplateImageryProvider({
-          url: 'https://slippy.vault.euclideon.com/aerial/{z}/{x}/{y}.png',
+          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           credit: new Cesium.Credit(`© ${new Date().getFullYear()} TomTom, Microsoft`, true),
           maximumLevel: 18,
           enablePickFeatures: false
@@ -378,44 +372,71 @@
 
         if (typeof model === 'string')
         {
-          getParamModel = udSDKJS_LoadModel(model);
-          udSDKJS_RenderQueueAddModel(getParamModel, 0.0, 4978);
-          modeldetails = udSDKJS_GetHeaderData(getParamModel);
+          udSDKJS_LoadModel(model).then(
+            function(modelid) {
+              modeldetails = udSDKJS_GetHeaderData(modelid);
 
-          var position = Cesium.Cartesian3.fromDegrees(modeldetails.latLong[1], modeldetails.latLong[0], 0.0);
-          viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(position, modeldetails.scaledRange));
+              var position = Cesium.Cartesian3.fromDegrees(modeldetails.latLong[1], modeldetails.latLong[0], 0.0);
+              viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(position, modeldetails.scaledRange));
+
+              udSDKJS_RenderQueueAddModel(modelid, 0.0, 4978);
+            },
+            function(error) { OnError("Loading Model", code) }
+          );
         }
         else
         {
-          udsAerometrixBrisbane = udSDKJS_LoadModel("https://models.euclideon.com/Aerometrex_Brisbane_75mm.uds");
-          udSDKJS_RenderQueueAddModel(udsAerometrixBrisbane, 112.0, 4978);
+          udSDKJS_LoadModel("https://models.euclideon.com/Aerometrex_Brisbane_75mm.uds").then(
+            function(modelid) {
+              udSDKJS_RenderQueueAddModel(modelid, 112.0, 4978);
+            },
+            function(error) { OnError("Loading Brisbane", code) }
+          );
 
-          udsAerometrixGoldCoast = udSDKJS_LoadModel("https://models.euclideon.com/GoldCoast_20mm.uds");
-          udSDKJS_RenderQueueAddModel(udsAerometrixGoldCoast, 140.0, 4978);
+          udSDKJS_LoadModel("https://models.euclideon.com/GoldCoast_20mm.uds").then(
+            function(modelid) {
+              udSDKJS_RenderQueueAddModel(modelid, 140.0, 4978);
+            },
+            function(error) { OnError("Loading GoldCoast", code) }
+          );
 
-          udsMelb = udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds");
-          udSDKJS_RenderQueueAddModel(udsMelb, 150.0, 4978);
+          udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds").then(
+            function(modelid) {
+              udSDKJS_RenderQueueAddModel(modelid, 150.0, 4978);
+            },
+            function(error) { OnError("Loading Melbourne", code) }
+          );
 
-          udsVancouver = udSDKJS_LoadModel("https://models.euclideon.com/Vancouver.uds");
-          slot = udSDKJS_RenderQueueAddModel(udsVancouver, 227.0, 4978);
-          if (slot >= 0)
-            udSDKJS_RenderQueueItem_SetClassification(slot);
+          udSDKJS_LoadModel("https://models.euclideon.com/Vancouver.uds").then(
+            function(modelid) {
+              slot = udSDKJS_RenderQueueAddModel(modelid, 227.0, 4978);
+              if (slot >= 0)
+                udSDKJS_RenderQueueItem_SetClassification(slot);
+            },
+            function(error) { OnError(code) }
+          );
 
           var position = Cesium.Cartesian3.fromDegrees(153.0, -27.0, 0.5);
           viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(position, 100000));
         }
 
         udSDKReady = 2;
-        document.getElementById("loginBox").style.display = "none";
+      }
+
+      function OnError(task, code) {
+        alert(task + " had error: " + udSDKJS_GetErrorString(code) + " (" + code + ")");
       }
 
       function udSDKPluginInit() {
         udSDKJS_RegisterShared();
         udSDKReady = 1;
-        if (udSDKJS_Domain("Cesium") == 0)
-          loadModels();
-        else
-          document.getElementById("loginBox").style.display = "block";
+
+        udSDKJS_CreateFrom_udCloud("CesiumJS Sample").then(
+          function () {
+            loadModels();
+          },
+          function (code) { OnError("Get Session", code); }
+        );
       };
 
       function findGetParameter(parameterName) {
@@ -429,25 +450,6 @@
                 if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
               });
           return result;
-      }
-
-      function udSDKPluginLoad(username, password) {
-        if (udSDKReady != 1)
-          Alert("Not ready to login!");
-
-        var status = udSDKJS_Login(username, password, "Cesium");
-
-        if (status == 0)
-        {
-          loadModels();
-        }
-        else
-        {
-          if (status == 13)
-            document.getElementById("errorMessage").innerText = "udSDKJS Error / Username & Password Wrong";
-          else
-            document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + status;
-        }
       }
 
       var Module = {
@@ -482,16 +484,6 @@
       };
 
       Module.setStatus('Downloading...');
-
-      function loginVDK(ev) {
-        if (udSDKReady == 1) {
-          udSDKPluginLoad(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
-        }
-      }
-
-      document.getElementById("passwordTxt").addEventListener("keyup", function(event) { if (event.keyCode === 13) { event.preventDefault(); document.getElementById("loginBtn").click(); }});
-      document.getElementById("usernameTxt").addEventListener("keyup", function(event) { if (event.keyCode === 13) { event.preventDefault(); document.getElementById("loginBtn").click(); }});
-      document.getElementById("loginBtn").addEventListener("click", loginVDK);
     </script>
   </body>
 </html>
