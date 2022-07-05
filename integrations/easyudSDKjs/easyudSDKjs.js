@@ -940,6 +940,18 @@ class udSDKJS_ProjectNode {
   }
 }
 
+//!
+//! Check if a point is visible
+//!
+//! @param point1Coordinates {object(x,y,z)} coordinates of the start point
+//! @param point2Coordinates {object(x,y,z)} coordinates of the end point
+//! @param rayWidth the width in metres of the ray
+//! @return {number} the value of a linear interpolation between the 2 points of where the closest visible point is
+//!
+function udSDKJS_IsPointVisible(point1Coordinates, point2Coordinates, rayWidth) {
+  return udSDKJS_IsPointVisibleInternal(point1Coordinates.x, point1Coordinates.y, point1Coordinates.z, point2Coordinates.x, point2Coordinates.y, point2Coordinates.z, rayWidth);
+}
+
 //---------------------------------------------------------------------------------------------
 // Utility
 //---------------------------------------------------------------------------------------------
@@ -1015,6 +1027,7 @@ let udSDKJS_ProjectNode_GetMetadataBoolInternal;
 let udSDKJS_ProjectNode_SetMetadataBoolInternal;
 let udSDKJS_ProjectNode_GetMetadataStringInternal;
 let udSDKJS_ProjectNode_SetMetadataStringInternal;
+let udSDKJS_IsPointVisibleInternal;
 
 function udSDKJS_RegisterShared()
 {
@@ -1071,6 +1084,8 @@ function udSDKJS_RegisterShared()
   udSDKJS_ProjectNode_SetMetadataBoolInternal= Module.cwrap('udSDKJS_ProjectNode_SetMetadataBool', 'number', ['number', 'string', 'number']);
   udSDKJS_ProjectNode_GetMetadataStringInternal= Module.cwrap('udSDKJS_ProjectNode_GetMetadataString', 'string', ['number', 'string', 'string']);
   udSDKJS_ProjectNode_SetMetadataStringInternal= Module.cwrap('udSDKJS_ProjectNode_SetMetadataString', 'number', ['number', 'string', 'string']);
+
+  udSDKJS_IsPointVisibleInternal = Module.cwrap('udSDKJS_IsPointVisible', 'number', ['number','number','number','number','number','number','number']);
 
   udSDKJS_LoadModelInternal = Module.cwrap('udSDKJS_LoadModel', '', ['string', 'number', 'number']);
   udSDKJS_RenderQueueAddModelWithMatrixInternal = Module.cwrap('udSDKJS_RenderQueueAddModelWithMatrix', 'number', ['number', 'number']);

@@ -365,6 +365,60 @@ extern "C" {
     return TO_JS_CODE(udScene_Release(&g_pScene));
   }
 
+  EMSCRIPTEN_KEEPALIVE float udSDKJS_IsPointVisible(double p0x, double p0y, double p0z, double p1x, double p1y, double p1z, int toleranceMetres)
+  {
+    const int BufferSize = 256;
+
+    udRenderTarget *pSmallTarget = nullptr;
+    udError result = udE_Unsupported;
+    udRenderSettings settings = {};
+
+    settings.flags = udRCF_BlockingStreaming;
+
+    double halfTolerance = toleranceMetres / 2;
+
+    float closestPoint = 1.f;
+
+    udDouble3 p0 = udDouble3::create(p0x, p0y, p0z);
+    udDouble3 p1 = udDouble3::create(p1x, p1y, p1z);
+
+    udDouble4x4 camera = udDouble4x4::lookAt(p0, p1);
+    udDouble4x4 ortho = udDouble4x4::orthoZO(-halfTolerance, halfTolerance, -halfTolerance, halfTolerance, 0.01, udMag3(p1 - p0) + 0.01);
+
+    float *pDepthBuffer = udAllocType(float, BufferSize * BufferSize, udAF_Zero);
+
+    UD_ERROR_NULL(pDepthBuffer, udE_MemoryAllocationFailure);
+
+    UD_ERROR_CHECK(udRenderTarget_Create(g_pContext, &pSmallTarget, g_pRenderer, BufferSize, BufferSize));
+
+    UD_ERROR_CHECK(udRenderTarget_SetMatrix(pSmallTarget, udRTM_Camera, camera.a));
+    UD_ERROR_CHECK(udRenderTarget_SetMatrix(pSmallTarget, udRTM_Projection, ortho.a));
+
+    UD_ERROR_CHECK(udRenderTarget_SetTargets(pSmallTarget, nullptr, 0, pDepthBuffer));
+
+    UD_ERROR_CHECK(udRenderContext_Render(g_pRenderer, pSmallTarget, g_renderData.GetRenderInstanceArray(), g_renderData.Size(), &settings));
+
+    for (int yp = 0; yp < BufferSize; ++yp)
+    {
+      for (int xp = 0; xp < BufferSize; ++xp)
+      {
+        if (pDepthBuffer[yp * BufferSize + xp] < closestPoint)
+          closestPoint = pDepthBuffer[yp * BufferSize + xp];
+      }
+    }
+
+    result = udE_Success;
+
+  epilogue:
+    udRenderTarget_Destroy(&pSmallTarget);
+    udFree(pDepthBuffer);
+
+    if (result == udE_Success)
+      return closestPoint;
+
+    return (float)TO_JS_CODE(result);
+  }
+
   EMSCRIPTEN_KEEPALIVE void udSDKJS_ServerProjectSave(void (*successCB)(), void (*failureCB)(int code))
   {
     udWorkerPool_AddTask(g_pWorkerPool, [successCB, failureCB](void *)
