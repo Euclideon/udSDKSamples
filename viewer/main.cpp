@@ -196,8 +196,6 @@ int main(int argc, char **args)
 
 epilogue:
   // Clean up
-  //ImGuiSDL::Deinitialize();
-
   delete[] pDepthBuffer;
   delete[] pColorBuffer;
   udPointCloud_Unload(&pModel);

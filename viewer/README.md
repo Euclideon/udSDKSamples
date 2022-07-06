@@ -10,13 +10,13 @@ Type:                  Feature Example
 Contributor:           Euclideon Development Team <support@euclideon.com>
 Organization:          Euclideon, https://euclideon.com
 Date:                  2022/06/02
-udSDK Version:         2.2.1
+udSDK Version:         2.3
 Toolsets:              C++11 compiler
 ```
 
 ## Resources Required
 <!-- TODO: Fill this section below with the resources required to do this sample-->
-_No additional resources or libraries required_
+ImGui and SDL2
 
 ## How to use the sample
 <!-- TODO: Explain how this sample can be used and what is required to get it running -->
