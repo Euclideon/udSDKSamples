@@ -365,7 +365,7 @@ extern "C" {
     return TO_JS_CODE(udScene_Release(&g_pScene));
   }
 
-  EMSCRIPTEN_KEEPALIVE float udSDKJS_IsPointVisible(double p0x, double p0y, double p0z, double p1x, double p1y, double p1z, int toleranceMetres)
+  EMSCRIPTEN_KEEPALIVE float udSDKJS_IsPointVisible(double p0x, double p0y, double p0z, double p1x, double p1y, double p1z, double toleranceMetres)
   {
     const int BufferSize = 256;
 
