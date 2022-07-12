@@ -385,7 +385,7 @@ namespace Euclideon.udSDK
     }
 
     [DllImport("udSDK")]
-    private static extern udError udServerAPI_Query(IntPtr pContext, string pAPIAddress, string pJSON, ref IntPtr ppResult);
+    private static extern udError udServerAPI_Query(IntPtr pContext, [MarshalAs(UnmanagedType.LPUTF8Str)] string pAPIAddress, [MarshalAs(UnmanagedType.LPUTF8Str)] string pJSON, ref IntPtr ppResult);
 
     [DllImport("udSDK")]
     private static extern udError udServerAPI_ReleaseResult(ref IntPtr ppResult);
