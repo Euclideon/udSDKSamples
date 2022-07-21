@@ -137,8 +137,12 @@ solution "udSDKSamples"
 			dofile "features/convertcustomdata/project.lua"
 			dofile "features/convertdem/project.lua"
 			dofile "features/renderingcustomvoxelshaders/project.lua"
+			dofile "features/getscenesfromudcloud/project.lua"
 		end
-
+	group "viewer"
+		if os.target() ~= "android" and os.target() ~= "ios" and os.target() ~= "emscripten" then
+			dofile "viewer/project.lua"
+		end
 	group "libraries"
 		if os.target() ~= "android" and os.target() ~= "ios" and os.target() ~= "emscripten" then
 			dofile "external/udcore/project.lua"
