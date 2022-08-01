@@ -42,8 +42,8 @@ int main(int argc, char **args)
   float menuBarHeight = 0;
 
   // Resume Session or Login
-  if (udContext_TryResume(&pContext, "staging.udcloud.euclideon.com", "udViewer", nullptr, false) != udE_Success)
-    udResult = udContext_ConnectWithKey(&pContext, "staging.udcloud.euclideon.com", "udViewer", "1.0", s_udCloudKey);
+  if (udContext_TryResume(&pContext, "udcloud.com", "udViewer", nullptr, false) != udE_Success)
+    udResult = udContext_ConnectWithKey(&pContext, "udcloud.com", "udViewer", "1.0", s_udCloudKey);
 
   if (udResult != udE_Success)
     ExitWithMessage(udResult, "Could not login!");

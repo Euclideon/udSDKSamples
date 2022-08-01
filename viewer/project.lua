@@ -42,9 +42,6 @@ project "Viewer"
 	filter { "system:linux" }
 		links { "udSDK", "z", "m" }
 
-		--This need to be changed to work in other distros
-		postbuildcommands { 'cp "' .. _OPTIONS["udsdk"] .. '/lib/ubuntu18.04_GCC_x64/libudSDK.so" "%{cfg.targetdir}/"' }
-
 	filter { "system:macosx" }
 		frameworkdirs { "../../builds/features/getscenesfromudcloud" }
 		links { "udSDK.framework" }
