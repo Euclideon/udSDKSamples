@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "udSDKFeatureSamples.h"
+#include "udSample.h"
 
 // external
 #include "SDL.h"
@@ -15,14 +16,19 @@
 // udcore
 #include "udChunkedArray.h"
 #include "udMath.h"
+#include "udStringUtil.h"
 
 // udsdk
 #include "udContext.h"
 #include "udRenderContext.h"
 #include "udRenderTarget.h"
 
-int g_windowWidth = 1280;
-int g_windowHeight = 720;
+// samples (commenting out the includes removes them from the list)
+UDSAMPLE_PREDECLARE_SAMPLE(BasicSample);
+
+udSample samples[] = {
+  UDSAMPLE_REGISTER_SAMPLE(BasicSample),
+};
 
 int main(int argc, char **args)
 {
@@ -32,12 +38,10 @@ int main(int argc, char **args)
   // Define our variables
   udError udResult = udE_Success;
   udContext *pContext = nullptr;
-  udRenderContext *pRenderer = nullptr;
-  udRenderTarget *pRenderView = nullptr;
-  udRenderInstance instance = {};
-  udRenderSettings options = {};
-  udPointCloud *pModel = nullptr;
-  udPointCloudHeader header;
+
+  udSampleRenderInfo renderInfo = {};
+  renderInfo.width = 1280;
+  renderInfo.height = 720;
 
   float menuBarHeight = 0;
 
@@ -51,14 +55,11 @@ int main(int argc, char **args)
   uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;// | SDL_WINDOW_RESIZABLE;
   bool isRunning = true;
   uint32_t lastRenderTime = udGetTimeMs() - 16;
-  double dt = 1000.f / 60.f;
-  double moveSpeed = 100;
-  int moveScale = -1;
-  udDouble4x4 mat = udDouble4x4::identity(), camera;
-
-  int *pColorBuffer = new int[g_windowWidth * g_windowHeight];
-  float *pDepthBuffer = new float[g_windowWidth * g_windowHeight];
+  
+  renderInfo.pColorBuffer = new int[renderInfo.width * renderInfo.height];
+  renderInfo.pDepthBuffer = new float[renderInfo.width * renderInfo.height];
   int selectedItem = -1;
+  void *pSampleData = nullptr;
 
   // Setup SDL
   if (SDL_Init(SDL_INIT_VIDEO) != 0)
@@ -67,7 +68,7 @@ int main(int argc, char **args)
   // Stop window from being minimized while fullscreened and focus is lost
   SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
 
-  SDL_Window *pWindow = SDL_CreateWindow("udSDK Sample Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, g_windowWidth, g_windowHeight, windowFlags);
+  SDL_Window *pWindow = SDL_CreateWindow("udSDK Sample Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, renderInfo.width, renderInfo.height, windowFlags);
   if (!pWindow)
     goto epilogue;
 
@@ -78,58 +79,35 @@ int main(int argc, char **args)
   ImGui::StyleColorsDark();
   ImGui_ImplSDL2_InitForSDLRenderer(pWindow, pSdlRenderer);
   ImGui_ImplSDLRenderer_Init(pSdlRenderer);
-  SDL_Texture *pSdlTexture = SDL_CreateTexture(pSdlRenderer,
-    SDL_PIXELFORMAT_BGRA8888,
-    SDL_TEXTUREACCESS_STREAMING,
-    g_windowWidth,
-    g_windowHeight);
+  renderInfo.pSDLTexture = SDL_CreateTexture(pSdlRenderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, renderInfo.width, renderInfo.height);
 
   //camera = camera.identity();
-  camera = {
-    +1.0,+0.0,+0.0,0,
-    +0.0,+0.5,-0.5,0,
-    +0.0,+0.5,+0.5,0,
-
-    +50.0,-55.0,+55.0,1
-  };
-
-  if (udRenderContext_Create(pContext, &pRenderer) != udE_Success)
+  if (udRenderContext_Create(pContext, &renderInfo.pRenderContext) != udE_Success)
   {
     printf("Could not create render context\n");
     goto epilogue;
   }
 
-  if (udRenderTarget_Create(pContext, &pRenderView, pRenderer, g_windowWidth, g_windowHeight) != udE_Success)
+  if (udRenderTarget_Create(pContext, &renderInfo.pRenderTarget, renderInfo.pRenderContext, renderInfo.width, renderInfo.height) != udE_Success)
   {
     printf("Could not create render target\n");
     goto epilogue;
   }
 
-  //udError res = udPointCloud_Load(pContext, &pModel, "../../samplefiles/DirCube.uds", &header);
-  udError res = udPointCloud_Load(pContext, &pModel, "../../samplefiles/HistogramTest.uds", &header);
-  if (res != udE_Success)
-  {
-    printf("Could not load sample UDS file\n");
-    goto epilogue;
-  }
-
-  if (udRenderTarget_SetTargets(pRenderView, pColorBuffer, 0, pDepthBuffer) != udE_Success)
+  if (udRenderTarget_SetTargets(renderInfo.pRenderTarget, renderInfo.pColorBuffer, 0, renderInfo.pDepthBuffer) != udE_Success)
   {
     printf("Could not set render target buffers\n");
     goto epilogue;
   }
 
-  instance.pPointCloud = pModel;
-  memcpy(instance.matrix, header.storedMatrix, sizeof(header.storedMatrix));
-
-  options.flags = udRCF_None;
-
   while (isRunning)
   {
-    double yaw = 0, pitch = 0, tx = 0, ty = 0, tz = 0;
     int frameTimeMs = (udGetTimeMs() - lastRenderTime);
-    dt = udMin(frameTimeMs / 1000.f, 1 / 60.f); // Clamp dt at 60fps
+    renderInfo.dt = udMin(frameTimeMs / 1000.f, 1 / 60.f); // Clamp dt at 60fps
     lastRenderTime = udGetTimeMs();
+
+    if (selectedItem >= 0)
+      samples[selectedItem].pRender(pSampleData, renderInfo);
 
     SDL_Event event;
     while (SDL_PollEvent(&event))
@@ -137,36 +115,7 @@ int main(int argc, char **args)
       ImGui_ImplSDL2_ProcessEvent(&event);
       if (event.type == SDL_QUIT)
         isRunning = false;
-
-      if (event.type == SDL_MOUSEWHEEL)
-        moveScale = udClamp(moveScale + event.wheel.y, -100, 100);
-      if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_w)
-        ty += moveSpeed * dt;
-      if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_s)
-        ty -= moveSpeed * dt;
-      if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_a)
-        tx -= moveSpeed * dt;
-      if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_d)
-        tx += moveSpeed * dt;
     }
-
-    float moveScaler = (moveScale < 0) ? -1.f / moveScale : moveScale + 1;
-    void *pSdlPixels;
-    udUpdateCamera(camera.a, yaw, pitch, tx * moveScaler, ty * moveScaler, tz * moveScaler);
-    SDL_LockTexture(pSdlTexture,
-      NULL,      // NULL means the *whole texture* here.
-      &pSdlPixels,
-      &g_windowWidth);
-
-    if (udRenderTarget_SetMatrix(pRenderView, udRTM_Camera, camera.a) != udE_Success)
-      printf("Could not set render target matrix\n");
-
-    if (udRenderContext_Render(pRenderer, pRenderView, &instance, 1, &options) != udE_Success)
-      printf("Rendering failed!\n");
-
-    //bind pColorBuffer to SDL_window
-    memcpy(pSdlPixels, pColorBuffer, g_windowWidth * g_windowHeight);
-    SDL_UnlockTexture(pSdlTexture);
 
     //ImGUI
     ImGui_ImplSDLRenderer_NewFrame();
@@ -179,8 +128,21 @@ int main(int argc, char **args)
       ImGui::LabelText("Samples", "Samples");
       if (ImGui::BeginListBox("Samples"))
       {
-        if (ImGui::Selectable("Basic Sample", selectedItem == 0))
-          selectedItem = 0;
+        for (size_t i = 0; i < udLengthOf(samples); ++i)
+        {
+          if (ImGui::Selectable(udTempStr("%s##sample_%zu", samples[i].pName, i), selectedItem == i))
+          {
+            if (selectedItem >= 0)
+            {
+              samples[selectedItem].pDeinit(pSampleData);
+              pSampleData = nullptr;
+            }
+
+            selectedItem = (int)i;
+
+            samples[selectedItem].pInit(&pSampleData, pContext);
+          }
+        }
 
         ImGui::EndListBox();
       }
@@ -189,21 +151,20 @@ int main(int argc, char **args)
 
     ImGui::Render();
     SDL_RenderClear(pSdlRenderer);
-    SDL_RenderCopy(pSdlRenderer, pSdlTexture, NULL, NULL);
+    SDL_RenderCopy(pSdlRenderer, renderInfo.pSDLTexture, NULL, NULL);
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(pSdlRenderer);
   }
 
 epilogue:
   // Clean up
-  delete[] pDepthBuffer;
-  delete[] pColorBuffer;
-  udPointCloud_Unload(&pModel);
-  udRenderTarget_Destroy(&pRenderView);
-  udRenderContext_Destroy(&pRenderer);
+  delete[] renderInfo.pDepthBuffer;
+  delete[] renderInfo.pColorBuffer;
+  udRenderTarget_Destroy(&renderInfo.pRenderTarget);
+  udRenderContext_Destroy(&renderInfo.pRenderContext);
   udContext_Disconnect(&pContext, true);
 
-  SDL_DestroyTexture(pSdlTexture);
+  SDL_DestroyTexture(renderInfo.pSDLTexture);
   SDL_DestroyRenderer(pSdlRenderer);
   SDL_DestroyWindow(pWindow);
 
