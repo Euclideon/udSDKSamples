@@ -17,6 +17,7 @@
 #include "udChunkedArray.h"
 #include "udMath.h"
 #include "udStringUtil.h"
+#include "udPlatformUtil.h"
 
 // udsdk
 #include "udContext.h"
