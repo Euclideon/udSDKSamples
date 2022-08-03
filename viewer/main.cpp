@@ -42,8 +42,8 @@ int main(int argc, char **args)
   float menuBarHeight = 0;
 
   // Resume Session or Login
-  if (udContext_TryResume(&pContext, "udcloud.com", "udViewer", nullptr, false) != udE_Success)
-    udResult = udContext_ConnectWithKey(&pContext, "udcloud.com", "udViewer", "1.0", s_udCloudKey);
+  if (udContext_TryResume(&pContext, "udcloud.com", "udSDK Sample Viewer", nullptr, false) != udE_Success)
+    udResult = udContext_ConnectWithKey(&pContext, "udcloud.com", "udSDK Sample Viewer", "1.0", s_udCloudKey);
 
   if (udResult != udE_Success)
     ExitWithMessage(udResult, "Could not login!");
@@ -67,7 +67,7 @@ int main(int argc, char **args)
   // Stop window from being minimized while fullscreened and focus is lost
   SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
 
-  SDL_Window *pWindow = SDL_CreateWindow("udViewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, g_windowWidth, g_windowHeight, windowFlags);
+  SDL_Window *pWindow = SDL_CreateWindow("udSDK Sample Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, g_windowWidth, g_windowHeight, windowFlags);
   if (!pWindow)
     goto epilogue;
 
