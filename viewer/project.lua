@@ -8,7 +8,7 @@ project "Viewer"
 
 	--Files to include
 	includedirs { "../external/sdl2/include"}
-	files { "*.h", "*.cpp", "*.md", "*.lua" }
+	files { "**.h", "**.cpp", "*.md", "*.lua" }
 	files { "../external/imgui/*.cpp", "../external/imgui/*.h" }
 	files { "../external/imgui/backends/imgui_impl_sdl.cpp", "../external/imgui/backends/imgui_impl_sdl.h" }
 	files { "../external/imgui/backends/imgui_impl_sdlrenderer.cpp", "../external/imgui/backends/imgui_impl_sdlrenderer.h" }
