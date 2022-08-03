@@ -33,8 +33,8 @@ void BasicSample_Init(void **ppSampleData, udContext *pContext)
   };
 
 
-  //udError res = udPointCloud_Load(pContext, &pModel, "../../samplefiles/DirCube.uds", &header);
-  udError res = udPointCloud_Load(pContext, &pData->pModel, "../../samplefiles/HistogramTest.uds", &pData->header);
+  //udError res = udPointCloud_Load(pContext, &pModel, UDSAMPLE_ASSETDIR "/DirCube.uds", &header);
+  udError res = udPointCloud_Load(pContext, &pData->pModel, UDSAMPLE_ASSETDIR "/HistogramTest.uds", &pData->header);
   if (res != udE_Success)
   {
     printf("Could not load sample UDS file\n");
