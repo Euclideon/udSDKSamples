@@ -38,4 +38,8 @@ struct udSample
 #define UDSAMPLE_REGISTER_SAMPLE(x) \
   { #x, x##_Init, x##_Deinit, x##_Render }
 
+#ifndef UDSAMPLE_ASSETDIR
+#define UDSAMPLE_ASSETDIR "../../samplefiles"
+#endif
+
 #endif // SharedSample_h__
