@@ -18,6 +18,8 @@
 #include "udMath.h"
 #include "udStringUtil.h"
 #include "udPlatformUtil.h"
+#include "udJSON.h"
+#include "udFile.h"
 
 // udsdk
 #include "udContext.h"
@@ -31,27 +33,78 @@ udSample samples[] = {
   UDSAMPLE_REGISTER_SAMPLE(BasicSample),
 };
 
+udError udSampleViewer_udSDKSetup(udSampleRenderInfo &renderInfo, const char *pAPIKey)
+{
+  udError result = udE_Failure;
+
+  // Resume Session or Login
+  if (udContext_ConnectWithKey(&renderInfo.pContext, "udcloud.com", "udSDK Sample Viewer", "1.0", pAPIKey) != udE_Success)
+  {
+    printf("Could not login\n");
+    goto epilogue;
+  }
+
+  if (udRenderContext_Create(renderInfo.pContext, &renderInfo.pRenderContext) != udE_Success)
+  {
+    printf("Could not create render context\n");
+    goto epilogue;
+  }
+
+  if (udRenderTarget_Create(renderInfo.pContext, &renderInfo.pRenderTarget, renderInfo.pRenderContext, renderInfo.width, renderInfo.height) != udE_Success)
+  {
+    printf("Could not create render target\n");
+    goto epilogue;
+  }
+
+  if (udRenderTarget_SetTargets(renderInfo.pRenderTarget, renderInfo.pColorBuffer, 0, renderInfo.pDepthBuffer) != udE_Success)
+  {
+    printf("Could not set render target buffers\n");
+    goto epilogue;
+  }
+
+  result = udE_Success;
+
+epilogue:
+  if (result != udE_Success)
+  {
+    udRenderTarget_Destroy(&renderInfo.pRenderTarget);
+    udRenderContext_Destroy(&renderInfo.pRenderContext);
+    udContext_Disconnect(&renderInfo.pContext, true);
+  }
+
+  return result;
+}
+
+void udSampleViewer_SaveSettings(const udJSON &settings)
+{
+  const char *pJSONString = nullptr;
+
+  if (settings.Export(&pJSONString, udJEO_JSON | udJEO_FormatWhiteSpace) == udR_Success)
+  {
+    // This can fail but as this is a simple viewer we aren't handling it
+    udFile_Save("settings.json", pJSONString, udStrlen(pJSONString));
+    udFree(pJSONString);
+  }
+}
+
 int main(int argc, char **args)
 {
-  // This confirms that the static key have been configured
-  static_assert(s_udCloudKey[0] != '\0', "udCloud key needs to be configured in udSDKFeatureSamples.h");
+  udJSON settings = {};
 
   // Define our variables
-  udError udResult = udE_Success;
-  udContext *pContext = nullptr;
-
   udSampleRenderInfo renderInfo = {};
   renderInfo.width = 1280;
   renderInfo.height = 720;
 
   float menuBarHeight = 0;
 
-  // Resume Session or Login
-  if (udContext_TryResume(&pContext, "udcloud.com", "udSDK Sample Viewer", nullptr, false) != udE_Success)
-    udResult = udContext_ConnectWithKey(&pContext, "udcloud.com", "udSDK Sample Viewer", "1.0", s_udCloudKey);
+  const char *pSettingsData = nullptr;
 
-  if (udResult != udE_Success)
-    ExitWithMessage(udResult, "Could not login!");
+  if (udFile_Load("settings.json", &pSettingsData) == udR_Success)
+  {
+    settings.Parse(pSettingsData);
+    udFree(pSettingsData);
+  }
 
   uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;// | SDL_WINDOW_RESIZABLE;
   bool isRunning = true;
@@ -61,6 +114,8 @@ int main(int argc, char **args)
   renderInfo.pDepthBuffer = new float[renderInfo.width * renderInfo.height];
   int selectedItem = -1;
   void *pSampleData = nullptr;
+
+  char apikey[1024] = {};
 
   // Setup SDL
   if (SDL_Init(SDL_INIT_VIDEO) != 0)
@@ -82,24 +137,8 @@ int main(int argc, char **args)
   ImGui_ImplSDLRenderer_Init(pSdlRenderer);
   renderInfo.pSDLTexture = SDL_CreateTexture(pSdlRenderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, renderInfo.width, renderInfo.height);
 
-  //camera = camera.identity();
-  if (udRenderContext_Create(pContext, &renderInfo.pRenderContext) != udE_Success)
-  {
-    printf("Could not create render context\n");
-    goto epilogue;
-  }
-
-  if (udRenderTarget_Create(pContext, &renderInfo.pRenderTarget, renderInfo.pRenderContext, renderInfo.width, renderInfo.height) != udE_Success)
-  {
-    printf("Could not create render target\n");
-    goto epilogue;
-  }
-
-  if (udRenderTarget_SetTargets(renderInfo.pRenderTarget, renderInfo.pColorBuffer, 0, renderInfo.pDepthBuffer) != udE_Success)
-  {
-    printf("Could not set render target buffers\n");
-    goto epilogue;
-  }
+  if (settings.Get("apikey").IsString())
+    udSampleViewer_udSDKSetup(renderInfo, settings.Get("apikey").AsString());
 
   while (isRunning)
   {
@@ -123,36 +162,60 @@ int main(int argc, char **args)
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::SetNextWindowSize(ImVec2(0, 0));
-    if (ImGui::Begin("Samples"))
+    if (renderInfo.pContext == nullptr)
     {
-      ImGui::LabelText("Samples", "Samples");
-      if (ImGui::BeginListBox("Samples"))
+      if (ImGui::Begin("Login"))
       {
-        for (size_t i = 0; i < udLengthOf(samples); ++i)
+        ImGui::InputText("API Key", apikey, udLengthOf(apikey));
+
+        if (ImGui::Button("Login"))
         {
-          if (ImGui::Selectable(udTempStr("%s##sample_%zu", samples[i].pName, i), selectedItem == i))
+          if (udSampleViewer_udSDKSetup(renderInfo, apikey) == udE_Success)
           {
-            if (selectedItem >= 0)
-            {
-              samples[selectedItem].pDeinit(pSampleData);
-              pSampleData = nullptr;
-            }
-
-            selectedItem = (int)i;
-
-            samples[selectedItem].pInit(&pSampleData, pContext);
+            udJSON tempStr = {};
+            tempStr.SetString(apikey);
+            settings.Set(&tempStr, "apikey");
+            memset(apikey, 0, sizeof(apikey));
+            udSampleViewer_SaveSettings(settings);
           }
         }
 
-        ImGui::EndListBox();
+        ImGui::End();
       }
-      ImGui::End();
     }
+    else
+    {
+      ImGui::SetNextWindowSize(ImVec2(0, 0));
+      if (ImGui::Begin("Samples"))
+      {
+        ImGui::LabelText("Samples", "Samples");
+        if (ImGui::BeginListBox("Samples"))
+        {
+          for (size_t i = 0; i < udLengthOf(samples); ++i)
+          {
+            if (ImGui::Selectable(udTempStr("%s##sample_%zu", samples[i].pName, i), selectedItem == i))
+            {
+              if (selectedItem >= 0)
+              {
+                samples[selectedItem].pDeinit(pSampleData);
+                pSampleData = nullptr;
+              }
 
+              selectedItem = (int)i;
+
+              samples[selectedItem].pInit(&pSampleData, renderInfo);
+            }
+          }
+
+          ImGui::EndListBox();
+        }
+        ImGui::End();
+      }
+
+      SDL_RenderClear(pSdlRenderer);
+      SDL_RenderCopy(pSdlRenderer, renderInfo.pSDLTexture, NULL, NULL);
+    }
     ImGui::Render();
-    SDL_RenderClear(pSdlRenderer);
-    SDL_RenderCopy(pSdlRenderer, renderInfo.pSDLTexture, NULL, NULL);
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(pSdlRenderer);
   }
@@ -163,7 +226,7 @@ epilogue:
   delete[] renderInfo.pColorBuffer;
   udRenderTarget_Destroy(&renderInfo.pRenderTarget);
   udRenderContext_Destroy(&renderInfo.pRenderContext);
-  udContext_Disconnect(&pContext, true);
+  udContext_Disconnect(&renderInfo.pContext, true);
 
   SDL_DestroyTexture(renderInfo.pSDLTexture);
   SDL_DestroyRenderer(pSdlRenderer);

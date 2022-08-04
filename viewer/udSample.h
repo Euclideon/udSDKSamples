@@ -8,6 +8,7 @@ struct udSampleRenderInfo
   int width;
   int height;
 
+  struct udContext *pContext;
   struct udRenderContext *pRenderContext;
   struct udRenderTarget *pRenderTarget;
 
@@ -17,7 +18,7 @@ struct udSampleRenderInfo
   struct SDL_Texture *pSDLTexture;
 };
 
-typedef void (udSampleInit)(void **ppSampleData, struct udContext *pContext);
+typedef void (udSampleInit)(void **ppSampleData, const udSampleRenderInfo &info);
 typedef void (udSampleDeinit)(void *pSampleData);
 typedef void (udSampleRender)(void *pSampleData, const udSampleRenderInfo &info);
 
@@ -31,7 +32,7 @@ struct udSample
 };
 
 #define UDSAMPLE_PREDECLARE_SAMPLE(x) \
-  void x##_Init(void **ppSampleData, udContext *pContext); \
+  void x##_Init(void **ppSampleData, const udSampleRenderInfo &info); \
   void x##_Deinit(void *pSampleData); \
   void x##_Render(void *pSampleData, const udSampleRenderInfo &info); \
 
