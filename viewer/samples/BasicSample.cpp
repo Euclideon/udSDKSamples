@@ -18,7 +18,7 @@ struct BasicSampleData
   udPointCloudHeader header;
 };
 
-void BasicSample_Init(void **ppSampleData, udContext *pContext)
+void BasicSample_Init(void **ppSampleData, const struct udSampleRenderInfo &info)
 {
   BasicSampleData *pData = udAllocType(BasicSampleData, 1, udAF_Zero);
 
@@ -34,7 +34,7 @@ void BasicSample_Init(void **ppSampleData, udContext *pContext)
 
 
   //udError res = udPointCloud_Load(pContext, &pModel, UDSAMPLE_ASSETDIR "/DirCube.uds", &header);
-  udError res = udPointCloud_Load(pContext, &pData->pModel, UDSAMPLE_ASSETDIR "/HistogramTest.uds", &pData->header);
+  udError res = udPointCloud_Load(info.pContext, &pData->pModel, UDSAMPLE_ASSETDIR "/HistogramTest.uds", &pData->header);
   if (res != udE_Success)
   {
     printf("Could not load sample UDS file\n");
