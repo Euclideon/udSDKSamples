@@ -46,8 +46,9 @@
     <script>
       var udSDKReady = 0;
 
-      var lineEntityPartA = undefined;
-      var lineEntityPartB = undefined;
+      var lineEntityPartA = undefined; // 'Visible' Section
+      var lineEntityPartB = undefined; // 'Hidden' Section
+      var lineEntityPartC = undefined; // 'Skipped' Section
 
       var viewer = new Cesium.Viewer("cesiumContainer", {
         scene3DOnly: true,
@@ -367,24 +368,63 @@
 
             var myBox = viewer.scene.primitives.add(new VtxfPrimitive());
 
-            function DrawLineTest(positions, rayWidth) {
-              if (lineEntityPartA !== undefined || lineEntityPartB !== undefined)
-              {
+            // Examples
+            //  Brisbane:
+            //    DrawLineTest(Cesium.Cartesian3.fromDegreesArrayHeights([153.0262193, -27.4674781, 40, 153.0289364, -27.4776821, 20]), 0.3); // Hits the first building
+            //    DrawLineTest(Cesium.Cartesian3.fromDegreesArrayHeights([153.0262193, -27.4674781, 40, 153.0289364, -27.4776821, 20]), 0.01, 130); // Between buildings in the next street
+            //  Melbourne:
+            //    DrawLineTest(Cesium.Cartesian3.fromDegreesArrayHeights([144.9325991, -37.8194791, 40, 144.9319378, -37.8193458, 40]), 0.01); // Beam is too narrow and passes through the model
+            //    DrawLineTest(Cesium.Cartesian3.fromDegreesArrayHeights([144.9325991, -37.8194791, 40, 144.9319378, -37.8193458, 40]), 0.1); // Beam hits the structure as expected
+            function DrawLineTest(positions, rayWidth, beginZone = 0) {
+              if (lineEntityPartA !== undefined) {
                 viewer.entities.remove(lineEntityPartA);
-                viewer.entities.remove(lineEntityPartB);
+                lineEntityPartA = undefined;
               }
 
-              let distance = udSDKJS_IsPointVisible(positions[0], positions[1], rayWidth);
-              console.log("IsVisible:", distance);
+              if (lineEntityPartB !== undefined) {
+                viewer.entities.remove(lineEntityPartB);
+                lineEntityPartB = undefined;
+              }
 
-              if (distance >= 0.0)
-              {
-                if (distance == 1.0)
-                {
-                  // Add a polyline to the scene. Positions are dynamic.
+              if (lineEntityPartC !== undefined) {
+                viewer.entities.remove(lineEntityPartC);
+                lineEntityPartC = undefined;
+              }
+
+              var bufferedStart = Cesium.Cartesian3.clone(positions[0], new Cesium.Cartesian3());
+
+              if (beginZone > 0) {
+                var delta = Cesium.Cartesian3.subtract(positions[1], positions[0], new Cesium.Cartesian3());
+                var direction = Cesium.Cartesian3.normalize(delta, new Cesium.Cartesian3());
+                var length = Cesium.Cartesian3.magnitude(delta, new Cesium.Cartesian3());
+
+                if (length > beginZone) {
+                  bufferedStart = Cesium.Cartesian3.add(Cesium.Cartesian3.multiplyByScalar(direction, beginZone, new Cesium.Cartesian3()), positions[0], new Cesium.Cartesian3());
+                  
+                  // Display a yellow line to indicate how much was 'skipped' from the start
+                  lineEntityPartC = viewer.entities.add({
+                    polyline: {
+                      positions: [ positions[0], bufferedStart ],
+                      width: 10,
+                      material: new Cesium.PolylineGlowMaterialProperty({
+                        glowPower: 0.2,
+                        color: Cesium.Color.YELLOW,
+                      }),
+                    },
+                  });
+                }
+              }
+
+              let distance = udSDKJS_IsPointVisible(bufferedStart, positions[1], rayWidth);
+              
+              //The following console log helps to debug to see how far between bufferedStart and positions[1] a point was found
+              //console.log("IsVisible:", distance);
+
+              if (distance >= 0.0) { // Was the function successful
+                if (distance == 1.0) { // No point was found, the ray reached the goal
                   lineEntityPartA = viewer.entities.add({
                     polyline: {
-                      positions: positions,
+                      positions: [bufferedStart, positions[1]],
                       width: 10,
                       material: new Cesium.PolylineGlowMaterialProperty({
                         glowPower: 0.2,
@@ -392,13 +432,10 @@
                       }),
                     },
                   });
-                }
-                else if (distance == 0.0)
-                {
-                  // Add a polyline to the scene. Positions are dynamic.
+                } else if (distance == 0.0) { // A point was found immediately, the ray didn't leave the start
                   lineEntityPartB = viewer.entities.add({
                     polyline: {
-                      positions: positions,
+                      positions: [bufferedStart, positions[1]],
                       width: 10,
                       material: new Cesium.PolylineGlowMaterialProperty({
                         glowPower: 0.2,
@@ -406,16 +443,13 @@
                       }),
                     },
                   });
-                }
-                else
-                {
-                  midPoint = Cesium.Cartesian3.fromElements(0,0,0);
-                  Cesium.Cartesian3.lerp(positions[0], positions[1], distance, midPoint);
+                } else { // The ray reached a point in the middle somewhere
+                  midPoint = Cesium.Cartesian3.lerp(bufferedStart, positions[1], distance, new Cesium.Cartesian3()); // This calculates that point
 
-                  // Add a polyline to the scene. Positions are dynamic.
+                  // Draw the blue part from the start (with the buffer: using bufferedStart) until the line meets the obstructions
                   lineEntityPartA = viewer.entities.add({
                     polyline: {
-                      positions: [positions[0], midPoint],
+                      positions: [bufferedStart, midPoint],
                       width: 10,
                       material: new Cesium.PolylineGlowMaterialProperty({
                         glowPower: 0.2,
@@ -424,7 +458,7 @@
                     },
                   });
 
-                  // Add a polyline to the scene. Positions are dynamic.
+                  // Draw the red from from the obstruction to the goal
                   lineEntityPartB = viewer.entities.add({
                     polyline: {
                       positions: [midPoint, positions[1]],
