@@ -117,6 +117,9 @@ int main(int argc, char **args)
 
   char apikey[1024] = {};
 
+  SDL_Window *pWindow = nullptr;
+  SDL_Renderer *pSdlRenderer = nullptr;
+
   // Setup SDL
   if (SDL_Init(SDL_INIT_VIDEO) != 0)
     goto epilogue;
@@ -124,12 +127,12 @@ int main(int argc, char **args)
   // Stop window from being minimized while fullscreened and focus is lost
   SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
 
-  SDL_Window *pWindow = SDL_CreateWindow("udSDK Sample Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, renderInfo.width, renderInfo.height, windowFlags);
+  pWindow = SDL_CreateWindow("udSDK Sample Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, renderInfo.width, renderInfo.height, windowFlags);
   if (!pWindow)
     goto epilogue;
 
   uint32_t render_flags = SDL_RENDERER_ACCELERATED;
-  SDL_Renderer *pSdlRenderer = SDL_CreateRenderer(pWindow, -1, render_flags);
+  pSdlRenderer = SDL_CreateRenderer(pWindow, -1, render_flags);
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO(); (void)io;
   ImGui::StyleColorsDark();
