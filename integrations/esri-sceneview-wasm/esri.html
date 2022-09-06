@@ -6,13 +6,29 @@
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
     <title>udSDK Esri Demo</title>
 
-    <link rel="stylesheet" href="https://js.arcgis.com/4.20/esri/themes/light/main.css" />
-    <script src="https://js.arcgis.com/4.20/"></script>
+    <link rel="stylesheet" href="https://samples.euclideon.com/api/arcgisjs/4.24/esri/themes/light/main.css" crossorigin />
+    <script src="https://samples.euclideon.com/api/arcgisjs/4.24/init.js" crossorigin></script>
 
     <style>
-      html,
-      body,
+      html, body {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+
       #viewDiv {
+        display: flex;
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: space-evenly;
+        align-items: stretch;
+      }
+
+      .viewPortal {
         padding: 0;
         margin: 0;
         height: 100%;
@@ -31,102 +47,35 @@
     </style>
 
     <!-- A simple fragment shader -->
-    <script id="shader-fs" type="x-shader/x-fragment">
-      #extension GL_EXT_frag_depth : enable
-      precision highp float;
-
-      //RGBA to Float from https://github.com/ihmeuw/glsl-rgba-to-float/blob/master/index.glsl
-      // Denormalize 8-bit color channels to integers in the range 0 to 255.
-      ivec4 floatsToBytes(vec4 inputFloats, bool littleEndian) {
-        ivec4 bytes = ivec4(inputFloats * 255.0);
-        return (
-          littleEndian
-          ? bytes.abgr
-          : bytes
-        );
-      }
-
-      // Break the four bytes down into an array of 32 bits.
-      void bytesToBits(const in ivec4 bytes, out bool bits[32]) {
-        for (int channelIndex = 0; channelIndex < 4; ++channelIndex) {
-          float acc = float(bytes[channelIndex]);
-          for (int indexInByte = 7; indexInByte >= 0; --indexInByte) {
-            float powerOfTwo = exp2(float(indexInByte));
-            bool bit = acc >= powerOfTwo;
-            bits[channelIndex * 8 + (7 - indexInByte)] = bit;
-            acc = mod(acc, powerOfTwo);
-          }
-        }
-      }
-
-      // Compute the exponent of the 32-bit float.
-      float getExponent(bool bits[32]) {
-        const int startIndex = 1;
-        const int bitStringLength = 8;
-        const int endBeforeIndex = startIndex + bitStringLength;
-        float acc = 0.0;
-        int pow2 = bitStringLength - 1;
-        for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
-          acc += float(bits[bitIndex]) * exp2(float(pow2--));
-        }
-        return acc;
-      }
-
-      // Compute the mantissa of the 32-bit float.
-      float getMantissa(bool bits[32], bool subnormal) {
-        const int startIndex = 9;
-        const int bitStringLength = 23;
-        const int endBeforeIndex = startIndex + bitStringLength;
-        // Leading/implicit/hidden bit convention:
-        // If the number is not subnormal (with exponent 0), we add a leading 1 digit.
-        float acc = float(!subnormal) * exp2(float(bitStringLength));
-        int pow2 = bitStringLength - 1;
-        for (int bitIndex = startIndex; bitIndex < endBeforeIndex; ++bitIndex) {
-          acc += float(bits[bitIndex]) * exp2(float(pow2--));
-        }
-        return acc;
-      }
-
-      // Parse the float from its 32 bits.
-      float bitsToFloat(bool bits[32]) {
-        float signBit = float(bits[0]) * -2.0 + 1.0;
-        float exponent = getExponent(bits);
-        bool subnormal = abs(exponent - 0.0) < 0.01;
-        float mantissa = getMantissa(bits, subnormal);
-        float exponentBias = 127.0;
-        return signBit * mantissa * exp2(exponent - exponentBias - 23.0);
-      }
-
-      // Decode a 32-bit float from the RGBA color channels of a texel.
-      float rgbaToFloat(vec4 texelRGBA, bool littleEndian) {
-        ivec4 rgbaBytes = floatsToBytes(texelRGBA, littleEndian);
-        bool bits[32];
-        bytesToBits(rgbaBytes, bits);
-        return bitsToFloat(bits);
-      }
-
+    <script id="shader-fs" type="x-shader/x-fragment">#version 300 es
+      precision mediump float;
+      precision highp int;
+      
       //Input Format
-      varying vec2 v_uv;
+      in highp vec2 v_uv;
 
       uniform sampler2D u_texture;
       uniform sampler2D u_depth;
+      
+      layout(location = 0) out highp vec4 out_var_SV_Target0;
 
       void main()
       {
-        vec4 col = texture2D(u_texture, v_uv);
-        float depth = rgbaToFloat(texture2D(u_depth, v_uv), true);
+        vec4 col = texture(u_texture, v_uv);
+        float depth = texture(u_depth, v_uv).x;
 
-        gl_FragColor = vec4(col.zyx, 1.0);
-        gl_FragDepthEXT = depth * 0.5 + 0.5;
+        out_var_SV_Target0 = vec4(col.zyx, 0.5);
+        gl_FragDepth = depth * 0.5 + 0.5;
       }
     </script>
 
     <!-- A simple vertex shader -->
-    <script id="shader-vs" type="x-shader/x-vertex">
-      attribute vec2 aVertexPosition;
-      attribute vec2 aVertexUVs;
+    <script id="shader-vs" type="x-shader/x-vertex">#version 300 es
+      in vec2 aVertexPosition;
+      in vec2 aVertexUVs;
       uniform sampler2D u_texture;
-      varying vec2 v_uv;
+
+      out vec2 v_uv;
 
       // A magenta color for referencing
       // Refer to line 311 to 315, we set a point to magenta color.
@@ -136,7 +85,7 @@
 
       void main(void) {
         // Correction work
-        topLeft = texture2D(u_texture, vec2(0.0, 0.0));
+        topLeft = texture(u_texture, vec2(0.0, 0.0));
         // We want to check if the magenta point is rendered in top left corner
         // If not, flip it
         if (topLeft == magenta)
@@ -149,7 +98,7 @@
 
     <!-- Our application -->
     <script>
-      var udSDKJSReady = 0;
+      var udSDKJSReady = false;
 
       require([
         "esri/Map",
@@ -196,7 +145,7 @@
            * Constructor
            */
           constructor: function(view) {
-            this.view = view;
+            this.view = view3D;
           },
 
           /**
@@ -225,7 +174,7 @@
             gl.vertexAttribPointer(texCoord, 2, gl.FLOAT, false, 16, 8);
             gl.enableVertexAttribArray(texCoord);
 
-            data = new Uint8Array(4);
+            var data = new Uint8Array(4);
             data[0] = data[1] = data[2] = data[3] = 255;
 
             this.texture = gl.createTexture();
@@ -236,13 +185,16 @@
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
 
+            var dataF32 = new Float32Array(1);
+            dataF32[0] = 0.0;
+
             this.textureDepth = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, 1, 1, 0, gl.RED, gl.FLOAT, dataF32);
           },
 
           /**
@@ -269,7 +221,7 @@
             var width = context.camera.width;
             var height = context.camera.height;
 
-            if (udSDKJSReady == 2)
+            if (udSDKJSReady)
             {
               if (width != this.prevWidth || height != this.prevHeight)
               {
@@ -277,14 +229,14 @@
                 this.prevHeight = height;
 
                 var data = new Uint8Array(width*height*4);
-
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, this.texture);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
 
+                var dataF32 = new Float32Array(width*height);
                 gl.activeTexture(gl.TEXTURE1);
                 gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
-                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, width, height, 0, gl.RED, gl.FLOAT, dataF32);
 
                 udSDKJS_ResizeScene(width, height, 0, 0);
               }
@@ -310,11 +262,11 @@
               gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data);
 
               var ptr = udSDKJS_GetDepthBuffer();
-              var dataHeap = new Uint8Array(HEAPU8.subarray(ptr, ptr+(width*height*4)));
+              var dataHeapF32 = new Float32Array(HEAPF32.subarray(ptr>>2, (ptr+(width*height*4))>>2));
 
               gl.activeTexture(gl.TEXTURE1);
               gl.bindTexture(gl.TEXTURE_2D, this.textureDepth);
-              gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, dataHeap);
+              gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, width, height, gl.RED, gl.FLOAT, dataHeapF32);
 
               gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo);
 
@@ -330,7 +282,7 @@
             }
 
             // Draw continuously
-            externalRenderers.requestRender(view);
+            externalRenderers.requestRender(view3D);
 
             // cleanup
             context.resetWebGLState();
@@ -396,11 +348,6 @@
           initShaders: function(context) {
             var gl = context.gl;
 
-            console.log("Loading Shaders!");
-            gl.getExtension("EXT_frag_depth");
-
-            console.log("Has fragdepth=" + (gl.getSupportedExtensions().indexOf("EXT_frag_depth") >= 0));
-
             var fragmentShader = this.getShader(gl, "shader-fs");
             var vertexShader = this.getShader(gl, "shader-vs");
             this.program = this.linkProgram(gl, fragmentShader, vertexShader);
@@ -420,8 +367,8 @@
           ground: "world-elevation"
         });
 
-        var view = new SceneView({
-          container: "viewDiv",
+        var view3D = new SceneView({
+          container: "view3D",
           map: map,
           viewingMode: "global",
           camera: {
@@ -437,28 +384,19 @@
         });
 
         var homeBtn = new Home({
-          view: view
+          view: view3D
         });
 
         var search = new Search({
-          view: view
+          view: view3D
         });
 
         // Add the home button to the top left corner of the view
-        view.ui.add(homeBtn, "top-left");
-        view.ui.add(search, "top-right");
-
-        view.when(function() {
-          document.getElementById("loginBtn").addEventListener("click", loginVDK);
-
-          function loginVDK(ev) {
-            if (udSDKJSReady == 1)
-                LoginVDKPlugin(document.getElementById("usernameTxt").value, document.getElementById("passwordTxt").value);
-          }
-        });
+        view3D.ui.add(homeBtn, "top-left");
+        view3D.ui.add(search, "top-right");
 
         // Install our external renderer
-        externalRenderers.add(view, udSDKRenderer);
+        externalRenderers.add(view3D, udSDKRenderer);
       });
     </script>
   </head>
@@ -466,66 +404,61 @@
   <body>
     <script>
       const udSDKjs = document.createElement('script');
-      udSDKjs.src = './udSDKjs.js';
+      udSDKjs.src = './euclideon/udSDKjs.js';
       document.body.appendChild(udSDKjs);
 
       const easyudSDKjs = document.createElement('script');
-      easyudSDKjs.src = './easyudSDKjs.js';
+      easyudSDKjs.src = './euclideon/easyudSDKjs.js';
       document.body.appendChild(easyudSDKjs);
     </script>
-    <div id="viewDiv"></div>
+    <div id="viewDiv">
+      <div id="view3D" class="viewPortal"></div>
+    </div>
     <div id="loginBox">
         <span id="errorMessage" style="color: red;"></span>
-        <label>Euclideon Login: <input id="usernameTxt" type="text" placeholder="Email" /></label>
-        <label><input id="passwordTxt" type="password" placeholder="Password" /></label>
-        <button id="loginBtn">Login!</login>
     </div>
     <script>
-      function CreateVDKPlugin()
+      function udSDKInit()
       {
-        udSDKJSReady = 1;
-        document.getElementById("loginBox").style.display = "block";
-      };
+        udSDKJS_RegisterShared();
 
-      function LoginVDKPlugin(username, password)
-      {
-        if (udSDKJSReady != 1)
-          Alert("Not ready to login!");
+        var status = udSDKJS_CreateSharedFrom_udCloud("Esri ArcScene").then(
+          function() {
+            // LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/).
+            udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds").then(
+              function(modelHandle) {
+                console.log(udSDKJS_GetErrorString(udSDKJS_RenderQueueAddModel(modelHandle, 150.0, -1)));
+              }, function(code) {
+                console.log(udSDKJS_GetErrorString(code));
+              }
+            );
 
-        var status = udSDKJS_Login(username, password, "Esri ArcScene");
+            // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
+            udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds").then(
+              function(modelHandle) {
+                console.log(udSDKJS_GetErrorString(udSDKJS_RenderQueueAddModel(modelHandle, 227.0, -1)));
+              }, function(code) {
+                console.log(udSDKJS_GetErrorString(code));
+              }
+            );
 
-        if (status == 0)
-        {
-          console.log("udSDKJS Logged in.");
-
-          // Photogrammetry model of the Gold Coast courtesy of [Aerometrex](https://aerometrex.com.au/).
-          udsAerometrixGoldCoast = udSDKJS_LoadModel("https://models.euclideon.com/GoldCoast_20mm.uds");
-          udSDKJS_RenderQueueAddModel(udsAerometrixGoldCoast, 140.0, -1);
-
-          // LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/).
-          udsMelb = udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds");
-          udSDKJS_RenderQueueAddModel(udsMelb, 150.0, -1);
-
-          // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
-          udsVancouver = udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds");
-          udSDKJS_RenderQueueAddModel(udsVancouver, 227.0, -1);
-
-          udSDKJSReady = 2;
-          document.getElementById("loginBox").style.display = "none";
-        }
-        else
-        {
-          if (status == 13)
-            document.getElementById("errorMessage").innerText = "udSDKJS Error / Email or Password Wrong";
-          else
-            document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + status;
-        }
+            udSDKJSReady = true;
+            document.getElementById("loginBox").style.display = "none"; // Hide this if it was presented previously
+          },
+          function(code) {
+            document.getElementById("loginBox").style.display = "block";
+            if (code == 13)
+              document.getElementById("errorMessage").innerText = "udSDKJS Error / Email or Password Wrong";
+            else
+              document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + code;
+          }
+        );
       }
 
       var Module = {
         noExitRuntime: true,
         preRun: [],
-        postRun: CreateVDKPlugin,
+        postRun: udSDKInit,
         setStatus: function(text) {
           if (!Module.setStatus.last)
             Module.setStatus.last = { time: Date.now(), text: '' };
