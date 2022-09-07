@@ -9,14 +9,14 @@ Language:              Javascript / HTML
 Type:                  Integration
 Contributor:           Euclideon Development Team <support@euclideon.com>
 Organization:          Euclideon, https://euclideon.com
-Date:                  2020-08-02
-udSDK Version:         2.0.0
+Date:                  2022-09-06
+udSDK Version:         2.3.0
 Toolsets:
 ```
 
 ## Resources Required
 <!-- TODO: Fill this section below with the resources required to do this sample-->
-1. A basic webserver (needs to deliver WASM with the correct MIMETYPE).
+1. A basic webserver (needs to deliver WASM with the correct MIMETYPE as well as CORS, COOP and COEP headers as required).
 2. A udStream account
 
 ## How to use the sample
@@ -25,7 +25,6 @@ Toolsets:
 2. Load the esri.html file in your brower.
 3. Login to the login box.
 4. Observe the models in the viewer.
-  - Photogrammetry model of the Gold Coast courtesy of [Aerometrex](https://aerometrex.com.au/).
   - LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/2dqj-9ydd).
   - LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
 
