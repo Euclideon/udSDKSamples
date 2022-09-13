@@ -422,13 +422,19 @@ extern "C" {
   EMSCRIPTEN_KEEPALIVE void udSDKJS_ServerProjectSave(void (*successCB)(), void (*failureCB)(int code))
   {
     udWorkerPool_AddTask(g_pWorkerPool, [successCB, failureCB](void *)
-      {
-         udError result = udScene_Save(g_pScene);
+    {
+      udError result = udScene_Save(g_pScene);
 #if UDPLATFORM_EMSCRIPTEN
-         if (result == udE_Success)
-           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_V, successCB);
-         else
-           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, failureCB, TO_JS_CODE(result));
+      if (result == udE_Success)
+        emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_V, successCB);
+      else
+        emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, failureCB, TO_JS_CODE(result));
+#else
+      // This isn't quite the same
+      if (result == udE_Success)
+        successCB();
+      else
+        failureCB(TO_JS_CODE(result));
 #endif
       });
   }
@@ -663,7 +669,7 @@ extern "C" {
     return TO_JS_CODE(udSceneNode_SetMetadataString(pSceneNode, pKey, pValue));
   }
 
-  EMSCRIPTEN_KEEPALIVE void udSDKJS_LoadModel(const char *pModelURL, void (*successCB)(int model), void (*failureCB)(int code))
+  EMSCRIPTEN_KEEPALIVE void udSDKJS_LoadModel(const char *pModelURL, void (*successCB)(udPointCloud* pModel), void (*failureCB)(int code))
   {
     char *pURL = udStrdup(pModelURL);
 
@@ -678,6 +684,11 @@ extern "C" {
           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, successCB, (int)pModel);
         else
           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, failureCB, TO_JS_CODE(result));
+#else
+        if (result == udE_Success)
+          successCB(pModel);
+        else
+          failureCB(result);
 #endif
         udFree(pURL);
       }, pURL, false);
@@ -748,9 +759,33 @@ extern "C" {
             epsgCode = udStrAtou(&pSRID[1]);
 
           if (udGeoZone_SetFromSRID(&srcZone, epsgCode) != udR_Success)
+          {
             epsgCode = 0;
+
+            pSRID = json.Get("ProjectionWKT").AsString();
+            if (pSRID != nullptr)
+            {
+              if (udGeoZone_SetFromWKT(&srcZone, pSRID) != udR_Success)
+              {
+                printf("No support for embedded WKT: %s\n", pSRID);
+                epsgCode = 0;
+              }
+              else
+              {
+                epsgCode = srcZone.srid;
+              }
+            }
+          }
+        }
+        else
+        {
+          printf("Model does not have an embedded SRID\n");
         }
       }
+    }
+    else
+    {
+      printf("Metadata was not available on the model\n");
     }
 
     if (epsgCode != 0 && targetZone != 0)
@@ -760,7 +795,7 @@ extern "C" {
         udDouble3 latLong = udGeoZone_CartesianToLatLong(srcZone, mid);
 
         udDouble3 ypr = udDouble3::create(UD_DEG2RAD(latLong.y) - UD_HALF_PI, UD_DEG2RAD(latLong.x), 0);
-        udDouble3 ecefPos = (6378137.0 + zOffset) * udDirectionFromYPR(ypr);
+        udDouble3 ecefPos = (6378137.0 + zOffset + mid.z) * udDirectionFromYPR(ypr);
 
         modelMat = udDouble4x4::translation(pivot) * udDouble4x4::rotationYPR(ypr, ecefPos) * udDouble4x4::rotationYPR(UD_PI, UD_HALF_PI, 0.0) * udDouble4x4::scaleUniform(modelMat.axis.x.x) * udDouble4x4::translation(-pivot);
       }
