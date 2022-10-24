@@ -53,13 +53,8 @@
       var viewer = new Cesium.Viewer("cesiumContainer", {
         scene3DOnly: true,
         imageryProvider: new Cesium.UrlTemplateImageryProvider({
-<<<<<<< Updated upstream
           url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          credit: new Cesium.Credit(`© ${new Date().getFullYear()} TomTom, Microsoft`, true),
-=======
-          url: 'https://a.tile.openstreetmap.org/{0}/{1}/{2}.png',
           credit: new Cesium.Credit(`© ${new Date().getFullYear()} OpenStreetMap contributors`, true),
->>>>>>> Stashed changes
           maximumLevel: 18,
           enablePickFeatures: false
         }),
