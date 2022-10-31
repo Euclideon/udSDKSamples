@@ -225,16 +225,16 @@ extern "C" {
     return TO_JS_CODE(udSDKJS_FinishSetup());
   }
 
-  EMSCRIPTEN_KEEPALIVE void udSDKJS_CreateSharedFrom_udCloud(const char *pApplication, void (*successCB)(), void (*failureCB)(int code))
+  EMSCRIPTEN_KEEPALIVE void udSDKJS_CreateSharedFrom_udCloud(const char *pApplication, const char *pKey, void (*successCB)(), void (*failureCB)(int code))
   {
     udSDKJS_Initialise();
-    char *pApp = udStrdup(pApplication);
-    udWorkerPool_AddTask(g_pWorkerPool, [successCB, failureCB](void *pData)
+    pApplication = udStrdup(pApplication);
+    pKey = udStrdup(pKey);
+    udWorkerPool_AddTask(g_pWorkerPool, [successCB, failureCB, pApplication, pKey](void *)
       {
         udResult result;
-        char *pApp = (char *)pData;
 
-        UD_ERROR_CHECK((udResult)udContext_ConnectWithKey(&g_pContext, g_udCloudAddress, pApp, "1.0", nullptr));
+        UD_ERROR_CHECK((udResult)udContext_ConnectWithKey(&g_pContext, g_udCloudAddress, pApplication, "1.0", pKey));
         UD_ERROR_CHECK(udSDKJS_FinishSetup());
 
         result = udR_Success;
@@ -246,8 +246,9 @@ extern "C" {
         else
           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, failureCB, TO_JS_CODE(result));
 #endif
-        udFree(pApp);
-      }, pApp, false);
+        const char *pTemp = pKey;
+        udFree(pTemp);
+      }, (void*)pApplication, true);
   }
 
   EMSCRIPTEN_KEEPALIVE void udSDKJS_CreateFrom_udCloud(const char *pApplication, void (*successCB)(), void (*failureCB)(int code))

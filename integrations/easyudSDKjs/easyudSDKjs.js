@@ -79,14 +79,15 @@ let udSDKJS_CreateSharedFromDomain;
 //!   Promise udSDKJS_CreateSharedFrom_udCloud(applicationName)
 //!
 //! @param applicationName {string} The name of the application connecting to Euclideon udCloud.
+//! @param key {string} Optional key for connecting to Euclideon udCloud with specific account.
 //! @return {Promise} The created promise.
 //! @note The application should call udSDKJS_DestroyShared to disconnect from the server.
 //!
-function udSDKJS_CreateSharedFrom_udCloud(applicationName) {
+function udSDKJS_CreateSharedFrom_udCloud(applicationName, key) {
   return new Promise(function (onSuccess, onFailure) {
     let onSuccessPtr = Module.addFunction(onSuccess, 'v');
     let onFailurePtr = Module.addFunction(onFailure, 'vi');
-    udSDKJS_CreateSharedFrom_udCloudInternal(applicationName, onSuccessPtr, onFailurePtr);
+    udSDKJS_CreateSharedFrom_udCloudInternal(applicationName, key, onSuccessPtr, onFailurePtr);
   });
 }
 
@@ -1032,7 +1033,7 @@ let udSDKJS_IsPointVisibleInternal;
 function udSDKJS_RegisterShared()
 {
   udSDKJS_GetErrorStringInternal = Module.cwrap('udSDKJS_GetErrorString', 'string', ['number']);
-  udSDKJS_CreateSharedFrom_udCloudInternal = Module.cwrap('udSDKJS_CreateSharedFrom_udCloud', '', ['string', 'number', 'number']);
+  udSDKJS_CreateSharedFrom_udCloudInternal = Module.cwrap('udSDKJS_CreateSharedFrom_udCloud', '', ['string', 'string', 'number', 'number']);
   udSDKJS_CreateShared = Module.cwrap('udSDKJS_CreateShared', 'number', ['string', 'string', 'string'])
   udSDKJS_CreateSharedFromDomain = Module.cwrap('udSDKJS_CreateSharedFromDomain', 'number', ['string'])
   udSDKJS_CreateFrom_udCloudInternal = Module.cwrap('udSDKJS_CreateFrom_udCloud', 'number', ['string', 'number', 'number']);
