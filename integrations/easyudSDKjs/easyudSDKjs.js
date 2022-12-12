@@ -481,6 +481,22 @@ function udSDKJS_ServerProjectSave() {
 }
 
 //!
+//! Syncronises the loaded project with the server
+//!
+//!   errorCode udSDKJS_ServerProjectSync()
+//!
+//! @return {number} An error code based on the result of syncronising the project.
+//! @note {number} You can only sync projects if you have connected with udSDKJS_CreateShared() or udSDKJS_CreateFrom_udCloud().
+//!
+function udSDKJS_ServerProjectSync() {
+  return new Promise(function (onSuccess, onFailure) {
+    let onSuccessPtr = Module.addFunction(onSuccess, 'v');
+    let onFailurePtr = Module.addFunction(onFailure, 'vi');
+    udSDKJS_ServerProjectSyncInternal(onSuccessPtr, onFailurePtr);
+  });
+}
+
+//!
 //! Move a node to reorder within the current parent or move to a different parent.
 //!
 //!   errorCode udSDKJS_ProjectNodeMoveChild(currentParent, newParent, node, insertBeforeChild)
@@ -983,6 +999,7 @@ let udSDKJS_ProjectNodeCreateNoURIInternal;
 let udSDKJS_SetModelMatrixInternal;
 let udSDKJS_LoadModelInternal;
 let udSDKJS_ServerProjectSaveInternal;
+let udSDKJS_ServerProjectSyncInternal;
 let udSDKJS_DestroySharedInternal;
 let udSDKJS_ServerProjectLoadInternal;
 let udSDKJS_RenderQueueAddModelWithMatrixInternal;
@@ -1046,6 +1063,7 @@ function udSDKJS_RegisterShared()
   udSDKJS_ServerProjectLoadInternal = Module.cwrap('udSDKJS_ServerProjectLoad', '', ['string', 'string', 'number', 'number']);
   udSDKJS_ServerProjectRelease = Module.cwrap('udSDKJS_ServerProjectRelease', 'number', []);
   udSDKJS_ServerProjectSaveInternal = Module.cwrap('udSDKJS_ServerProjectSave', '', ['number', 'number']);
+  udSDKJS_ServerProjectSyncInternal = Module.cwrap('udSDKJS_ServerProjectSync', '', ['number', 'number']);
   udSDKJS_ProjectNodeCreateNoURIInternal = Module.cwrap('udSDKJS_ProjectNodeCreateNoURI', 'number', ['number', 'string', 'string']);
   udSDKJS_ProjectNodeCreateInternal = Module.cwrap('udSDKJS_ProjectNodeCreate', 'number', ['number', 'string', 'string', 'string']);
   udSDKJS_ProjectNodeMoveChildInternal = Module.cwrap('udSDKJS_ProjectNodeMoveChild', 'number', ['number', 'number', 'number', 'number']);
