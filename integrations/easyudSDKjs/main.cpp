@@ -245,6 +245,11 @@ extern "C" {
           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_V, successCB);
         else
           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, failureCB, TO_JS_CODE(result));
+#else
+        if (result == udR_Success)
+          successCB();
+        else
+          failureCB(TO_JS_CODE(result));
 #endif
         const char *pTemp = pKey;
         udFree(pTemp);
@@ -353,7 +358,13 @@ extern "C" {
           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_V, successCB);
         else
           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, failureCB, TO_JS_CODE(result));
+#else
+        if (result == udR_Success)
+          successCB();
+        else
+          failureCB(TO_JS_CODE(result));
 #endif
+
         char *pProjTemp = pProjID;
         char *pGrpTemp = pGrpID;
         udFree(pProjTemp);
@@ -436,6 +447,36 @@ extern "C" {
         successCB();
       else
         failureCB(TO_JS_CODE(result));
+#endif
+      });
+  }
+
+  EMSCRIPTEN_KEEPALIVE void udSDKJS_ServerProjectSync(void (*successCB)(), void (*failureCB)(int code))
+  {
+    udWorkerPool_AddTask(g_pWorkerPool, [successCB, failureCB](void *)
+      {
+        udResult result;
+
+        udSceneUpdateInfo info = {};
+        info.forceSync = true; // We are already on another thread
+
+        UD_ERROR_IF(g_pScene == nullptr, udR_NothingToDo);
+
+        UD_ERROR_CHECK((udResult)udScene_Update(g_pScene, &info));
+
+        result = udR_Success;
+
+      epilogue:
+#if UDPLATFORM_EMSCRIPTEN
+        if (result == udR_Success)
+          emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_V, successCB);
+        else
+          emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, failureCB, TO_JS_CODE(result));
+#else
+        if (result == udR_Success)
+          successCB();
+        else
+          failureCB(TO_JS_CODE(result));
 #endif
       });
   }
@@ -1536,8 +1577,31 @@ extern "C" {
   }
 
 #if UDPLATFORM_WINDOWS
+# include "../../features/shared/udSDKFeatureSamples.h"
+
+  void SimpleFailureFunc(int errorCode)
+  {
+    printf("Failure! %d, %s\n", errorCode, udSDKJS_GetErrorString(errorCode));
+  }
+
   int main()
   {
+    // Some basic tests to make sure the API is working
+    if (s_udCloudKey[0] != '\0')
+    {
+      udSDKJS_CreateSharedFrom_udCloud("udSDKJS-Easy", s_udCloudKey,
+        [] {
+          udSDKJS_ServerProjectLoad("0EWLkBBNOEu6nRxMwGD4sQ", "euclideon/wwgGSKacEe2wDAENV2uyg", //Brisbane sample project
+            [] {
+              udSDKJS_ServerProjectSync(
+                [] {
+                  printf("Project Sync Completed");
+                }, SimpleFailureFunc);
+            }, SimpleFailureFunc);
+        }, SimpleFailureFunc);
+    }
+
+    // This spins to let the above complete
     while (true)
       ;
 
