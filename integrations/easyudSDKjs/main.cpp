@@ -451,33 +451,67 @@ extern "C" {
       });
   }
 
-  EMSCRIPTEN_KEEPALIVE void udSDKJS_ServerProjectSync(void (*successCB)(), void (*failureCB)(int code))
+  EMSCRIPTEN_KEEPALIVE void udSDKJS_ServerProjectSync(int additionalInfo, void (*successCB)(const char *pJSON), void (*failureCB)(int code))
   {
-    udWorkerPool_AddTask(g_pWorkerPool, [successCB, failureCB](void *)
+    udWorkerPool_AddTask(g_pWorkerPool, [additionalInfo, successCB, failureCB](void *)
       {
         udResult result;
 
         udSceneUpdateInfo info = {};
+        udJSON json;
+        udJSON temp;
+        const char *pJSON = nullptr;
         info.forceSync = true; // We are already on another thread
 
         UD_ERROR_IF(g_pScene == nullptr, udR_NothingToDo);
 
         UD_ERROR_CHECK((udResult)udScene_Update(g_pScene, &info));
 
+        for (uint32_t i = 0; i < info.usersCount; i++)
+        {
+          temp.SetString(info.pUserList[i].pDisplayName);
+          json.Set(&temp, "collabUsers[%u].name", i);
+          temp.SetString(info.pUserList[i].pUserID);
+          json.Set(&temp, "collabUsers[%u].userID", i);
+          temp.SetString(info.pUserList[i].pSceneSessionID);
+          json.Set(&temp, "collabUsers[%u].sessionID", i);
+          json.Set("collabUsers[%u].lastUpdated = %f", i, info.pUserList[i].lastUpdated);
+
+          // Adds additional info
+          if (additionalInfo == 1) {
+            json.Set("collabUsers[%u].userFlags = %u", i, info.pUserList[i].userFlags);
+            json.Set("collabUsers[%u].selectedNodesCount = %u", i, info.pUserList[i].selectedNodesCount);
+            for (uint32_t j = 0; j < info.pUserList[i].selectedNodesCount; j++)
+            {
+              temp.SetString(info.pUserList[i].selectedNodesList[j].id);
+              json.Set(&temp, "collabUsers[%u].selectedNodes[%u].uuid", i, j);
+            }
+            json.Set("collabUsers[%u].headCamera.position = [ %f, %f, %f ]", i, info.pUserList[i].headCamera.x, info.pUserList[i].headCamera.y, info.pUserList[i].headCamera.z);
+            json.Set("collabUsers[%u].headCamera.rotation = [ %f, %f, %f ]", i, info.pUserList[i].headCamera.heading, info.pUserList[i].headCamera.pitch, info.pUserList[i].headCamera.roll);
+            json.Set("collabUsers[%u].handRight.position = [ %f, %f, %f ]", i, info.pUserList[i].handRight.x, info.pUserList[i].handRight.y, info.pUserList[i].handRight.z);
+            json.Set("collabUsers[%u].handRight.rotation = [ %f, %f, %f ]", i, info.pUserList[i].handRight.heading, info.pUserList[i].handRight.pitch, info.pUserList[i].handRight.roll);
+            json.Set("collabUsers[%u].handLeft.position = [ %f, %f, %f ]", i, info.pUserList[i].handLeft.x, info.pUserList[i].handLeft.y, info.pUserList[i].handLeft.z);
+            json.Set("collabUsers[%u].handLeft.rotation = [ %f, %f, %f ]", i, info.pUserList[i].handLeft.heading, info.pUserList[i].handLeft.pitch, info.pUserList[i].handLeft.roll);
+            json.Set("collabUsers[%u].worldAnchorPoint = [ %f, %f, %f, %f ]", i, info.pUserList[i].worldAnchorPoint.x, info.pUserList[i].worldAnchorPoint.y, info.pUserList[i].worldAnchorPoint.z, info.pUserList[i].worldAnchorPoint.w);
+          }
+        }
+        UD_ERROR_CHECK(json.Export(&pJSON));
+
         result = udR_Success;
 
       epilogue:
 #if UDPLATFORM_EMSCRIPTEN
         if (result == udR_Success)
-          emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_V, successCB);
+          emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, successCB, pJSON);
         else
           emscripten_sync_run_in_main_runtime_thread(EM_FUNC_SIG_VI, failureCB, TO_JS_CODE(result));
 #else
         if (result == udR_Success)
-          successCB();
+          successCB(pJSON);
         else
           failureCB(TO_JS_CODE(result));
 #endif
+        udFree(pJSON);
       });
   }
 
