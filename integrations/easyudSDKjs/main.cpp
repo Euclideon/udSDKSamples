@@ -1613,6 +1613,11 @@ extern "C" {
 #if UDPLATFORM_WINDOWS
 # include "../../features/shared/udSDKFeatureSamples.h"
 
+  void SimpleSuccessFunc(const char *pJSON)
+  {
+    printf("Project Sync Completed! %p\n", pJSON);
+  }
+
   void SimpleFailureFunc(int errorCode)
   {
     printf("Failure! %d, %s\n", errorCode, udSDKJS_GetErrorString(errorCode));
@@ -1628,9 +1633,9 @@ extern "C" {
           udSDKJS_ServerProjectLoad("0EWLkBBNOEu6nRxMwGD4sQ", "euclideon/wwgGSKacEe2wDAENV2uyg", //Brisbane sample project
             [] {
               udSDKJS_ServerProjectSync(
-                [] {
-                  printf("Project Sync Completed");
-                }, SimpleFailureFunc);
+                0, 
+                SimpleSuccessFunc,
+                SimpleFailureFunc);
             }, SimpleFailureFunc);
         }, SimpleFailureFunc);
     }
