@@ -485,14 +485,15 @@ function udSDKJS_ServerProjectSave() {
 //!
 //!   errorCode udSDKJS_ServerProjectSync()
 //!
-//! @return {number} An error code based on the result of syncronising the project.
+//! @return {number} An error code based on the result of syncronising the project, gives you list of users in the scene when success.
 //! @note {number} You can only sync projects if you have connected with udSDKJS_CreateShared() or udSDKJS_CreateFrom_udCloud().
 //!
-function udSDKJS_ServerProjectSync() {
+function udSDKJS_ServerProjectSync(additonalinfo) {
   return new Promise(function (onSuccess, onFailure) {
-    let onSuccessPtr = Module.addFunction(onSuccess, 'v');
+    let onSuccessPtr = Module.addFunction((jsonPtr) => { onSuccess(JSON.parse(Module.UTF8ToString(jsonPtr))); Module.removeFunction(onSuccessPtr); }, 'vi');
     let onFailurePtr = Module.addFunction(onFailure, 'vi');
-    udSDKJS_ServerProjectSyncInternal(onSuccessPtr, onFailurePtr);
+    udSDKJS_ServerProjectSyncInternal(additonalinfo ? 1 : 0, onSuccessPtr, onFailurePtr);
+
   });
 }
 
@@ -1063,7 +1064,7 @@ function udSDKJS_RegisterShared()
   udSDKJS_ServerProjectLoadInternal = Module.cwrap('udSDKJS_ServerProjectLoad', '', ['string', 'string', 'number', 'number']);
   udSDKJS_ServerProjectRelease = Module.cwrap('udSDKJS_ServerProjectRelease', 'number', []);
   udSDKJS_ServerProjectSaveInternal = Module.cwrap('udSDKJS_ServerProjectSave', '', ['number', 'number']);
-  udSDKJS_ServerProjectSyncInternal = Module.cwrap('udSDKJS_ServerProjectSync', '', ['number', 'number']);
+  udSDKJS_ServerProjectSyncInternal = Module.cwrap('udSDKJS_ServerProjectSync', '', ['number', 'number', 'number']);
   udSDKJS_ProjectNodeCreateNoURIInternal = Module.cwrap('udSDKJS_ProjectNodeCreateNoURI', 'number', ['number', 'string', 'string']);
   udSDKJS_ProjectNodeCreateInternal = Module.cwrap('udSDKJS_ProjectNodeCreate', 'number', ['number', 'string', 'string', 'string']);
   udSDKJS_ProjectNodeMoveChildInternal = Module.cwrap('udSDKJS_ProjectNodeMoveChild', 'number', ['number', 'number', 'number', 'number']);
