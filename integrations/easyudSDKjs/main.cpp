@@ -73,7 +73,6 @@ uint32_t g_highlightColour = (0xFF000000) | (253ul << 16) | (173ul << 8) | (53ul
 float g_highlightStrength = 0.2f;
 
 char g_serverAddress[256] = "https://udcloud.euclideon.com/";
-const char g_udCloudAddress[] = "https://udcloud.euclideon.com/";
 
 udContext *g_pContext = nullptr;
 udRenderContext *g_pRenderer = nullptr;
@@ -234,7 +233,7 @@ extern "C" {
       {
         udResult result;
 
-        UD_ERROR_CHECK((udResult)udContext_ConnectWithKey(&g_pContext, g_udCloudAddress, pApplication, "1.0", pKey));
+        UD_ERROR_CHECK((udResult)udContext_ConnectWithKey(&g_pContext, g_serverAddress, pApplication, "1.0", pKey));
         UD_ERROR_CHECK(udSDKJS_FinishSetup());
 
         result = udR_Success;
@@ -269,7 +268,7 @@ extern "C" {
         udContextPartial *pPartial = nullptr;
         const char *pApprovePath = nullptr;
 
-        UD_ERROR_CHECK((udResult)udContext_ConnectStart(&pPartial, g_udCloudAddress, pApp, "1", &pApprovePath, nullptr));
+        UD_ERROR_CHECK((udResult)udContext_ConnectStart(&pPartial, g_serverAddress, pApp, "1", &pApprovePath, nullptr));
         UD_ERROR_IF(pApprovePath == nullptr, udR_InternalError);
 
         MAIN_THREAD_EM_ASM(window.open(UTF8ToString($0)), pApprovePath);
