@@ -40,6 +40,7 @@ namespace Euclideon.udSDK
       public IntPtr voxelUserData;
       public double opacity;
       public uint skipRender;
+      public uint modelID;
 
       public udRenderInstance(udPointCloud pointCloud, double[] worldMatrix=null)
       {
@@ -54,6 +55,7 @@ namespace Euclideon.udSDK
         this.pointCloud = pointCloud.pModel;
         opacity = 1;
         skipRender = 0;
+        modelID = 0;
       }
     }
 
