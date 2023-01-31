@@ -11,6 +11,7 @@ namespace Euclideon.udSDK
       PrimitiveID, //!< udATI_uint32  
       ARGB, //!< udATI_color32 
       Normal, //!< udATI_normal32
+      Altitude, //!< udATI_normal32
       Red, //!< Legacy 16bit Red channel
       Green, //!< Legacy 16bit Green channel
       Blue, //!< Legacy 16bit Blue channel
@@ -40,6 +41,7 @@ namespace Euclideon.udSDK
       udSAC_PrimitiveID = (1 << StandardAttribute.PrimitiveID),
       udSAC_ARGB = (1 << StandardAttribute.ARGB),
       udSAC_Normal = (1 << StandardAttribute.Normal),
+      udSAC_Altitude = (1 << StandardAttribute.Altitude),
       udSAC_Red = (1 << StandardAttribute.Red),
       udSAC_Green = (1 << StandardAttribute.Green),
       udSAC_Blue = (1 << StandardAttribute.Blue),
