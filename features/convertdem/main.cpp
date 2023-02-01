@@ -180,7 +180,7 @@ int main(int argc, char **ppArgv)
 
   uint8_t *pIData = nullptr;
 
-  if (argc < 4)
+  if (argc > 2)
   {
     pIData = stbi_load(ppArgv[2], &width, &height, &channels, 3);
     printf("Image Loaded %dx%d\n", width, height);
@@ -263,7 +263,13 @@ int main(int argc, char **ppArgv)
   udContext *pContext = nullptr;
   
   // Resume Session or Login
-  if (udContext_TryResume(&pContext, "udcloud.euclideon.com", "ConvertDEMSample", nullptr, false) != udE_Success)
+  uint32_t tryDongle = 1;
+
+#if UDPLATFORM_WINDOWS
+  tryDongle = (IsDebuggerPresent() ? 0 : 1);
+#endif
+
+  if (udContext_TryResume(&pContext, "udcloud.euclideon.com", "ConvertDEMSample", nullptr, tryDongle) != udE_Success)
     udResult = udContext_ConnectWithKey(&pContext, "udcloud.euclideon.com", "ConvertDEMSample", "1.0", s_udCloudKey);
 
   if (udResult != udE_Success)
