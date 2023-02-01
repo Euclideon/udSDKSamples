@@ -19,6 +19,7 @@ namespace Euclideon.udSDK
       NIR, //!< udATI_uint16  
       ScanAngle, //!< udATI_uint16  
       PointSourceID, //!< udATI_uint16  
+      SourceFileID, //!< udATI_uint16  
       Classification, //!< udATI_uint8   
       ReturnNumber, //!< udATI_uint8   
       NumberOfReturns, //!< udATI_uint8   
@@ -49,6 +50,7 @@ namespace Euclideon.udSDK
       udSAC_NIR = (1 << StandardAttribute.NIR),
       udSAC_ScanAngle = (1 << StandardAttribute.ScanAngle),
       udSAC_PointSourceID = (1 << StandardAttribute.PointSourceID),
+      udSAC_SourceFileID = (1 << StandardAttribute.SourceFileID),
       udSAC_Classification = (1 << StandardAttribute.Classification),
       udSAC_ReturnNumber = (1 << StandardAttribute.ReturnNumber),
       udSAC_NumberOfReturns = (1 << StandardAttribute.NumberOfReturns),
