@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>My first three.js app</title>
+    <style>
+      body {
+        margin: 0;
+      }
+    </style>
+    <script id="shader-vs" type="x-shader/x-vertex">
+      in vec2 aVertexPosition;
+      in vec2 aVertexUVs;
+      uniform sampler2D u_texture;
+
+      out vec2 v_uv;
+
+      // A magenta color for referencing
+      // Refer to line 311 to 315, we set a point to magenta color.
+      // And we will compare the magenta point with this vec4 magenta.
+      vec4 magenta = vec4(1.0, 0.0, 1.0, 1.0);
+      vec4 topLeft;
+
+      void main(void) {
+        // Correction work
+        topLeft = texture(u_texture, vec2(0.0, 0.0));
+        // We want to check if the magenta point is rendered in top left corner
+        // If not, flip it
+        if (topLeft == magenta)
+          v_uv = vec2(aVertexUVs.x, aVertexUVs.y);
+        else
+          v_uv = vec2(aVertexUVs.x, 1.0 - aVertexUVs.y);
+        gl_Position = vec4(aVertexPosition.xy, 0.0, 1.0);
+      }
+    </script>
+    <script id="shader-fs" type="x-shader/x-fragment">
+      precision mediump float;
+      precision highp int;
+      
+      //Input Format
+      in highp vec2 v_uv;
+
+      uniform sampler2D u_texture;
+      uniform sampler2D u_depth;
+      
+      layout(location = 0) out highp vec4 out_var_SV_Target0;
+
+      void main()
+      {
+        vec4 col = texture(u_texture, v_uv);
+        float depth = texture(u_depth, v_uv).x;
+
+        out_var_SV_Target0 = vec4(col.zyx, 0.5);
+        gl_FragDepth = depth * 0.5 + 0.5;
+      }
+    </script>
+  </head>
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./js/three.module.js",
+          "three/addons/": "./js/jsm/"
+        }
+      }
+
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+
+      import Stats from "three/addons/libs/stats.module.js";
+      import WebGL from "three/addons/capabilities/WebGL.js";
+
+      if (WebGL.isWebGL2Available() === false) {
+        document.body.appendChild(WebGL.getWebGL2ErrorMessage());
+      }
+
+      let camera, scene, mesh, renderer, stats;
+      let colourTextureGL, udTextureDepth;      
+
+      camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
+			camera.position.z = 5;
+
+      scene = new THREE.Scene(); 
+
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      stats = new Stats();
+      document.body.appendChild(stats.dom);
+      window.addEventListener("resize", onWindowResize);
+
+      let material = new THREE.ShaderMaterial({
+        uniforms: {
+          u_texture: { value: null },
+          u_depth: { value: null }
+
+        },
+        vertexShader: document.getElementById("shader-vs").textContent.trim(),
+        fragmentShader: document.getElementById("shader-fs").textContent.trim(),
+        glslVersion: THREE.GLSL3
+      });
+
+      let geometry = new THREE.BufferGeometry();
+      const vertices = new Float32Array([-1,-1,0,1,  1,-1,1,1,  1,1,1,0, -1,-1,0,1,  1,1,1,0,  -1,1,0,0]);
+      geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(vertices, 4)
+      );
+
+      //const material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+      mesh = new THREE.Mesh(geometry, material);  
+      scene.add(mesh);
+      renderer.render(scene, camera);
+
+      animate();
+      
+      function animate() {
+        requestAnimationFrame(animate);
+
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+
+        if (udSDKJSReady) {
+          console.log("animate");
+          var v = camera.matrixWorldInverse;
+          udSDKJS_SetMatrix(
+            "view",
+            v[0],
+            v[1],
+            v[2],
+            v[3],
+            v[4],
+            v[5],
+            v[6],
+            v[7],
+            v[8],
+            v[9],
+            v[10],
+            v[11],
+            v[12],
+            v[13],
+            v[14],
+            v[15]
+          );
+
+          var v = camera.projectionMatrix;
+          udSDKJS_SetMatrix(
+            "projection",
+            v[0],
+            v[1],
+            v[2],
+            v[3],
+            v[4],
+            v[5],
+            v[6],
+            v[7],
+            v[8],
+            v[9],
+            v[10],
+            v[11],
+            v[12],
+            v[13],
+            v[14],
+            v[15]
+          );
+
+          udSDKJS_RenderQueue();
+
+          var ptr = udSDKJS_GetColourBuffer();
+          var data = new Uint8Array(
+            HEAPU8.subarray(ptr, ptr + width * height * 4)
+          );
+
+          // Magenta point
+          data[0] = 255;
+          data[1] = 0;
+          data[2] = 255;
+          data[3] = 255;
+
+          const DEPTH = 255; // not sure
+          colourTextureGL = new THREE.DataArrayTexture(
+            data,
+            width,
+            height,
+            DEPTH
+          );
+          colourTextureGL.format = THREE.RGBAFormat;
+          colourTextureGL.needsUpdate = true;
+
+          var ptr = udSDKJS_GetDepthBuffer();
+          var dataHeapF32 = new Float32Array(
+            HEAPF32.subarray(ptr >> 2, (ptr + width * height * 4) >> 2)
+          );
+
+          udTextureDepth = new THREE.DataArrayTexture(
+            dataHeapF32,
+            width,
+            height,
+            DEPTH
+          );
+          udTextureDepth.format = THREE.DepthFormat;
+          udTextureDepth.needsUpdate = true;
+
+          material.uniforms.u_texture.value = colourTextureGL;
+				  material.uniforms.u_depth.value = udTextureDepth;
+          stats.update();    
+        }
+      }
+
+      function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+      }
+    </script>
+
+    <script>
+      const udSDKjs = document.createElement("script");
+      udSDKjs.src = "./euclideon/udSDKjs.js";
+      document.body.appendChild(udSDKjs);
+
+      const easyudSDKjs = document.createElement("script");
+      easyudSDKjs.src = "./euclideon/easyudSDKjs.js";
+      document.body.appendChild(easyudSDKjs);
+
+      var udSDKJSReady = false;
+
+    </script>
+    <div id="viewDiv">
+      <div id="view3D" class="viewPortal"></div>
+    </div>
+    <div id="loginBox">
+      <span id="errorMessage" style="color: red"></span>
+    </div>
+    <script>
+      function udSDKInit() {
+        udSDKJS_RegisterShared();
+
+        var status = udSDKJS_CreateSharedFrom_udCloud("Esri ArcScene").then(
+          function() {
+            // LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/).
+            udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds").then(
+              function(modelHandle) {
+                let ret = udSDKJS_RenderQueueAddModel(modelHandle, 150.0, -1);
+                if(ret < 0)
+                  console.log(udSDKJS_GetErrorString(ret));
+                else
+                  console.log("load succ");
+              }, function(code) {
+                console.log(udSDKJS_GetErrorString(code));
+              }
+            );
+
+            // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
+            udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds").then(
+              function(modelHandle) {
+                let ret = udSDKJS_RenderQueueAddModel(modelHandle, 227.0, -1);
+                if(ret < 0)
+                  console.log(udSDKJS_GetErrorString(ret));
+                else
+                  console.log("load succ");
+              }, function(code) {
+                console.log(udSDKJS_GetErrorString(code));
+              }
+            );
+
+            udSDKJSReady = true;
+            document.getElementById("loginBox").style.display = "none"; // Hide this if it was presented previously
+          },
+          function(code) {
+            document.getElementById("loginBox").style.display = "block";
+            if (code == 13)
+              document.getElementById("errorMessage").innerText = "udSDKJS Error / Email or Password Wrong";
+            else
+              document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + code;
+          }
+        );
+      }
+
+      var Module = {
+        noExitRuntime: true,
+        preRun: [],
+        postRun: udSDKInit,
+        setStatus: function (text) {
+          if (!Module.setStatus.last)
+            Module.setStatus.last = { time: Date.now(), text: "" };
+
+          if (text === Module.setStatus.last.text) return;
+
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
+
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+          if (m) {
+            text = m[1];
+          }
+
+          console.log(text);
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function (left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(
+            left
+              ? "Preparing... (" +
+                  (this.totalDependencies - left) +
+                  "/" +
+                  this.totalDependencies +
+                  ")"
+              : "All downloads complete."
+          );
+        },
+      };
+
+      Module.setStatus("Downloading...");
+    </script>
+  </body>
+</html>
