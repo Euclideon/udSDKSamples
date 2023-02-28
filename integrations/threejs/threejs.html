@@ -180,12 +180,11 @@
           data[2] = 255;
           data[3] = 255;
 
-          const DEPTH = 1; // not sure
           colourTextureGL = new THREE.DataArrayTexture(
             data,
             width,
             height,
-            DEPTH
+            0
           );
           colourTextureGL.format = THREE.RGBAFormat;
           colourTextureGL.needsUpdate = true;
@@ -199,7 +198,7 @@
             dataHeapF32,
             width,
             height,
-            DEPTH
+            0
           );
           udTextureDepth.format = THREE.DepthFormat;
           udTextureDepth.needsUpdate = true;
