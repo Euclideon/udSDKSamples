@@ -123,6 +123,8 @@
         requestAnimationFrame(animate);
         controls.update();
 
+        udSDKJS_ResizeScene(window.innerWidth, window.innerHeight, 0, 0);
+
         let width = window.innerWidth;
         let height = window.innerHeight;
 
@@ -228,6 +230,8 @@
       }
 
       function onWindowResize() {
+        udSDKJS_ResizeScene(window.innerWidth, window.innerHeight, 0, 0);
+
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
 
