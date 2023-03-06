@@ -282,13 +282,12 @@
             //);
 
             //non-geolocated uds
-            let apple_uds = "https://fa-data-aueast-01.udcloud.euclideon.com/api/YZukILKU40uvb4qWI2SVg/_sharecode/TvCH2FoUKUSoZS5QgLr0Lg/_file/zUiBwcuHUG1st8UXlmg/apple.uds";
-            //let vancouver_uds = "https://models.euclideon.com/Vancouver_Colour.uds";
+            //let apple_uds = "https://fa-data-aueast-01.udcloud.euclideon.com/api/YZukILKU40uvb4qWI2SVg/_sharecode/TvCH2FoUKUSoZS5QgLr0Lg/_file/zUiBwcuHUG1st8UXlmg/apple.uds";
+            let vancouver_uds = "https://models.euclideon.com/Vancouver_Colour.uds";
             // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
-            udSDKJS_LoadModel(apple_uds).then(
+            udSDKJS_LoadModel(vancouver_uds).then(
               function(modelHandle) {
- 			  let m = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
-                let ret = udSDKJS_RenderQueueAddModelWithMatrix(modelHandle, m);
+                let ret = udSDKJS_RenderQueueAddModelWithMatrix(modelHandle, camera.modelViewMatrix.elements);
                 if(ret < 0)
                   console.log(udSDKJS_GetErrorString(ret));
                 else
