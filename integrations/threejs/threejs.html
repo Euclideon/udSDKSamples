@@ -127,7 +127,7 @@
         let height = window.innerHeight;
 
         if (udSDKJSReady) {
-          var vm = camera.modelViewMatrix;
+          var vm = camera.modelViewMatrix.elements;
           udSDKJS_SetMatrix(
             "view",
             vm[0],
@@ -148,7 +148,7 @@
             vm[15]
           );
 
-          var pm = camera.projectionMatrix;
+          var pm = camera.projectionMatrix.elements;
           udSDKJS_SetMatrix(
             "projection",
             pm[0],
@@ -169,7 +169,28 @@
             pm[15]
           );
 
-          udSDKJS_RenderQueue();
+          var m = camera.matrix.elements;
+                  udSDKJS_SetMatrix(
+                    "camera",
+                    m[0],
+                    m[1],
+                    m[2],
+                    m[3],
+                    m[4],
+                    m[5],
+                    m[6],
+                    m[7],
+                    m[8],
+                    m[9],
+                    m[10],
+                    m[11],
+                    m[12],
+                    m[13],
+                    m[14],
+                    m[15]
+                  );
+
+          console.log(udSDKJS_RenderQueue());
 
           var ptr = udSDKJS_GetColourBuffer();
           var data = new Uint8Array(
@@ -246,7 +267,7 @@
                 if(ret < 0)
                   console.log(udSDKJS_GetErrorString(ret));
                 else
-                  console.log("load succ");
+                  console.log("load succ slotID:" + ret);
               }, function(code) {
                 console.log(udSDKJS_GetErrorString(code));
               }
@@ -258,11 +279,11 @@
             // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
             udSDKJS_LoadModel(apple_uds).then(
               function(modelHandle) {
-                let ret = udSDKJS_RenderQueueAddModelWithMatrix(modelHandle, camera.matrixWorld);
+                let ret = udSDKJS_RenderQueueAddModel(modelHandle, 0, 0);
                 if(ret < 0)
                   console.log(udSDKJS_GetErrorString(ret));
                 else
-                  console.log("load succ");
+                  console.log("load succ slotID:" + ret);
               }, function(code) {
                 console.log(udSDKJS_GetErrorString(code));
               }
