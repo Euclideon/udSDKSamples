@@ -79,9 +79,11 @@
       let scene, mesh, renderer, stats;
       let colourTextureGL, udTextureDepth;
 
-      camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
-      camera.position.y = -1;
-	  camera.position.z = -3;
+      camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );      
+      camera.up.set(0,0,1);
+      camera.position.x = -0.1;	
+      camera.position.y = -0.1;
+      camera.position.z = -0.02;
 
       scene = new THREE.Scene(); 
 
@@ -103,10 +105,7 @@
 
         },
         vertexShader: document.getElementById("shader-vs").textContent.trim(),
-        fragmentShader: document.getElementById("shader-fs").textContent.trim(),
-        depthTest: false,
-        side: THREE.DoubleSide
-        //glslVersion: THREE.GLSL3
+        fragmentShader: document.getElementById("shader-fs").textContent.trim()
       });
 
       let geometry = new THREE.BufferGeometry();
@@ -117,7 +116,7 @@
       );
       mesh = new THREE.Mesh(geometry, material);
       scene.add(mesh);
-
+      camera.lookAt(scene.position);
       animate();
 
       function animate() {
@@ -131,28 +130,6 @@
         if (udSDKJSReady) {
 		  
 		  udSDKJS_ResizeScene(width, height, 0, 0);
-
-
-          //var vm = camera.modelViewMatrix.elements;
-          //udSDKJS_SetMatrix(
-          //  "view",
-          //  vm[0],
-          //  vm[1],
-          //  vm[2],
-          //  vm[3],
-          //  vm[4],
-          //  vm[5],
-          //  vm[6],
-          //  vm[7],
-          //  vm[8],
-          //  vm[9],
-          //  vm[10],
-          //  vm[11],
-          //  vm[12],
-          //  vm[13],
-          //  vm[14],
-          //  vm[15]
-          //);
 
           var pm = camera.projectionMatrix.elements;
           udSDKJS_SetMatrix(
@@ -176,28 +153,27 @@
           );
 
           var m = camera.matrix.elements;
-                  udSDKJS_SetMatrix(
-                    "camera",
-                    m[0],
-                    m[1],
-                    m[2],
-                    m[3],
-                    m[4],
-                    m[5],
-                    m[6],
-                    m[7],
-                    m[8],
-                    m[9],
-                    m[10],
-                    m[11],
-                    m[12],
-                    m[13],
-                    m[14],
-                    m[15]
-                  );
+          udSDKJS_SetMatrix(
+            "camera",
+            m[0],
+            m[1],
+            m[2],
+            m[3],
+            m[4],
+            m[5],
+            m[6],
+            m[7],
+            m[8],
+            m[9],
+            m[10],
+            m[11],
+            m[12],
+            m[13],
+            m[14],
+            m[15]
+            );
 
-          console.log(udSDKJS_RenderQueue());
-
+          udSDKJS_RenderQueue();
           var ptr = udSDKJS_GetColourBuffer();
           var data = new Uint8Array(
             HEAPU8.subarray(ptr, ptr + width * height * 4)
@@ -268,26 +244,11 @@
 
         var status = udSDKJS_CreateSharedFrom_udCloud("Esri ArcScene").then(
           function() {
-            // LiDAR of Melbourne available as [Open Data](https://data.melbourne.vic.gov.au/City-Council/City-of-Melbourne-3D-Point-Cloud-2018/).
-            //udSDKJS_LoadModel("https://models.euclideon.com/Melbourne_75mm.uds").then(
-            //  function(modelHandle) {
-            //    let ret = udSDKJS_RenderQueueAddModel(modelHandle, 0, 0);
-            //    if(ret < 0)
-            //      console.log(udSDKJS_GetErrorString(ret));
-            //    else
-            //      console.log("load succ slotID:" + ret);
-            //  }, function(code) {
-            //    console.log(udSDKJS_GetErrorString(code));
-            //  }
-            //);
-
-            //non-geolocated uds
-            //let apple_uds = "https://fa-data-aueast-01.udcloud.euclideon.com/api/YZukILKU40uvb4qWI2SVg/_sharecode/TvCH2FoUKUSoZS5QgLr0Lg/_file/zUiBwcuHUG1st8UXlmg/apple.uds";
-            let vancouver_uds = "https://models.euclideon.com/Vancouver_Colour.uds";
             // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
-            udSDKJS_LoadModel(vancouver_uds).then(
+            udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds").then(
               function(modelHandle) {
-                let ret = udSDKJS_RenderQueueAddModelWithMatrix(modelHandle, camera.modelViewMatrix.elements);
+                let m = [1,0,0,0, 0,1,0,0, 0,0,-1,0, 0,0,0,1];
+                let ret = udSDKJS_RenderQueueAddModelWithMatrix(modelHandle, m);
                 if(ret < 0)
                   console.log(udSDKJS_GetErrorString(ret));
                 else
