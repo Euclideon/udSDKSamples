@@ -50,7 +50,7 @@
         float depth = texture2D(u_depth, v_uv).x;
 
         gl_FragColor = vec4(col.zyx, 1.0);
-        gl_FragDepth = depth * 0.5 + 0.5;
+        gl_FragDepth = depth;
       }
     </script>
   </head>
@@ -141,47 +141,12 @@
         let height = window.innerHeight;
         if (udSDKJSReady) {
           udSDKJS_ResizeScene(width, height, 0, 0);
-          var pm = camera.projectionMatrix.elements;
-          udSDKJS_SetMatrix(
-            "projection",
-            pm[0],
-            pm[1],
-            pm[2],
-            pm[3],
-            pm[4],
-            pm[5],
-            pm[6],
-            pm[7],
-            pm[8],
-            pm[9],
-            pm[10],
-            pm[11],
-            pm[12],
-            pm[13],
-            pm[14],
-            pm[15]
-          );
 
-          var m = camera.matrix.elements;
-          udSDKJS_SetMatrix(
-            "camera",
-            m[0],
-            m[1],
-            m[2],
-            m[3],
-            m[4],
-            m[5],
-            m[6],
-            m[7],
-            m[8],
-            m[9],
-            m[10],
-            m[11],
-            m[12],
-            m[13],
-            m[14],
-            m[15]
-            );
+          var v = camera.matrixWorldInverse.elements;
+          udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+          var v = camera.projectionMatrix.elements;
+          udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
           udSDKJS_RenderQueue();
           var ptr = udSDKJS_GetColourBuffer();
@@ -216,10 +181,7 @@
           material.uniforms.u_depth.value = udTextureDepth; // however all data are 1 in this array, not sure why
 
           ///test
-          const r = Date.now() * 0.0005;
-          boxObject.position.x = Math.cos( r );
-          boxObject.position.y = Math.sin( r );
-          boxObject.rotation.z += 0.2;
+          boxObject.rotation.z += 0.02;
   
           stats.update();
           renderer.render(scene, camera);
