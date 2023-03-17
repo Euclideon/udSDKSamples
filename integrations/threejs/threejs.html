@@ -224,7 +224,8 @@
         var status = udSDKJS_CreateSharedFrom_udCloud("Esri ArcScene").then(
           function() {
             // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
-            udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds").then(
+            udSDKJS_LoadModel("https://fa-data-aueast-01.udcloud.euclideon.com/api/YZukILKU40uvb4qWI2SVg/_sharecode/TvCH2FoUKUSoZS5QgLr0Lg/_file/zUiBwcuHUG1st8UXlmg/apple.uds").then(
+            //udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds").then(
               function(modelHandle) {
                 let m = [1,0,0,0, 0,1,0,0, 0,0,-1,0, 0,0,0,1];
                 let ret = udSDKJS_RenderQueueAddModelWithMatrix(modelHandle, m);
