@@ -48,6 +48,7 @@
       {
         vec4 col = texture2D(u_texture, v_uv);
         float depth = texture2D(u_depth, v_uv).x;
+        depth = (depth + 1.0) / 2.0;
 
         gl_FragColor = vec4(col.zyx, 1.0);
         gl_FragDepth = depth;
@@ -114,11 +115,11 @@
         new THREE.BufferAttribute(vertices, 3)
       );
       mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set( 0, 0, 0 );
+      mesh.position.set( -0.5, -0.5, 0 );
       scene.add(mesh);
 
       ///// test
-      const boxGeometry = new THREE.BoxGeometry( 0.5,  0.5,  0.5 );
+      const boxGeometry = new THREE.BoxGeometry( 0.25,  0.25,  0.25 );
       const texture = new THREE.TextureLoader().load( 'crate.gif' );
       let boxMaterial = new THREE.MeshBasicMaterial( { 
         map: texture,
@@ -142,7 +143,7 @@
         if (udSDKJSReady) {
           udSDKJS_ResizeScene(width, height, 0, 0);
 
-          var v = camera.matrixWorldInverse.elements;
+          var v = mesh.modelViewMatrix.elements;
           udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
 
           var v = camera.projectionMatrix.elements;
