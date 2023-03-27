@@ -23,7 +23,7 @@ Toolsets:
 1. Put the following files in your web server:
   a. The threejs.html file from this repository.
   b. The contents of the udSDK JS/WASM module into the "euclideon" folder.
-  c. The js folder from this repository.
+  c. The three.js library files.
 2. Load the threejs.html file in your brower.
 
 <!-- End -->
