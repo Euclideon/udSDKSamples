@@ -9,8 +9,6 @@
       }
     </style>
     <script id="shader-vs" type="x-shader/x-vertex">
-      //uniform sampler2D u_texture;
-
       out vec2 v_uv;
 
       // A magenta color for referencing
@@ -20,15 +18,7 @@
       vec4 topLeft;
 
       void main(void) {
-        // Correction work
-        //topLeft = texture(u_texture, vec2(0.0, 0.0));
-        //// We want to check if the magenta point is rendered in top left corner
-        //// If not, flip it
-        //if (topLeft == magenta)
-        //  v_uv = vec2(aVertexUVs.x, aVertexUVs.y);
-        //else
-        //  v_uv = vec2(aVertexUVs.x, 1.0 - aVertexUVs.y);
-		v_uv = position.xy * vec2(0.5, 0.5) + vec2(0.5, 0.5);
+        v_uv = position.xy * vec2(0.5, 0.5) + vec2(0.5, 0.5);
         gl_Position = vec4(position.xyz, 1.0);
       }
     </script>
@@ -41,8 +31,6 @@
 
       uniform sampler2D u_texture;
       uniform sampler2D u_depth;
-      
-      //layout(location = 0) out highp vec4 out_var_SV_Target0;
 
       void main()
       {
@@ -225,7 +213,6 @@
         var status = udSDKJS_CreateSharedFrom_udCloud("Esri ArcScene").then(
           function() {
             // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
-            //udSDKJS_LoadModel("https://fa-data-aueast-01.udcloud.euclideon.com/api/YZukILKU40uvb4qWI2SVg/_sharecode/TvCH2FoUKUSoZS5QgLr0Lg/_file/zUiBwcuHUG1st8UXlmg/apple.uds").then(
             udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds").then(
               function(modelHandle) {
                 let m = [1,0,0,0, 0,1,0,0, 0,0,-1,0, 0,0,0,1];
