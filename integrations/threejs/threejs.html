@@ -11,12 +11,6 @@
     <script id="shader-vs" type="x-shader/x-vertex">
       out vec2 v_uv;
 
-      // A magenta color for referencing
-      // Refer to line 311 to 315, we set a point to magenta color.
-      // And we will compare the magenta point with this vec4 magenta.
-      vec4 magenta = vec4(1.0, 0.0, 1.0, 1.0);
-      vec4 topLeft;
-
       void main(void) {
         v_uv = position.xy * vec2(0.5, 0.5) + vec2(0.5, 0.5);
         gl_Position = vec4(position.xyz, 1.0);
@@ -106,18 +100,15 @@
       mesh.position.set( -0.5, -0.5, 0 );
       scene.add(mesh);
 
-      ///// test
+      //Add a simple light and a box to test intersection with Unlimited Detail
+      scene.add( new THREE.AmbientLight( 0xffffff, 0.8 ) );
+      const light = new THREE.DirectionalLight( 0xffffff, 0.35 );
+      light.position.set( 1, 1, 1 ).normalize();
+      scene.add( light );
       const boxGeometry = new THREE.BoxGeometry( 0.25,  0.25,  0.25 );
-      const texture = new THREE.TextureLoader().load( 'crate.gif' );
-      let boxMaterial = new THREE.MeshBasicMaterial( { 
-        map: texture,
-        depthTest: true,
-        depthWrite: true,
-       } );
-      let boxObject = new THREE.Mesh( boxGeometry,  boxMaterial);
+      let boxObject = new THREE.Mesh( boxGeometry, new THREE.MeshLambertMaterial({ color: 0x00ffff }));
       boxObject.position.set( 0, 0, 0 );
       scene.add( boxObject );
-      /////
 
       camera.lookAt(scene.position);
       animate();
@@ -125,7 +116,7 @@
       function animate() {
         requestAnimationFrame(animate);
         controls.update();
-		
+
         let width = window.innerWidth;
         let height = window.innerHeight;
         if (udSDKJSReady) {
@@ -167,9 +158,9 @@
           udTextureDepth.needsUpdate = true;
 
           material.uniforms.u_texture.value = colourTextureGL;
-          material.uniforms.u_depth.value = udTextureDepth; // however all data are 1 in this array, not sure why
+          material.uniforms.u_depth.value = udTextureDepth;
 
-          ///test
+          //Rotate the sample box
           boxObject.rotation.z += 0.02;
   
           stats.update();
