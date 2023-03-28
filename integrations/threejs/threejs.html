@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>My first three.js app</title>
+    <style>
+      body {
+        margin: 0;
+      }
+    </style>
+    <script id="shader-vs" type="x-shader/x-vertex">
+      out vec2 v_uv;
+
+      void main(void) {
+        v_uv = position.xy * vec2(0.5, 0.5) + vec2(0.5, 0.5);
+        gl_Position = vec4(position.xyz, 1.0);
+      }
+    </script>
+    <script id="shader-fs" type="x-shader/x-fragment">
+      precision mediump float;
+      precision highp int;
+      
+      //Input Format
+      in highp vec2 v_uv;
+
+      uniform sampler2D u_texture;
+      uniform sampler2D u_depth;
+
+      void main()
+      {
+        vec4 col = texture2D(u_texture, v_uv);
+        float depth = texture2D(u_depth, v_uv).x;
+        depth = (depth + 1.0) / 2.0;
+
+        gl_FragColor = vec4(col.zyx, 1.0);
+        gl_FragDepth = depth;
+      }
+    </script>
+  </head>
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./js/three.module.js",
+          "three/addons/": "./js/jsm/"
+        }
+      }
+
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+
+      import Stats from "three/addons/libs/stats.module.js";
+      import WebGL from "three/addons/capabilities/WebGL.js";
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+      if (WebGL.isWebGL2Available() === false) {
+        document.body.appendChild(WebGL.getWebGL2ErrorMessage());
+      }
+
+      THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
+
+      let scene, mesh, renderer, stats;
+      var colourTextureGL, udTextureDepth;
+      var prevWidth = 0;
+      var prevHeight = 0;
+      var colourData, depthData;
+
+      camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
+      camera.position.y = -1;
+
+      scene = new THREE.Scene(); 
+
+      renderer = new THREE.WebGLRenderer();
+      renderer.setPixelRatio( window.devicePixelRatio );
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls( camera, renderer.domElement );
+      controls.update();
+
+      stats = new Stats();
+      document.body.appendChild(stats.dom);
+      window.addEventListener("resize", onWindowResize);
+
+      let material = new THREE.ShaderMaterial({
+        uniforms: {
+          u_texture: { type: "t", value: null },
+          u_depth: { type: "t", value: null },
+        },
+        vertexShader: document.getElementById("shader-vs").textContent.trim(),
+        fragmentShader: document.getElementById("shader-fs").textContent.trim(),
+      });
+
+      let geometry = new THREE.BufferGeometry();
+      const vertices = new Float32Array([-1,-1,0,  1,-1,0,  1,1,0, -1,-1,0,  1,1,0,  -1,1,0]);
+      geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(vertices, 3)
+      );
+      mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set( -0.5, -0.5, 0 );
+      scene.add(mesh);
+
+      //Add a simple light and a box to test intersection with Unlimited Detail
+      scene.add( new THREE.AmbientLight( 0xffffff, 0.8 ) );
+      const light = new THREE.DirectionalLight( 0xffffff, 0.35 );
+      light.position.set( 1, 1, 1 ).normalize();
+      scene.add( light );
+      const boxGeometry = new THREE.BoxGeometry( 0.25,  0.25,  0.25 );
+      let boxObject = new THREE.Mesh( boxGeometry, new THREE.MeshLambertMaterial({ color: 0x00ffff }));
+      boxObject.position.set( 0, 0, 0 );
+      scene.add( boxObject );
+
+      camera.lookAt(scene.position);
+      animate();
+
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        if (udSDKJSReady) {
+          if (width != prevWidth || height != prevHeight)
+            onResizeudSDK(width, height);
+
+          var v = mesh.modelViewMatrix.elements;
+          udSDKJS_SetMatrix("view", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+          var v = camera.projectionMatrix.elements;
+          udSDKJS_SetMatrix("projection", v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7],v[8],v[9],v[10],v[11],v[12],v[13],v[14],v[15]);
+
+          udSDKJS_RenderQueue();
+          var ptr = udSDKJS_GetColourBuffer();
+          colourData.set(HEAPU8.subarray(ptr, ptr + width * height * 4));
+          colourTextureGL.needsUpdate = true;
+
+          var ptr = udSDKJS_GetDepthBuffer();
+          depthData.set(HEAPF32.subarray(ptr >> 2, (ptr + width * height * 4) >> 2));
+          udTextureDepth.needsUpdate = true;
+
+          material.uniforms.u_texture.value = colourTextureGL;
+          material.uniforms.u_depth.value = udTextureDepth;
+
+          //Rotate the sample box
+          boxObject.rotation.z += 0.02;
+  
+          stats.update();
+          renderer.render(scene, camera);
+        }
+      }
+
+      function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize( window.innerWidth, window.innerHeight );
+      }
+
+      function onResizeudSDK(width, height)
+      {
+        if (udSDKJSReady)
+        {
+          prevWidth = width;
+          prevHeight = height;
+  
+          colourData = new Uint8Array(width * height * 4);
+          depthData = new Float32Array(width * height);
+  
+          colourTextureGL = new THREE.DataTexture(colourData, width, height);
+          colourTextureGL.type = THREE.UnsignedByteType;
+          colourTextureGL.format = THREE.RGBAFormat;
+          colourTextureGL.needsUpdate = true;
+  
+          udTextureDepth = new THREE.DataTexture(depthData, width, height);
+          udTextureDepth.type = THREE.FloatType;
+          udTextureDepth.format = THREE.RedFormat;
+          udTextureDepth.needsUpdate = true;
+
+          udSDKJS_ResizeScene(width, height, 0, 0);
+        }
+        
+      }
+    </script>
+
+    <script>
+      const udSDKjs = document.createElement("script");
+      udSDKjs.src = "./euclideon/udSDKjs.js";
+      document.body.appendChild(udSDKjs);
+
+      const easyudSDKjs = document.createElement("script");
+      easyudSDKjs.src = "./euclideon/easyudSDKjs.js";
+      document.body.appendChild(easyudSDKjs);
+
+      var udSDKJSReady = false;
+      var camera;
+
+    </script>
+    <div id="viewDiv">
+      <div id="view3D" class="viewPortal"></div>
+    </div>
+    <div id="loginBox">
+      <span id="errorMessage" style="color: red"></span>
+    </div>
+    <script>
+      function udSDKInit() {
+        udSDKJS_RegisterShared();
+
+        var status = udSDKJS_CreateSharedFrom_udCloud("Esri ArcScene").then(
+          function() {
+            // LiDAR of Vancouver available as [Open Data](https://opendata.vancouver.ca/pages/home/).
+            udSDKJS_LoadModel("https://models.euclideon.com/Vancouver_Colour.uds").then(
+              function(modelHandle) {
+                let m = [1,0,0,0, 0,1,0,0, 0,0,-1,0, 0,0,0,1];
+                let ret = udSDKJS_RenderQueueAddModelWithMatrix(modelHandle, m);
+                if(ret < 0)
+                  console.log(udSDKJS_GetErrorString(ret));
+                else
+                  console.log("load succ slotID:" + ret);
+              }, function(code) {
+                console.log(udSDKJS_GetErrorString(code));
+              }
+            );
+
+            udSDKJSReady = true;
+            document.getElementById("loginBox").style.display = "none"; // Hide this if it was presented previously
+          },
+          function(code) {
+            document.getElementById("loginBox").style.display = "block";
+            if (code == 13)
+              document.getElementById("errorMessage").innerText = "udSDKJS Error / Email or Password Wrong";
+            else
+              document.getElementById("errorMessage").innerText = "udSDKJS FAILED Error=" + code;
+          }
+        );
+      }
+
+      var Module = {
+        noExitRuntime: true,
+        preRun: [],
+        postRun: udSDKInit,
+        setStatus: function (text) {
+          if (!Module.setStatus.last)
+            Module.setStatus.last = { time: Date.now(), text: "" };
+
+          if (text === Module.setStatus.last.text) return;
+
+          var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+          var now = Date.now();
+          if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
+
+          Module.setStatus.last.time = now;
+          Module.setStatus.last.text = text;
+          if (m) {
+            text = m[1];
+          }
+
+          console.log(text);
+        },
+        totalDependencies: 0,
+        monitorRunDependencies: function (left) {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(
+            left
+              ? "Preparing... (" +
+                  (this.totalDependencies - left) +
+                  "/" +
+                  this.totalDependencies +
+                  ")"
+              : "All downloads complete."
+          );
+        },
+      };
+
+      Module.setStatus("Downloading...");
+    </script>
+  </body>
+</html>
