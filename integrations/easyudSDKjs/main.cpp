@@ -788,7 +788,7 @@ extern "C" {
 
   EMSCRIPTEN_KEEPALIVE int udSDKJS_RenderQueueAddModel(udPointCloud *pModel, double zOffset, int targetZone) // zone == -1 is Esri ECEF, 0 is native
   {
-    udResult result;
+    udError result;
     udGeoZone targetGeoZone = {};
     udRenderInstance *pInstance = nullptr;
     udSDKJSModelInstance *pModelInstance = nullptr;
@@ -801,10 +801,10 @@ extern "C" {
     int slotID = InvalidID;
     const char *pData = nullptr;
 
-    UD_ERROR_IF(pModel == 0 || targetZone < -4, udR_InvalidParameter);
+    UD_ERROR_IF(pModel == 0 || targetZone < -4, udE_InvalidParameter);
 
     slotID = g_renderData.InsertNew(&pModelInstance);
-    UD_ERROR_IF(slotID == InvalidID, udR_CountExceeded);
+    UD_ERROR_IF(slotID == InvalidID, udE_CountExceeded);
 
     if (targetZone > 0)
       UD_ERROR_CHECK(udGeoZone_SetFromSRID(&targetGeoZone, targetZone));
@@ -901,16 +901,16 @@ extern "C" {
       }
       else
       {
-        modelMat = udGeoZone_TransformMatrix(modelMat, srcZone, targetGeoZone);
+         UD_ERROR_CHECK(udGeoZone_TransformMatrix(&modelMat, &modelMat, &srcZone, &targetGeoZone));
       }
     }
 
     memcpy(pInstance->matrix, modelMat.a, sizeof(pInstance->matrix));
 
-    result = udR_Success;
+    result = udE_Success;
   epilogue:
 
-    if (result == udR_Success)
+    if (result == udE_Success)
       return slotID;
     return TO_JS_CODE(result);
   }
