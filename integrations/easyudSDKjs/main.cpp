@@ -901,7 +901,7 @@ extern "C" {
       }
       else
       {
-        modelMat = udGeoZone_TransformMatrix(modelMat, srcZone, targetGeoZone);
+         UD_ERROR_CHECK(udGeoZone_TransformMatrix(&modelMat, &modelMat, &srcZone, &targetGeoZone));
       }
     }
 

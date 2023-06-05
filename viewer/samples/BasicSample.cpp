@@ -18,6 +18,26 @@ struct BasicSampleData
   udPointCloudHeader header;
 };
 
+void UpdateCamera(double camera[16], double yawRadians, double pitchRadians, double tx, double ty, double tz)
+{
+  udDouble4x4 rotation = udDouble4x4::create(camera);
+  udDouble3 pos = rotation.axis.t.toVector3();
+  rotation.axis.t = udDouble4::identity();
+
+  if (yawRadians != 0.0)
+    rotation = udDouble4x4::rotationZ(yawRadians) * rotation;   // Yaw on global axis
+  if (pitchRadians != 0.0)
+    rotation = rotation * udDouble4x4::rotationX(pitchRadians); // Pitch on local axis
+  udDouble3 trans = udDouble3::zero();
+  trans += rotation.axis.x.toVector3() * tx;
+  trans += rotation.axis.y.toVector3() * ty;
+  trans += rotation.axis.z.toVector3() * tz;
+  rotation.axis.t = udDouble4::create(pos + trans, 1.0);
+
+  memcpy(camera, rotation.a, sizeof(rotation));
+}
+
+
 void BasicSample_Init(void **ppSampleData, const struct udSampleRenderInfo &info)
 {
   BasicSampleData *pData = udAllocType(BasicSampleData, 1, udAF_Zero);
@@ -86,7 +106,7 @@ void BasicSample_Render(void *pSampleData, const udSampleRenderInfo &info)
     ImGui::ResetMouseDragDelta();
   }
 
-  udUpdateCamera(pData->camera.a, yaw, pitch, position.x, position.y, position.z);
+  UpdateCamera(pData->camera.a, yaw, pitch, position.x, position.y, position.z);
 
   int imgPitch = 0;
   void *pSdlPixels = nullptr;
