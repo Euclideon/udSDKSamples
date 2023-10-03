@@ -138,7 +138,7 @@ int main(int argc, char **args)
   ImGui::StyleColorsDark();
   ImGui_ImplSDL2_InitForSDLRenderer(pWindow, pSdlRenderer);
   ImGui_ImplSDLRenderer_Init(pSdlRenderer);
-  renderInfo.pSDLTexture = SDL_CreateTexture(pSdlRenderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, renderInfo.width, renderInfo.height);
+  renderInfo.pSDLTexture = SDL_CreateTexture(pSdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, renderInfo.width, renderInfo.height);
 
   if (settings.Get("apikey").IsString())
     udSampleViewer_udSDKSetup(renderInfo, settings.Get("apikey").AsString());
@@ -182,9 +182,8 @@ int main(int argc, char **args)
             udSampleViewer_SaveSettings(settings);
           }
         }
-
-        ImGui::End();
       }
+      ImGui::End();
     }
     else
     {

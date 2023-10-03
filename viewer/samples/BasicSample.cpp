@@ -53,14 +53,12 @@ void BasicSample_Init(void **ppSampleData, const struct udSampleRenderInfo &info
   };
 
 
-  //udError res = udPointCloud_Load(pContext, &pModel, UDSAMPLE_ASSETDIR "/DirCube.uds", &header);
+  //udError res = udPointCloud_Load(info.pContext, &pData->pModel, UDSAMPLE_ASSETDIR "/DirCube.uds", &pData->header);
   udError res = udPointCloud_Load(info.pContext, &pData->pModel, UDSAMPLE_ASSETDIR "/HistogramTest.uds", &pData->header);
   if (res != udE_Success)
   {
     printf("Could not load sample UDS file\n");
   }
-
-
 
   *ppSampleData = pData;
 }
@@ -120,6 +118,6 @@ void BasicSample_Render(void *pSampleData, const udSampleRenderInfo &info)
     printf("Rendering failed!\n");
 
   //bind pColorBuffer to SDL_window
-  memcpy(pSdlPixels, info.pColorBuffer, info.width * info.height);
+  memcpy(pSdlPixels, info.pColorBuffer, imgPitch * info.height);
   SDL_UnlockTexture(info.pSDLTexture);
 }
