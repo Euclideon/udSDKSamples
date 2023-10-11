@@ -10,114 +10,64 @@
 #include "SDL.h"
 #include "imgui.h"
 
-struct BasicSampleData
+class BasicSample : public udSample
 {
+public:
+  const char *GetName() const override { return "Basic Sample"; }
+  udError Init(udSampleRenderInfo &info) override;
+  udError Deinit() override;
+  udError Render(udSampleRenderInfo &info) override;
+
   udDouble4x4 mat;
   udDouble4x4 camera;
   udPointCloud *pModel;
   udPointCloudHeader header;
 };
+static BasicSample instance;
 
-void UpdateCamera(double camera[16], double yawRadians, double pitchRadians, double tx, double ty, double tz)
+
+udError BasicSample::Init(udSampleRenderInfo &info)
 {
-  udDouble4x4 rotation = udDouble4x4::create(camera);
-  udDouble3 pos = rotation.axis.t.toVector3();
-  rotation.axis.t = udDouble4::identity();
-
-  if (yawRadians != 0.0)
-    rotation = udDouble4x4::rotationZ(yawRadians) * rotation;   // Yaw on global axis
-  if (pitchRadians != 0.0)
-    rotation = rotation * udDouble4x4::rotationX(pitchRadians); // Pitch on local axis
-  udDouble3 trans = udDouble3::zero();
-  trans += rotation.axis.x.toVector3() * tx;
-  trans += rotation.axis.y.toVector3() * ty;
-  trans += rotation.axis.z.toVector3() * tz;
-  rotation.axis.t = udDouble4::create(pos + trans, 1.0);
-
-  memcpy(camera, rotation.a, sizeof(rotation));
-}
-
-
-void BasicSample_Init(void **ppSampleData, const struct udSampleRenderInfo &info)
-{
-  BasicSampleData *pData = udAllocType(BasicSampleData, 1, udAF_Zero);
-
-  pData->mat = udDouble4x4::identity();
-
-  pData->camera = {
-    +1.0,+0.0,+0.0,0,
-    +0.0,+0.5,-0.5,0,
-    +0.0,+0.5,+0.5,0,
-
-    +50.0,-55.0,+55.0,1
-  };
-
-
-  //udError res = udPointCloud_Load(info.pContext, &pData->pModel, UDSAMPLE_ASSETDIR "/DirCube.uds", &pData->header);
-  udError res = udPointCloud_Load(info.pContext, &pData->pModel, UDSAMPLE_ASSETDIR "/HistogramTest.uds", &pData->header);
-  if (res != udE_Success)
+  udError result;
+  mat = udDouble4x4::identity();
+  result = udPointCloud_Load(info.pContext, &pModel, UDSAMPLE_ASSETDIR "/HistogramTest.uds", &header);
+  if (result == udE_Success)
   {
-    printf("Could not load sample UDS file\n");
+    camera = udDouble4x4::identity();
+    udDouble4x4 mat = udDouble4x4::create(header.storedMatrix);
+    camera.axis.t = mat.axis.t + ((mat.axis.x + mat.axis.z) * 0.25);
   }
-
-  *ppSampleData = pData;
+  return result;
 }
 
-void BasicSample_Deinit(void *pSampleData)
+udError BasicSample::Deinit()
 {
-  BasicSampleData *pData = (BasicSampleData*)pSampleData;
-
-  udPointCloud_Unload(&pData->pModel);
-  udFree(pSampleData);
+  udPointCloud_Unload(&pModel);
+  return udE_Success;
 }
 
-void BasicSample_Render(void *pSampleData, const udSampleRenderInfo &info)
+udError BasicSample::Render(udSampleRenderInfo &info)
 {
-  const double MoveSpeed = 100;
-
-  BasicSampleData *pData = (BasicSampleData*)pSampleData;
-
+  udError result;
   udRenderSettings options = {};
   udRenderInstance instance = {};
-
-  instance.pPointCloud = pData->pModel;
-  memcpy(instance.matrix, pData->header.storedMatrix, sizeof(pData->header.storedMatrix));
-
-  double yaw = 0;
-  double pitch = 0;
-  udDouble3 position = {};
-
-  if (ImGui::IsKeyDown(ImGuiKey_W))
-    position.y += MoveSpeed * info.dt;
-  if (ImGui::IsKeyDown(ImGuiKey_S))
-    position.y -= MoveSpeed * info.dt;
-  if (ImGui::IsKeyDown(ImGuiKey_A))
-    position.x -= MoveSpeed * info.dt;
-  if (ImGui::IsKeyDown(ImGuiKey_D))
-    position.x += MoveSpeed * info.dt;
-
-  if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
-  {
-    ImVec2 mouseDrag = ImGui::GetMouseDragDelta();
-    yaw = mouseDrag.x / 100;
-    pitch = mouseDrag.y / 100;
-    ImGui::ResetMouseDragDelta();
-  }
-
-  UpdateCamera(pData->camera.a, yaw, pitch, position.x, position.y, position.z);
-
   int imgPitch = 0;
   void *pSdlPixels = nullptr;
 
+  instance.pPointCloud = pModel;
+  memcpy(instance.matrix, header.storedMatrix, sizeof(header.storedMatrix));
+
+  UpdateCamera(&camera, info.dt, info.moveSpeed, info.turnSpeed);
+
   SDL_LockTexture(info.pSDLTexture, NULL, &pSdlPixels, &imgPitch);
 
-  if (udRenderTarget_SetMatrix(info.pRenderTarget, udRTM_Camera, pData->camera.a) != udE_Success)
-    printf("Could not set render target matrix\n");
-
-  if (udRenderContext_Render(info.pRenderContext, info.pRenderTarget, &instance, 1, &options) != udE_Success)
-    printf("Rendering failed!\n");
+  result = udRenderTarget_SetMatrix(info.pRenderTarget, udRTM_Camera, camera.a);
+  if (result == udR_Success)
+    result = udRenderContext_Render(info.pRenderContext, info.pRenderTarget, &instance, 1, &options);
 
   //bind pColorBuffer to SDL_window
   memcpy(pSdlPixels, info.pColorBuffer, imgPitch * info.height);
   SDL_UnlockTexture(info.pSDLTexture);
+
+  return result;
 }
