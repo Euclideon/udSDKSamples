@@ -13,21 +13,25 @@ project "Viewer"
 	files { "../external/imgui/backends/imgui_impl_sdl.cpp", "../external/imgui/backends/imgui_impl_sdl.h" }
 	files { "../external/imgui/backends/imgui_impl_sdlrenderer.cpp", "../external/imgui/backends/imgui_impl_sdlrenderer.h" }
 	includedirs { "../external/stb", "../features/shared" }
-	
+	includedirs { "../external/glew/include" }
 	includedirs { "../external/udcore/Include" }
-	links { "udCore" }
-
 	includedirs { "../external/imgui" }
-	
+
+	links { "udCore" }
+		
 	--This project includes
 	IncludeUDSDK()
 
 	-- filters
 	filter { "system:windows" }
+		defines { "GLEW_STATIC" }
+
 		staticruntime "on"
 		libdirs { "../external/sdl2/lib/x64" }
-		links { "SDL2.lib", "SDL2main.lib", "winmm.lib" }
+		links { "GLEW" }
+		links { "opengl32.lib", "glu32.lib", "SDL2.lib", "SDL2main.lib", "winmm.lib" }
 		postbuildcommands { 'XCOPY /f /d /y "..\\external\\sdl2\\lib\\x64\\SDL2.dll" "$(TargetDir)\\"' }
+
 	filter { "system:linux" }
 		links { "SDL2" }
 

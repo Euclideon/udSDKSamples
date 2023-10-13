@@ -128,6 +128,7 @@ solution "udSDKSamples"
 	end
 
 	if os.target() == premake.WINDOWS then
+		dofile "external/glew/project.lua"
 		dofile "languages/csharp/project.lua"
 		dofile "integrations/winforms-csharp/project.lua"
 	end

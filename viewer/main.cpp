@@ -10,6 +10,7 @@
 
 // external
 #include "SDL.h"
+#include "GL/glew.h"
 #include "imgui.h"
 #include "backends/imgui_impl_sdl.h"
 #include "backends/imgui_impl_sdlrenderer.h"
@@ -125,6 +126,7 @@ int main(int argc, char **args)
   // Setup SDL
   if (SDL_Init(SDL_INIT_VIDEO) != 0)
     goto epilogue;
+  glewInit();
 
   // Stop window from being minimized while fullscreened and focus is lost
   SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
