@@ -11,7 +11,7 @@ project "Viewer"
 	files { "**.h", "**.cpp", "*.md", "*.lua" }
 	files { "../external/imgui/*.cpp", "../external/imgui/*.h" }
 	files { "../external/imgui/backends/imgui_impl_sdl.cpp", "../external/imgui/backends/imgui_impl_sdl.h" }
-	files { "../external/imgui/backends/imgui_impl_sdlrenderer.cpp", "../external/imgui/backends/imgui_impl_sdlrenderer.h" }
+	files { "../external/imgui/backends/imgui_impl_opengl3.cpp", "../external/imgui/backends/imgui_impl_opengl3.h" }
 	includedirs { "../external/stb", "../features/shared" }
 	includedirs { "../external/glew/include" }
 	includedirs { "../external/udcore/Include" }

@@ -1,19 +1,16 @@
-
+// system
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
 #include <algorithm>
 
-#include "udSDKFeatureSamples.h"
-#include "udSample.h"
-
 // external
 #include "SDL.h"
 #include "GL/glew.h"
 #include "imgui.h"
 #include "backends/imgui_impl_sdl.h"
-#include "backends/imgui_impl_sdlrenderer.h"
+#include "backends/imgui_impl_opengl3.h"
 
 // udcore
 #include "udChunkedArray.h"
@@ -28,6 +25,10 @@
 #include "udRenderContext.h"
 #include "udRenderTarget.h"
 
+// sample infrastructure
+#include "udSDKFeatureSamples.h"
+#include "udSample.h"
+#include "udGLImpl.h"
 
 // ----------------------------------------------------------------------------
 // Set up for licencing and render context
@@ -60,6 +61,9 @@ udError udSampleViewer_udSDKSetup(udSampleRenderInfo &renderInfo, const char *pA
     goto epilogue;
   }
 
+  // Also set up the GPU renderer to allow the user to switch between cpu and gpu rendering
+  udGLImpl_Init(7000000, 0.5f);
+
   result = udE_Success;
 
 epilogue:
@@ -90,59 +94,69 @@ void udSampleViewer_SaveSettings(const udJSON &settings)
 // ----------------------------------------------------------------------------
 int main(int argc, char **args)
 {
+  char apikey[1024] = {};
   udJSON settings = {};
-
-  // Define our variables
   udSampleRenderInfo renderInfo = {};
   renderInfo.width = 1280;
   renderInfo.height = 720;
+  renderInfo.useGpuRenderer = false;
+
   // Defaults for camera move/turn speeds
   renderInfo.moveSpeed = 100;
   renderInfo.turnSpeed = -150;
+
+  // Sample navigation state
   udSample *pCurrentSample = nullptr;
   const char *pSampleToInit = nullptr;
   udError errorToReport = udE_Success;
   const char *pErrorContext = "";
   const char *pSettingsData = nullptr;
 
+  // SDL/rendering
+  SDL_Window *pWindow = nullptr;
+  uint32_t windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+  bool isRunning = true;
+  uint32_t lastRenderTime = udGetTimeMs() - 16;
+  
   if (udFile_Load("settings.json", &pSettingsData) == udR_Success)
   {
     settings.Parse(pSettingsData);
     udFree(pSettingsData);
   }
-
-  uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;// | SDL_WINDOW_RESIZABLE;
-  bool isRunning = true;
-  uint32_t lastRenderTime = udGetTimeMs() - 16;
-  
+  renderInfo.useGpuRenderer = settings.Get("GpuRenderer").AsBool();
   renderInfo.pColorBuffer = new int[renderInfo.width * renderInfo.height];
   renderInfo.pDepthBuffer = new float[renderInfo.width * renderInfo.height];
-
-  char apikey[1024] = {};
-
-  SDL_Window *pWindow = nullptr;
-  SDL_Renderer *pSdlRenderer = nullptr;
 
   // Setup SDL
   if (SDL_Init(SDL_INIT_VIDEO) != 0)
     goto epilogue;
-  glewInit();
 
-  // Stop window from being minimized while fullscreened and focus is lost
+  // SDL Config hints/attributes. Request opengl 3.0
   SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
   pWindow = SDL_CreateWindow("udSDK Sample Viewer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, renderInfo.width, renderInfo.height, windowFlags);
   if (!pWindow)
     goto epilogue;
 
+  // Create a GL context the gpu renderer can use
+  SDL_GLContext pGLContext = SDL_GL_CreateContext(pWindow);
+  SDL_GL_MakeCurrent(pWindow, pGLContext);
+  SDL_GL_SetSwapInterval(1); // Enable vsync
+  glewInit();
+
   uint32_t render_flags = SDL_RENDERER_ACCELERATED;
-  pSdlRenderer = SDL_CreateRenderer(pWindow, -1, render_flags);
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO(); (void)io;
   ImGui::StyleColorsDark();
-  ImGui_ImplSDL2_InitForSDLRenderer(pWindow, pSdlRenderer);
-  ImGui_ImplSDLRenderer_Init(pSdlRenderer);
-  renderInfo.pSDLTexture = SDL_CreateTexture(pSdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, renderInfo.width, renderInfo.height);
+
+  ImGui_ImplSDL2_InitForOpenGL(pWindow, pGLContext);
+  ImGui_ImplOpenGL3_Init("#version 130");
 
   if (settings.Get("apikey").IsString())
     udSampleViewer_udSDKSetup(renderInfo, settings.Get("apikey").AsString());
@@ -183,7 +197,7 @@ int main(int argc, char **args)
     }
 
     // ImGUI
-    ImGui_ImplSDLRenderer_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
@@ -212,6 +226,13 @@ int main(int argc, char **args)
       ImGui::SetNextWindowSize(ImVec2(0, 0));
       if (ImGui::BeginMainMenuBar())
       {
+        if (ImGui::BeginMenu("Settings"))
+        {
+          if (ImGui::Checkbox("GPU Renderer", &renderInfo.useGpuRenderer))
+            settings.Set("GpuRenderer = %s", renderInfo.useGpuRenderer ? "true" : "false");
+
+          ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Samples"))
         {
           for (udSample *p = udSample::pSamplesHead; p; p = p->pNextSample)
@@ -268,38 +289,30 @@ int main(int argc, char **args)
         }
         ImGui::EndPopup();
       }
-      else
-      {
-        // If there's no errors, keep rendering more frames
-        if (pCurrentSample)
-        {
-          errorToReport = pCurrentSample->Render(renderInfo);
-          if (errorToReport != udR_Success)
-          {
-            pErrorContext = "rendering";
-            ImGui::OpenPopup("Error");
-          }
-        }
-        else
-        {
-          int imgPitch = 0;
-          void *pSdlPixels = nullptr;
-
-          SDL_LockTexture(renderInfo.pSDLTexture, NULL, &pSdlPixels, &imgPitch);
-          memset(pSdlPixels, 0, imgPitch * renderInfo.height);
-          SDL_UnlockTexture(renderInfo.pSDLTexture);
-        }
-      }
 
       ImGui::EndMainMenuBar();
-
-      SDL_RenderClear(pSdlRenderer);
-      SDL_RenderCopy(pSdlRenderer, renderInfo.pSDLTexture, NULL, NULL);
     }
     ImGui::Render();
-    ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
-    SDL_RenderPresent(pSdlRenderer);
+
+    // Now with all the UI rendered to internal lists, handle the actual visual rendering of the UI and the sample itself
+    glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+    glClearColor(0,0,0,1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (pCurrentSample)
+    {
+      errorToReport = pCurrentSample->Render(renderInfo);
+      if (errorToReport != udR_Success)
+      {
+        pErrorContext = "rendering";
+        ImGui::OpenPopup("Error");
+      }
+    }
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    SDL_GL_SwapWindow(pWindow);
   }
+  udSampleViewer_SaveSettings(settings);
 
 epilogue:
   // Clean up
@@ -309,9 +322,13 @@ epilogue:
   udRenderContext_Destroy(&renderInfo.pRenderContext);
   udContext_Disconnect(&renderInfo.pContext, true);
 
-  SDL_DestroyTexture(renderInfo.pSDLTexture);
-  SDL_DestroyRenderer(pSdlRenderer);
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplSDL2_Shutdown();
+  ImGui::DestroyContext();
+
+  SDL_GL_DeleteContext(pGLContext);
   SDL_DestroyWindow(pWindow);
+  SDL_Quit();
 
   return 0;
 }
