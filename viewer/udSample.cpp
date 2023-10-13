@@ -2,8 +2,25 @@
 #include "ImGui.h"
 #include "SDL.h"
 
-std::vector<udSample *> udSample::samples;
+#include "udStringUtil.h"
 
+udSample *udSample::pSamplesHead;
+
+
+// ----------------------------------------------------------------------------
+// Base constructor that adds all samples into a common static list
+udSample::udSample(const char *pSampleName) : pName(pSampleName)
+{
+  // Insert sample into the static list, sorted by name
+  udSample **ppLink = &pSamplesHead;
+  while (*ppLink && udStrcmpi((*ppLink)->pName, pName) < 0)
+    ppLink = &(*ppLink)->pNextSample;
+  pNextSample = *ppLink;
+  (*ppLink) = this;
+}
+
+// ----------------------------------------------------------------------------
+// Simple camera controls
 void udSample::UpdateCamera(udDouble4x4 *pCamera, double dt, double &moveSpeed, double &turnSpeed)
 {
   double yaw = 0, pitch = 0, tx = 0, ty = 0, tz = 0;
@@ -44,7 +61,9 @@ void udSample::UpdateCamera(udDouble4x4 *pCamera, double dt, double &moveSpeed, 
   *pCamera = rotation;
 };
 
-udError udSample::Event(udSampleRenderInfo &, const SDL_Event &)
+// ----------------------------------------------------------------------------
+// Default event handler
+bool udSample::Event(udSampleRenderInfo &, const SDL_Event &)
 {
-  return udE_NothingToDo; // By default, signal to the caller that this sample doesn't handle the event
+  return false; // By default, signal to the caller that this sample doesn't handle the event
 }

@@ -13,9 +13,9 @@
 class BasicSample : public udSample
 {
 public:
-  const char *GetName() const override { return "Basic Sample"; }
+  BasicSample(const char *pSampleName) : udSample(pSampleName) {}
   udError Init(udSampleRenderInfo &info) override;
-  udError Deinit() override;
+  void Deinit() override;
   udError Render(udSampleRenderInfo &info) override;
 
   udDouble4x4 mat;
@@ -23,9 +23,11 @@ public:
   udPointCloud *pModel;
   udPointCloudHeader header;
 };
-static BasicSample instance;
+static BasicSample instance("Basic Sample");
 
 
+// ----------------------------------------------------------------------------
+// Initalise the sample, this is where resources should be allocated rather than in the constructor
 udError BasicSample::Init(udSampleRenderInfo &info)
 {
   udError result;
@@ -40,12 +42,15 @@ udError BasicSample::Init(udSampleRenderInfo &info)
   return result;
 }
 
-udError BasicSample::Deinit()
+// ----------------------------------------------------------------------------
+// Free any resources and leave the sample in a state to be re-initialised
+void BasicSample::Deinit()
 {
   udPointCloud_Unload(&pModel);
-  return udE_Success;
 }
 
+// ----------------------------------------------------------------------------
+// Render one frame
 udError BasicSample::Render(udSampleRenderInfo &info)
 {
   udError result;

@@ -29,19 +29,20 @@ struct udSampleRenderInfo
 class udSample
 {
 public:
-  udSample() { samples.push_back(this); }
+  udSample(const char *pSampleName);
   virtual ~udSample() {}
 
-  virtual const char *GetName() const = 0;                          // Return the name of the sample
-  virtual udError Init(udSampleRenderInfo &info) = 0;               // Initialise for running the sample
-  virtual udError Deinit() = 0;                                     // Tear-down resources to run another sample, or to re-run from the start
-  virtual udError Render(udSampleRenderInfo &info) = 0;             // Render one frame
-  virtual udError Event(udSampleRenderInfo &, const SDL_Event &);   // Handle SDL events, return udE_Success if handled, or udE_NothingToDo if not handled, all other returns are errors
+  virtual udError Init(udSampleRenderInfo &info) = 0;           // Initialise for running the sample
+  virtual void Deinit() = 0;                                    // Tear-down resources to run another sample, or to re-run from the start
+  virtual udError Render(udSampleRenderInfo &info) = 0;         // Render one frame, error codes are shown to the user
+  virtual bool Event(udSampleRenderInfo &, const SDL_Event &);  // Handle SDL events, return true if handled (implying the framework should ignore)
 
   // Simple camera inputs handler available to all samples for consistency
   void UpdateCamera(udDouble4x4 *pCamera, double dt, double &moveSpeed, double &turnSpeed);
   
-  static std::vector<udSample *> samples;
+  static udSample *pSamplesHead; // Head of static list of samples
+  udSample *pNextSample;
+  const char *pName;
 };
 
 #ifndef UDSAMPLE_ASSETDIR

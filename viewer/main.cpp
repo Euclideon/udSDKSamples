@@ -28,7 +28,8 @@
 #include "udRenderTarget.h"
 
 
-
+// ----------------------------------------------------------------------------
+// Set up for licencing and render context
 udError udSampleViewer_udSDKSetup(udSampleRenderInfo &renderInfo, const char *pAPIKey)
 {
   udError result = udE_Failure;
@@ -71,6 +72,8 @@ epilogue:
   return result;
 }
 
+// ----------------------------------------------------------------------------
+// Save the settings to reload next time (for convenience)
 void udSampleViewer_SaveSettings(const udJSON &settings)
 {
   const char *pJSONString = nullptr;
@@ -83,6 +86,7 @@ void udSampleViewer_SaveSettings(const udJSON &settings)
   }
 }
 
+// ----------------------------------------------------------------------------
 int main(int argc, char **args)
 {
   udJSON settings = {};
@@ -95,9 +99,9 @@ int main(int argc, char **args)
   renderInfo.moveSpeed = 100;
   renderInfo.turnSpeed = -150;
   udSample *pCurrentSample = nullptr;
-
-  float menuBarHeight = 0;
-
+  const char *pSampleToInit = nullptr;
+  udError errorToReport = udE_Success;
+  const char *pErrorContext = "";
   const char *pSettingsData = nullptr;
 
   if (udFile_Load("settings.json", &pSettingsData) == udR_Success)
@@ -141,21 +145,8 @@ int main(int argc, char **args)
   if (settings.Get("apikey").IsString())
     udSampleViewer_udSDKSetup(renderInfo, settings.Get("apikey").AsString());
 
-  // Sort the samples by name to provide a consistent order
-  std::sort(udSample::samples.begin(), udSample::samples.end(), [](const udSample *a, const udSample *b) { return udStrcmpi(a->GetName(), b->GetName()) < 0; });
-
   if (argc > 1 && udStrBeginsWithi(args[1], "sample="))
-  {
-    for (udSample *p : udSample::samples)
-    {
-      if (udStrEquali(p->GetName(), args[1] + 7))
-      {
-        pCurrentSample = p;
-        p->Init(renderInfo);
-        break;
-      }
-    }
-  }
+    pSampleToInit = args[1] + 7;
 
   while (isRunning)
   {
@@ -170,7 +161,7 @@ int main(int argc, char **args)
       if (event.type == SDL_QUIT)
         isRunning = false;
 
-      if (!pCurrentSample || pCurrentSample->Event(renderInfo, event) == udE_NothingToDo)
+      if (!pCurrentSample || pCurrentSample->Event(renderInfo, event) == false)
       {
         // In here the viewer handles events that the sample has not handled themselves
         if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
@@ -221,19 +212,10 @@ int main(int argc, char **args)
       {
         if (ImGui::BeginMenu("Samples"))
         {
-          for (udSample *p : udSample::samples)
+          for (udSample *p = udSample::pSamplesHead; p; p = p->pNextSample)
           {
-            if (ImGui::Selectable(udTempStr("%s##sample_%p", p->GetName(), p), p == pCurrentSample))
-            {
-              if (pCurrentSample)
-              {
-                pCurrentSample->Deinit();
-                pCurrentSample = nullptr;
-              }
-
-              pCurrentSample = p;
-              pCurrentSample->Init(renderInfo);
-            }
+            if (ImGui::Selectable(udTempStr("%s##sample_%p", p->pName, p), p == pCurrentSample))
+              pSampleToInit = p->pName;
           }
           
           isRunning = !ImGui::MenuItem("Exit", nullptr, nullptr);
@@ -241,24 +223,70 @@ int main(int argc, char **args)
           ImGui::EndMenu();
         }
       }
-  
-      if (pCurrentSample)
+
+      if (pSampleToInit)
       {
-        bool exitRequested = pCurrentSample->Render(renderInfo);
-        if (exitRequested)
+        if (pCurrentSample)
         {
           pCurrentSample->Deinit();
           pCurrentSample = nullptr;
         }
+
+        for (udSample *p = udSample::pSamplesHead; p; p = p->pNextSample)
+        {
+          if (udStrEquali(p->pName, pSampleToInit))
+          {
+            pCurrentSample = p;
+            errorToReport = p->Init(renderInfo);
+            if (errorToReport != udR_Success)
+            {
+              pErrorContext = "initialising";
+              ImGui::OpenPopup("Error");
+            }
+            break;
+          }
+        }
+        pSampleToInit = nullptr;
+      }
+
+      // Make a model popup to report any errors to the user
+      if (ImGui::BeginPopupModal("Error"))
+      {
+        ImGui::Text("Error %s encountered %s %s", udError_GetErrorString(errorToReport), pErrorContext, pCurrentSample ? pCurrentSample->pName : "");
+        if (ImGui::Button("OK"))
+        {
+          if (pCurrentSample)
+          {
+            pCurrentSample->Deinit();
+            pCurrentSample = nullptr;
+          }
+          errorToReport = udE_Success;
+          pErrorContext = "";
+          ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
       }
       else
       {
-        int imgPitch = 0;
-        void *pSdlPixels = nullptr;
+        // If there's no errors, keep rendering more frames
+        if (pCurrentSample)
+        {
+          errorToReport = pCurrentSample->Render(renderInfo);
+          if (errorToReport != udR_Success)
+          {
+            pErrorContext = "rendering";
+            ImGui::OpenPopup("Error");
+          }
+        }
+        else
+        {
+          int imgPitch = 0;
+          void *pSdlPixels = nullptr;
 
-        SDL_LockTexture(renderInfo.pSDLTexture, NULL, &pSdlPixels, &imgPitch);
-        memset(pSdlPixels, 0, imgPitch * renderInfo.height);
-        SDL_UnlockTexture(renderInfo.pSDLTexture);
+          SDL_LockTexture(renderInfo.pSDLTexture, NULL, &pSdlPixels, &imgPitch);
+          memset(pSdlPixels, 0, imgPitch * renderInfo.height);
+          SDL_UnlockTexture(renderInfo.pSDLTexture);
+        }
       }
 
       ImGui::EndMainMenuBar();
