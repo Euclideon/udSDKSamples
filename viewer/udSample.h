@@ -3,6 +3,8 @@
 
 #include "udMath.h"
 #include "udError.h"
+#include "udBlockRenderContext.h"
+
 union SDL_Event;
 #include <vector>
 
@@ -13,6 +15,7 @@ struct udSampleRenderInfo
 
   int width;
   int height;
+  bool useGpuRenderer;
 
   struct udContext *pContext;
   struct udRenderContext *pRenderContext;
@@ -20,8 +23,6 @@ struct udSampleRenderInfo
 
   int *pColorBuffer;
   float *pDepthBuffer;
-
-  struct SDL_Texture *pSDLTexture;
 };
 
 
