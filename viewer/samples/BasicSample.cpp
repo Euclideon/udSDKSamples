@@ -9,12 +9,11 @@
 
 #include "SDL.h"
 #include "imgui.h"
-#include "SDL_opengl.h"
 
 class BasicSample : public udSample
 {
 public:
-  BasicSample(const char *pSampleName) : udSample(pSampleName), udQuadTexture(GL_INVALID_INDEX), quadPixelCount(0) {}
+  BasicSample(const char *pSampleName) : udSample(pSampleName) {}
   udError Init(udSampleRenderInfo &info) override;
   void Deinit() override;
   udError Render(udSampleRenderInfo &info) override;
@@ -23,8 +22,6 @@ public:
   udDouble4x4 camera;
   udPointCloud *pModel;
   udPointCloudHeader header;
-  GLuint udQuadTexture;
-  uint32_t quadPixelCount;
 };
 static BasicSample instance("Basic Sample");
 
@@ -51,9 +48,8 @@ udError BasicSample::Init(udSampleRenderInfo &info)
 // Free any resources and leave the sample in a state to be re-initialised
 void BasicSample::Deinit()
 {
-  glDeleteTextures(1, &udQuadTexture);
-  udQuadTexture = GL_INVALID_INDEX;
   udPointCloud_Unload(&pModel);
+  DeinitUDQuad();
 }
 
 // ----------------------------------------------------------------------------
@@ -63,8 +59,6 @@ udError BasicSample::Render(udSampleRenderInfo &info)
   udError result;
   udRenderSettings options = {};
   udRenderInstance instance = {};
-  int imgPitch = 0;
-  void *pSdlPixels = nullptr;
 
   instance.pPointCloud = pModel;
   memcpy(instance.matrix, header.storedMatrix, sizeof(header.storedMatrix));
@@ -79,37 +73,7 @@ udError BasicSample::Render(udSampleRenderInfo &info)
   else
   {
     UD_ERROR_CHECK(udRenderContext_Render(info.pRenderContext, info.pRenderTarget, &instance, 1, &options));
-
-    glBindTexture(GL_TEXTURE_2D, udQuadTexture);
-    if (quadPixelCount != (info.width * info.height))
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, info.width, info.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, info.pColorBuffer);
-    else
-      glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, info.width, info.height, GL_BGRA, GL_UNSIGNED_BYTE, info.pColorBuffer);
-    quadPixelCount = (info.width * info.height);
-
-    glEnable(GL_TEXTURE_2D);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-
-    glBegin(GL_QUADS);
-    glTexCoord2f(0, 0);
-    glVertex2f(-1, 1);
-
-    glTexCoord2f(1, 0);
-    glVertex2f(1, 1);
-
-    glTexCoord2f(1, 1);
-    glVertex2f(1, -1);
-
-    glTexCoord2f(0, 1);
-    glVertex2f(-1, -1);
-    glEnd();
-
+    UD_ERROR_CHECK(RenderUDQuad(info));
   }
 
 epilogue:

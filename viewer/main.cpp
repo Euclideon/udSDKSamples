@@ -62,7 +62,7 @@ udError udSampleViewer_udSDKSetup(udSampleRenderInfo &renderInfo, const char *pA
   }
 
   // Also set up the GPU renderer to allow the user to switch between cpu and gpu rendering
-  udGLImpl_Init(7000000, 0.5f);
+  udGLImpl_Init();
 
   result = udE_Success;
 
@@ -123,7 +123,6 @@ int main(int argc, char **args)
     settings.Parse(pSettingsData);
     udFree(pSettingsData);
   }
-  renderInfo.useGpuRenderer = settings.Get("GpuRenderer").AsBool();
   renderInfo.pColorBuffer = new int[renderInfo.width * renderInfo.height];
   renderInfo.pDepthBuffer = new float[renderInfo.width * renderInfo.height];
 
@@ -228,9 +227,8 @@ int main(int argc, char **args)
       {
         if (ImGui::BeginMenu("Settings"))
         {
-          if (ImGui::Checkbox("GPU Renderer", &renderInfo.useGpuRenderer))
-            settings.Set("GpuRenderer = %s", renderInfo.useGpuRenderer ? "true" : "false");
-
+          ImGui::Checkbox("GPU Renderer", &renderInfo.useGpuRenderer);
+          ImGui::SliderFloat("Move speed", &renderInfo.moveSpeed, 0.1f, 200.f);
           ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Samples"))
@@ -245,6 +243,10 @@ int main(int argc, char **args)
 
           ImGui::EndMenu();
         }
+
+        const char *pFPSText = udTempStr("%dfps (%s %s) ", (int)io.Framerate, renderInfo.useGpuRenderer ? "GPU" : "CPU", _DEBUG ? "Debug" : "Release");
+        ImGui::SetCursorPosX(renderInfo.width - ImGui::CalcTextSize(pFPSText).x);
+        ImGui::Text(pFPSText);
       }
 
       if (pSampleToInit)
@@ -292,7 +294,6 @@ int main(int argc, char **args)
 
       ImGui::EndMainMenuBar();
     }
-    ImGui::Render();
 
     // Now with all the UI rendered to internal lists, handle the actual visual rendering of the UI and the sample itself
     glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
@@ -309,6 +310,7 @@ int main(int argc, char **args)
       }
     }
 
+    ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(pWindow);
   }
