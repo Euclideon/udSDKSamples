@@ -9,7 +9,7 @@
 #include "udThread.h"
 #include "udPlatformUtil.h"
 
-#define BLOCKSPACE_POSITIONS 0
+#define BLOCKSPACE_POSITIONS 1
 
 #define VERIFY_GL() { GLuint glErrorCode = glGetError(); if (glErrorCode != GL_NO_ERROR) udDebugPrintf("%s(%d): glError %d\n", __FILE__, __LINE__, glErrorCode); UDASSERT(glErrorCode == GL_NO_ERROR, ""); }
 
@@ -39,12 +39,10 @@ layout(location = 1) in vec4 a_color;
 out vec4 v_color;
 uniform mat4 u_worldViewProj;
 uniform vec2 u_screenSize;
-uniform int u_debug;
 
 void main()
 {
   v_color = a_color.bgra;
-  if (u_debug != 0) v_color.xz = v_color.xz * vec2(2);
 
   // Points
   vec4 off = vec4(a_position.www * 2.0, 0);
@@ -206,7 +204,6 @@ struct GLBlockRenderProgram
   GLuint programID;
   GLuint worldViewProjLoc;
   GLuint screenSizeLoc;
-  GLuint debugLoc;
 
   void Compile()
   {
@@ -216,14 +213,10 @@ struct GLBlockRenderProgram
     // Get the uniform locations
     worldViewProjLoc = glGetUniformLocation(programID, "u_worldViewProj");
     screenSizeLoc = glGetUniformLocation(programID, "u_screenSize");
-    debugLoc = glGetUniformLocation(programID, "u_debug");
   }
   void Use()
   {
     glUseProgram(programID); VERIFY_GL();
-
-    if (debugLoc != GL_INVALID_INDEX)
-      glUniform1i(debugLoc, 0);
   }
   void Bind(GLuint vaoId)
   {
@@ -232,7 +225,7 @@ struct GLBlockRenderProgram
 } blockRenderProgram;
 
 /*----------------------------------------------------------------------------------------------------*/
-void udGLImpl_BeginRender(void *pGPUContext, const udRenderView *pView)
+void udGLImpl_BeginRender(void *pGPUContext, const udRenderView *pView, uint32_t width, uint32_t height)
 {
   udGLImplContext *pCtx = (udGLImplContext*)pGPUContext;
   if (pCtx)
@@ -242,10 +235,7 @@ void udGLImpl_BeginRender(void *pGPUContext, const udRenderView *pView)
   glEnable(GL_DEPTH_TEST); VERIFY_GL();
   glDepthMask(GL_TRUE); VERIFY_GL();
   glDepthFunc(GL_LEQUAL); VERIFY_GL();
-  //glDisable(GL_DEPTH_TEST);
-  //glDepthMask(GL_FALSE);
 
-  //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   glEnable(GL_PROGRAM_POINT_SIZE); VERIFY_GL();
   glEnable(GL_VERTEX_PROGRAM_POINT_SIZE); VERIFY_GL();
 
@@ -253,8 +243,7 @@ void udGLImpl_BeginRender(void *pGPUContext, const udRenderView *pView)
 
   blockRenderProgram.Use();
   // Upload shader constants
-  // TODO!!!! Need to find these properly
-  glUniform2f(blockRenderProgram.screenSizeLoc, 1280.f, 720.f); VERIFY_GL();
+  glUniform2f(blockRenderProgram.screenSizeLoc, (float)width, (float)height); VERIFY_GL();
 }
 
 // ---------------------------------------------------------------------
@@ -435,7 +424,7 @@ udError udGLImpl_DestroyVertexBuffer(void * /*pGPUContext*/, void *pVertexBuffer
 }
 
 // ---------------------------------------------------------------------
-void udGLImpl_Init(int targetPointCount, float threshold)
+void udGLImpl_Init(int targetPointCount = 7000000, float threshold = 0.5f)
 {
   blockRenderProgram.Compile();
   static udBlockRenderGPUInterface gpuInterface;
