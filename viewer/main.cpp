@@ -29,6 +29,7 @@
 #include "udSDKFeatureSamples.h"
 #include "udSample.h"
 #include "udGLImpl.h"
+static udError udGLImplError;
 
 // ----------------------------------------------------------------------------
 // Set up for licencing and render context
@@ -62,7 +63,8 @@ udError udSampleViewer_udSDKSetup(udSampleRenderInfo &renderInfo, const char *pA
   }
 
   // Also set up the GPU renderer to allow the user to switch between cpu and gpu rendering
-  udGLImpl_Init();
+  udGLImplError = udGLImpl_Init();
+   
 
   result = udE_Success;
 
@@ -227,7 +229,10 @@ int main(int argc, char **args)
       {
         if (ImGui::BeginMenu("Settings"))
         {
-          ImGui::Checkbox("GPU Renderer", &renderInfo.useGpuRenderer);
+          if (udGLImplError == udR_Success)
+            ImGui::Checkbox("GPU Renderer", &renderInfo.useGpuRenderer);
+          else
+            ImGui::Text("GPU Renderer (%s)", udError_GetErrorString(udGLImplError));
           ImGui::SliderFloat("Move speed", &renderInfo.moveSpeed, 0.1f, 200.f);
           ImGui::EndMenu();
         }

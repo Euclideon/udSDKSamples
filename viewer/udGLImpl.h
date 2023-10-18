@@ -14,10 +14,102 @@
 #define VERIFY_GL() { GLuint glErrorCode = glGetError(); if (glErrorCode != GL_NO_ERROR) udDebugPrintf("%s(%d): glError %d\n", __FILE__, __LINE__, glErrorCode); UDASSERT(glErrorCode == GL_NO_ERROR, ""); }
 
 // ---------------------------------------------------------------------
+struct GLBlockRenderProgram
+{
+  const char *pDescription;
+  GLuint programID;
+  GLint worldViewProjLoc;
+  GLint screenSizeLoc;
+
+  udError Compile(const char *pVertShader, const char *pFragShader, const char *pDesc)
+  {
+    udError result;
+
+    programID = GL_INVALID_INDEX;
+    GLuint vertexShaderID = GL_INVALID_INDEX;
+    GLuint fragShaderID = GL_INVALID_INDEX;
+    GLint compileResult = GL_FALSE;
+
+    // Compile Vertex Shader
+    vertexShaderID = glCreateShader(GL_VERTEX_SHADER); VERIFY_GL();
+    glShaderSource(vertexShaderID, 1, &pVertShader, NULL); VERIFY_GL();
+    glCompileShader(vertexShaderID); VERIFY_GL();
+    glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &compileResult); VERIFY_GL();
+    UD_ERROR_IF(!compileResult, udE_Failure);
+
+    // Compile Fragment Shader
+    fragShaderID = glCreateShader(GL_FRAGMENT_SHADER); VERIFY_GL();
+    glShaderSource(fragShaderID, 1, &pFragShader, NULL); VERIFY_GL();
+    glCompileShader(fragShaderID); VERIFY_GL();
+    glGetShaderiv(fragShaderID, GL_COMPILE_STATUS, &compileResult); VERIFY_GL();
+    UD_ERROR_IF(!compileResult, udE_Failure);
+
+    // Link the program
+    programID = glCreateProgram();
+    glAttachShader(programID, vertexShaderID);
+    glAttachShader(programID, fragShaderID);
+    glLinkProgram(programID);
+    glGetProgramiv(programID, GL_LINK_STATUS, &compileResult);
+    UD_ERROR_IF(!compileResult, udE_Failure);
+
+    // Get the uniform locations
+    worldViewProjLoc = glGetUniformLocation(programID, "u_worldViewProj");
+    screenSizeLoc = glGetUniformLocation(programID, "u_screenSize");
+
+    pDescription = pDesc;
+    result = udE_Success;
+
+  epilogue:
+    if (result != udE_Success)
+    {
+      char log[1024] = "";
+      const char *pThing;
+      if (programID != GL_INVALID_INDEX)
+      {
+        pThing = "program";
+      }
+      else if (fragShaderID != GL_INVALID_INDEX)
+      {
+        pThing = "fragment shader";
+        glGetShaderInfoLog(fragShaderID, sizeof(log), NULL, log);
+      }
+      else
+      {
+        pThing = "vertex shader";
+        glGetShaderInfoLog(vertexShaderID, sizeof(log), NULL, log);
+      }
+
+      udDebugPrintf("Error compiling %s shader for %s: %s\n", pThing, pDesc, log);
+    }
+
+    // These shaders are referenced by the program now, so deleting them just
+    // reduces their reference count so when we delete the program they are deleted
+    glDeleteShader(vertexShaderID);
+    glDeleteShader(fragShaderID);
+
+    return result;
+  }
+  void Use()
+  {
+    glUseProgram(programID); VERIFY_GL();
+  }
+  void Bind(GLuint vaoId)
+  {
+    glBindVertexArray(vaoId);
+  }
+  void Destroy()
+  {
+    glDeleteProgram(programID);
+  }
+} *pBlockRenderProgram = nullptr;
+
+// ---------------------------------------------------------------------
 struct udGLImplContext
 {
+  GLBlockRenderProgram pointsProgram;
+  GLBlockRenderProgram quadsProgram;
+  GLBlockRenderProgram *pBlockRenderProgram; // The shaders to use for current settings
   const udBlockRenderModel *pUploadedModelData; // For tracking which model shader current constants refer to
-  // TODO: int renderWidth, renderHeight;
 
   int32_t numberOfBlocksRendered;
   int32_t numberOfDrawCalls;
@@ -32,7 +124,24 @@ struct udGLImplContext
 udGLImplContext g_udGLImplContextMem;
 
 
-static const char *pVoxelVertShader = R"(
+static const char *pVoxelVertShader_Points = R"(
+#version 330 core
+layout(location = 0) in vec4 a_position;
+layout(location = 1) in vec4 a_color;
+out vec4 v_color;
+uniform mat4 u_worldViewProj;
+uniform vec2 u_screenSize;
+
+void main()
+{
+  v_color = a_color.bgra;
+  vec4 pos = u_worldViewProj * a_position;
+  gl_Position = pos / pos.w;
+  gl_PointSize = 2;
+};
+)";
+
+static const char *pVoxelVertShader_Quads = R"(
 #version 330 core
 layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec4 a_color;
@@ -44,7 +153,7 @@ void main()
 {
   v_color = a_color.bgra;
 
-  // Points
+  // Points of each corner
   vec4 off = vec4(a_position.www * 2.0, 0);
   vec4 pos0 = u_worldViewProj * vec4(a_position.xyz + off.www, 1);
   vec4 pos1 = u_worldViewProj * vec4(a_position.xyz + off.xww, 1);
@@ -96,7 +205,7 @@ void main()
   float m = max((maxPos.x - minPos.x) * u_screenSize.x, (maxPos.y - minPos.y) * u_screenSize.y);
   m = min(m, 150.0); // Cap size of huge points
   const float maxPointSize = 2.0;
-  gl_PointSize = max(maxPointSize, ceil(m * 0.5));
+  gl_PointSize = 2;//max(maxPointSize, ceil(m * 0.5));
 };
 )";
 
@@ -110,73 +219,6 @@ void main()
   out_color = v_color;
 };
 )";
-
-// ---------------------------------------------------------------------
-// Author: Dave Pevreal, December 2016
-static GLuint CompileProgram(const char *pProgramDescription, const char *pVertShader, const char *pFragShader)
-{
-  udDebugPrintf("Compiling %s\n", pProgramDescription);
-  // Create the shaders
-  GLuint vertexShaderID = glCreateShader(GL_VERTEX_SHADER); VERIFY_GL();
-  GLuint fragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER); VERIFY_GL();
-  GLint compileResult = GL_FALSE;
-  GLint infoLogLength;
-
-  // Compile Vertex Shader
-  glShaderSource(vertexShaderID, 1, &pVertShader, NULL); VERIFY_GL();
-  glCompileShader(vertexShaderID); VERIFY_GL();
-  glGetShaderiv(vertexShaderID, GL_COMPILE_STATUS, &compileResult); VERIFY_GL();
-
-  if (!compileResult)
-  {
-    glGetShaderiv(vertexShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-    char *pVertexShaderErrorMessage = udAllocType(char, infoLogLength, udAF_None);
-    glGetShaderInfoLog(vertexShaderID, infoLogLength, NULL, pVertexShaderErrorMessage);
-    udDebugPrintf("Error compiling vertex shader for %s: %s\n", pProgramDescription, pVertexShaderErrorMessage);
-    udFree(pVertexShaderErrorMessage);
-    UDASSERT(false, "Could not compile vertex shader.");
-  }
-
-  // Compile Fragment Shader
-  glShaderSource(fragmentShaderID, 1, &pFragShader, NULL); VERIFY_GL();
-  glCompileShader(fragmentShaderID); VERIFY_GL();
-  glGetShaderiv(fragmentShaderID, GL_COMPILE_STATUS, &compileResult); VERIFY_GL();
-
-  if (!compileResult)
-  {
-    glGetShaderiv(fragmentShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
-    char *pFragShaderErrorMessage = udAllocType(char, infoLogLength, udAF_None);
-    glGetShaderInfoLog(fragmentShaderID, infoLogLength, NULL, pFragShaderErrorMessage);
-    udDebugPrintf("Error compiling fragment shader for %s: %s\n", pProgramDescription, pFragShaderErrorMessage);
-    udFree(pFragShaderErrorMessage);
-    UDASSERT(false, "Could not compile fragment shader.");
-  }
-
-  // Link the program
-  GLuint programID = glCreateProgram();
-  glAttachShader(programID, vertexShaderID);
-  glAttachShader(programID, fragmentShaderID);
-  glLinkProgram(programID);
-  glGetProgramiv(programID, GL_LINK_STATUS, &compileResult);
-
-  if (!compileResult)
-  {
-    glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &infoLogLength);
-    char *pProgramErrorMessage = udAllocType(char, infoLogLength, udAF_None);
-
-    glGetProgramInfoLog(programID, infoLogLength, NULL, pProgramErrorMessage);
-    udDebugPrintf("Shader Linker Error for program %s: %s\n", pProgramDescription, pProgramErrorMessage);
-    udFree(pProgramErrorMessage);
-    UDASSERT(false, "Could not link shader programs.\n");
-  }
-
-  // These shaders are referenced by the program now, so deleting them just
-  // reduces their reference count so when we delete the program they are deleted
-  glDeleteShader(vertexShaderID);
-  glDeleteShader(fragmentShaderID);
-
-  return programID;
-}
 
 // ---------------------------------------------------------------------
 struct udGLImplVertexBuffer
@@ -198,38 +240,19 @@ struct udGLImplVertexBuffer
   udDouble4x4 blockToModel;
 };
 
-// ---------------------------------------------------------------------
-struct GLBlockRenderProgram
-{
-  GLuint programID;
-  GLuint worldViewProjLoc;
-  GLuint screenSizeLoc;
-
-  void Compile()
-  {
-    programID = CompileProgram("Voxel", pVoxelVertShader, pVoxelFragShader);
-    udDebugPrintf("Voxel program: %d\n", programID);
-
-    // Get the uniform locations
-    worldViewProjLoc = glGetUniformLocation(programID, "u_worldViewProj");
-    screenSizeLoc = glGetUniformLocation(programID, "u_screenSize");
-  }
-  void Use()
-  {
-    glUseProgram(programID); VERIFY_GL();
-  }
-  void Bind(GLuint vaoId)
-  {
-    glBindVertexArray(vaoId);
-  }
-} blockRenderProgram;
-
 /*----------------------------------------------------------------------------------------------------*/
 void udGLImpl_BeginRender(void *pGPUContext, const udRenderView *pView, uint32_t width, uint32_t height)
 {
   udGLImplContext *pCtx = (udGLImplContext*)pGPUContext;
-  if (pCtx)
-    memset(pCtx, 0, sizeof(udGLImplContext));
+
+  pCtx->numberOfBlocksRendered = 0;
+  pCtx->numberOfDrawCalls = 0;
+  pCtx->numberOfVBOsUploaded = 0;
+  pCtx->numberOfVerticesUploaded = 0;
+  pCtx->numberOfVerticesRendered = 0;
+  pCtx->createVertexBufferTimeMs = 0;
+  pCtx->uploadTimeMs = 0;
+  pCtx->drawTimeMs = 0;
 
   glDisable(GL_CULL_FACE); VERIFY_GL();
   glEnable(GL_DEPTH_TEST); VERIFY_GL();
@@ -241,9 +264,13 @@ void udGLImpl_BeginRender(void *pGPUContext, const udRenderView *pView, uint32_t
 
   glDisable(GL_BLEND); VERIFY_GL();
 
-  blockRenderProgram.Use();
+  pBlockRenderProgram = &pCtx->quadsProgram;
+  pBlockRenderProgram->Use();
+
   // Upload shader constants
-  glUniform2f(blockRenderProgram.screenSizeLoc, (float)width, (float)height); VERIFY_GL();
+  // TODO: this info needs to be available in render vertex buffer
+  if (pBlockRenderProgram->screenSizeLoc >= 0)
+    glUniform2f(pBlockRenderProgram->screenSizeLoc, (float)width, (float)height); VERIFY_GL();
 }
 
 // ---------------------------------------------------------------------
@@ -371,11 +398,11 @@ udError udGLImpl_RenderVertexBuffer(void *pGPUContext, const udBlockRenderModel 
     else
       wvp = udMul(pModel->projection, pModel->worldView);
     udFloat4x4 fwvp = udFloat4x4::create(wvp);
-    glUniformMatrix4fv(blockRenderProgram.worldViewProjLoc, 1, GL_FALSE, fwvp.a); VERIFY_GL();
+    glUniformMatrix4fv(pBlockRenderProgram->worldViewProjLoc, 1, GL_FALSE, fwvp.a); VERIFY_GL();
     pCtx->pUploadedModelData = pModel;
   }
 
-  blockRenderProgram.Bind(pVB->vao);
+  pBlockRenderProgram->Bind(pVB->vao);
 
   uint64_t startTm = udPerfCounterStart();
   for (int dc = 0; dc < pDrawList->drawCount; ++dc)
@@ -406,6 +433,7 @@ epilogue:
 void udGLImpl_EndRender(void * /*pGPUContext*/)
 {
   glUseProgram(0); VERIFY_GL();
+  pBlockRenderProgram = nullptr;
 }
 
 
@@ -424,11 +452,14 @@ udError udGLImpl_DestroyVertexBuffer(void * /*pGPUContext*/, void *pVertexBuffer
 }
 
 // ---------------------------------------------------------------------
-void udGLImpl_Init(int targetPointCount = 7000000, float threshold = 0.5f)
+udError udGLImpl_Init(int targetPointCount = 7000000, float threshold = 0.5f)
 {
-  blockRenderProgram.Compile();
-  static udBlockRenderGPUInterface gpuInterface;
+  udError result;
 
+  UD_ERROR_CHECK(g_udGLImplContextMem.pointsProgram.Compile(pVoxelVertShader_Points, pVoxelFragShader, "Points"));
+  UD_ERROR_CHECK(g_udGLImplContextMem.quadsProgram.Compile(pVoxelVertShader_Quads, pVoxelFragShader, "Quads"));
+
+  static udBlockRenderGPUInterface gpuInterface;
   gpuInterface.pBeginRender = udGLImpl_BeginRender;
   gpuInterface.pEndRender = udGLImpl_EndRender;
   gpuInterface.pCreateVertexBuffer = udGLImpl_CreateVertexBuffer;
@@ -437,13 +468,17 @@ void udGLImpl_Init(int targetPointCount = 7000000, float threshold = 0.5f)
   gpuInterface.pDestroyVertexBuffer = udGLImpl_DestroyVertexBuffer;
   gpuInterface.pGPUContext = &g_udGLImplContextMem;
 
-  udBlockRenderContext_Init(&gpuInterface);
+  UD_ERROR_CHECK(udBlockRenderContext_Init(&gpuInterface));
+
+epilogue:
+  return result;
 }
 
 // ---------------------------------------------------------------------
 void udGLImpl_Deinit()
 {
-  // TODO: Destroy shader program
+  g_udGLImplContextMem.pointsProgram.Destroy();
+  g_udGLImplContextMem.quadsProgram.Destroy();
 }
 
 
