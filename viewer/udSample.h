@@ -1,9 +1,15 @@
 #ifndef SharedSample_h__
 #define SharedSample_h__
 
+#include "udMath.h"
+#include "udError.h"
+union SDL_Event;
+#include <vector>
+
 struct udSampleRenderInfo
 {
   double dt;
+  double moveSpeed, turnSpeed; // Camera control speeds
 
   int width;
   int height;
@@ -18,26 +24,26 @@ struct udSampleRenderInfo
   struct SDL_Texture *pSDLTexture;
 };
 
-typedef void (udSampleInit)(void **ppSampleData, const udSampleRenderInfo &info);
-typedef void (udSampleDeinit)(void *pSampleData);
-typedef void (udSampleRender)(void *pSampleData, const udSampleRenderInfo &info);
 
-struct udSample
+// Base class for samples
+class udSample
 {
+public:
+  udSample(const char *pSampleName);
+  virtual ~udSample() {}
+
+  virtual udError Init(udSampleRenderInfo &info) = 0;           // Initialise for running the sample
+  virtual void Deinit() = 0;                                    // Tear-down resources to run another sample, or to re-run from the start
+  virtual udError Render(udSampleRenderInfo &info) = 0;         // Render one frame, error codes are shown to the user
+  virtual bool Event(udSampleRenderInfo &, const SDL_Event &);  // Handle SDL events, return true if handled (implying the framework should ignore)
+
+  // Simple camera inputs handler available to all samples for consistency
+  void UpdateCamera(udDouble4x4 *pCamera, double dt, double &moveSpeed, double &turnSpeed);
+  
+  static udSample *pSamplesHead; // Head of static list of samples
+  udSample *pNextSample;
   const char *pName;
-
-  udSampleInit *pInit; // Called when the Sample is 'activated'
-  udSampleDeinit *pDeinit; // Called when the Sample is 'deactivated'
-  udSampleRender *pRender; // Called each frame
 };
-
-#define UDSAMPLE_PREDECLARE_SAMPLE(x) \
-  void x##_Init(void **ppSampleData, const udSampleRenderInfo &info); \
-  void x##_Deinit(void *pSampleData); \
-  void x##_Render(void *pSampleData, const udSampleRenderInfo &info); \
-
-#define UDSAMPLE_REGISTER_SAMPLE(x) \
-  { #x, x##_Init, x##_Deinit, x##_Render }
 
 #ifndef UDSAMPLE_ASSETDIR
 #define UDSAMPLE_ASSETDIR "../../samplefiles"
