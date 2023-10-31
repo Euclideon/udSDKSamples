@@ -31,8 +31,10 @@ static BasicSample instance("Basic Sample");
 udError BasicSample::Init(udSampleRenderInfo &info)
 {
   udError result;
+
   mat = udDouble4x4::identity();
   UD_ERROR_CHECK(udPointCloud_Load(info.pContext, &pModel, UDSAMPLE_ASSETDIR "/HistogramTest.uds", &header));
+
   camera = udDouble4x4::identity();
   mat = udDouble4x4::create(header.storedMatrix);
   camera.axis.t = mat.axis.t + ((mat.axis.x + mat.axis.z) * 0.25);
@@ -60,6 +62,7 @@ udError BasicSample::Render(udSampleRenderInfo &info)
   udRenderSettings options = {};
   udRenderInstance instance = {};
 
+  options.pointMode = info.pointMode;
   instance.pPointCloud = pModel;
   memcpy(instance.matrix, header.storedMatrix, sizeof(header.storedMatrix));
 

@@ -101,15 +101,17 @@ struct GLBlockRenderProgram
   {
     glDeleteProgram(programID);
   }
-} *pBlockRenderProgram = nullptr;
+};
 
 // ---------------------------------------------------------------------
 struct udGLImplContext
 {
   GLBlockRenderProgram pointsProgram;
   GLBlockRenderProgram quadsProgram;
-  GLBlockRenderProgram *pBlockRenderProgram; // The shaders to use for current settings
+  GLBlockRenderProgram *pBlockRenderProgram; // Current program in use
   const udBlockRenderModel *pUploadedModelData; // For tracking which model shader current constants refer to
+
+  uint32_t width, height; 
 
   int32_t numberOfBlocksRendered;
   int32_t numberOfDrawCalls;
@@ -135,9 +137,9 @@ uniform vec2 u_screenSize;
 void main()
 {
   v_color = a_color.bgra;
-  vec4 pos = u_worldViewProj * a_position;
+  vec4 pos = u_worldViewProj * vec4(a_position.xyz + a_position.www,1);
   gl_Position = pos / pos.w;
-  gl_PointSize = 2;
+  gl_PointSize = 1;
 };
 )";
 
@@ -205,7 +207,7 @@ void main()
   float m = max((maxPos.x - minPos.x) * u_screenSize.x, (maxPos.y - minPos.y) * u_screenSize.y);
   m = min(m, 150.0); // Cap size of huge points
   const float maxPointSize = 2.0;
-  gl_PointSize = 2;//max(maxPointSize, ceil(m * 0.5));
+  gl_PointSize = max(maxPointSize, ceil(m * 0.5));
 };
 )";
 
@@ -245,6 +247,10 @@ void udGLImpl_BeginRender(void *pGPUContext, const udRenderView *pView, uint32_t
 {
   udGLImplContext *pCtx = (udGLImplContext*)pGPUContext;
 
+  // Store copies of the render dimensions
+  pCtx->width = width;
+  pCtx->height = height;
+
   pCtx->numberOfBlocksRendered = 0;
   pCtx->numberOfDrawCalls = 0;
   pCtx->numberOfVBOsUploaded = 0;
@@ -253,6 +259,7 @@ void udGLImpl_BeginRender(void *pGPUContext, const udRenderView *pView, uint32_t
   pCtx->createVertexBufferTimeMs = 0;
   pCtx->uploadTimeMs = 0;
   pCtx->drawTimeMs = 0;
+  pCtx->pBlockRenderProgram = nullptr;
 
   glDisable(GL_CULL_FACE); VERIFY_GL();
   glEnable(GL_DEPTH_TEST); VERIFY_GL();
@@ -263,14 +270,6 @@ void udGLImpl_BeginRender(void *pGPUContext, const udRenderView *pView, uint32_t
   glEnable(GL_VERTEX_PROGRAM_POINT_SIZE); VERIFY_GL();
 
   glDisable(GL_BLEND); VERIFY_GL();
-
-  pBlockRenderProgram = &pCtx->quadsProgram;
-  pBlockRenderProgram->Use();
-
-  // Upload shader constants
-  // TODO: this info needs to be available in render vertex buffer
-  if (pBlockRenderProgram->screenSizeLoc >= 0)
-    glUniform2f(pBlockRenderProgram->screenSizeLoc, (float)width, (float)height); VERIFY_GL();
 }
 
 // ---------------------------------------------------------------------
@@ -382,11 +381,26 @@ epilogue:
 }
 
 /*----------------------------------------------------------------------------------------------------*/
-udError udGLImpl_RenderVertexBuffer(void *pGPUContext, const udBlockRenderModel *pModel, void *pVertexBuffer, uint16_t divisionsMask, udBlockRenderDrawList *pDrawList, double /*blockPriority*/, void * /*pVoxelShaderData*/)
+udError udGLImpl_RenderVertexBuffer(void *pGPUContext, const udBlockRenderModel *pModel, void *pVertexBuffer, void * /*pVoxelShaderData*/, const udBlockRenderInfo *pInfo)
 {
   udResult result;
   udGLImplVertexBuffer *pVB = (udGLImplVertexBuffer *)pVertexBuffer;
   udGLImplContext *pCtx = (udGLImplContext *)pGPUContext;
+  GLBlockRenderProgram *pProgramToUse;
+
+  if (pInfo->pointMode == udRCPM_Points)
+    pProgramToUse = &pCtx->pointsProgram;
+  else
+    pProgramToUse = &pCtx->quadsProgram;
+
+  if (pCtx->pBlockRenderProgram != pProgramToUse)
+  {
+    pCtx->pBlockRenderProgram = pProgramToUse;
+    pCtx->pBlockRenderProgram->Use();
+    pCtx->pUploadedModelData = nullptr;
+    if (pCtx->pBlockRenderProgram->screenSizeLoc >= 0)
+      glUniform2f(pCtx->pBlockRenderProgram->screenSizeLoc, (float)pCtx->width, (float)pCtx->height); VERIFY_GL();
+  }
 
   ++pCtx->numberOfBlocksRendered;
   if (pCtx->pUploadedModelData != pModel || BLOCKSPACE_POSITIONS)
@@ -398,19 +412,21 @@ udError udGLImpl_RenderVertexBuffer(void *pGPUContext, const udBlockRenderModel 
     else
       wvp = udMul(pModel->projection, pModel->worldView);
     udFloat4x4 fwvp = udFloat4x4::create(wvp);
-    glUniformMatrix4fv(pBlockRenderProgram->worldViewProjLoc, 1, GL_FALSE, fwvp.a); VERIFY_GL();
+
+
+    glUniformMatrix4fv(pCtx->pBlockRenderProgram->worldViewProjLoc, 1, GL_FALSE, fwvp.a); VERIFY_GL();
     pCtx->pUploadedModelData = pModel;
   }
 
-  pBlockRenderProgram->Bind(pVB->vao);
+  pCtx->pBlockRenderProgram->Bind(pVB->vao);
 
   uint64_t startTm = udPerfCounterStart();
-  for (int dc = 0; dc < pDrawList->drawCount; ++dc)
+  for (int dc = 0; dc < pInfo->pDrawList->drawCount; ++dc)
   {
-    if (pDrawList->draws[dc].mask & divisionsMask)
+    if (pInfo->pDrawList->draws[dc].mask & pInfo->divisionsMask)
     {
-      int start = pDrawList->draws[dc].start;
-      int count = pDrawList->draws[dc].count;
+      int start = pInfo->pDrawList->draws[dc].start;
+      int count = pInfo->pDrawList->draws[dc].count;
 
       ++pCtx->numberOfDrawCalls;
       glDrawArrays(GL_POINTS, start, count); VERIFY_GL();
@@ -430,10 +446,11 @@ epilogue:
 
 
 /*----------------------------------------------------------------------------------------------------*/
-void udGLImpl_EndRender(void * /*pGPUContext*/)
+void udGLImpl_EndRender(void *pGPUContext)
 {
+  udGLImplContext *pCtx = (udGLImplContext *)pGPUContext;
   glUseProgram(0); VERIFY_GL();
-  pBlockRenderProgram = nullptr;
+  pCtx->pBlockRenderProgram = nullptr;
 }
 
 

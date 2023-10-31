@@ -234,6 +234,7 @@ int main(int argc, char **args)
           else
             ImGui::Text("GPU Renderer (%s)", udError_GetErrorString(udGLImplError));
           ImGui::SliderFloat("Move speed", &renderInfo.moveSpeed, 0.1f, 200.f);
+          ImGui::Combo("Point mode", (int *)&renderInfo.pointMode, "Rectangles\0Cubes\0Points\0\0", 3);
           ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Samples"))

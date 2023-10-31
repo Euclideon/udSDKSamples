@@ -14,6 +14,7 @@ struct udSampleRenderInfo
 {
   double dt;
   float moveSpeed, turnSpeed; // Camera control speeds (floats for imgui convenience)
+  udRenderContextPointMode pointMode;
 
   int width;
   int height;
