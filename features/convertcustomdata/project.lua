@@ -1,6 +1,7 @@
 project "ConvertCustomData"
 	kind "ConsoleApp"
 	language "C++"
+	cppdialect "C++17"
 	flags { "FatalWarnings" }
 
 	targetdir "../../builds/features/customconversion"

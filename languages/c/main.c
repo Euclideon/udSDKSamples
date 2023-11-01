@@ -25,7 +25,7 @@ int main(int argc, char **ppArgv)
   int x, y;
   const int width = 1280;
   const int height = 720;
-  char *pServerPath = "https://udcloud.euclideon.com";
+  char *pServerPath = "https://udcloud.com";
   char *pKey = "udCloudKey";
   char *pModelName = "DirCube.uds";
   int pause = 0;

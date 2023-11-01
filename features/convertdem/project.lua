@@ -1,6 +1,7 @@
 project "ConvertDEM"
 	kind "ConsoleApp"
 	language "C++"
+	cppdialect "C++17"
 	flags { "FatalWarnings" }
 
 	targetdir "../../builds/features/convertdem"

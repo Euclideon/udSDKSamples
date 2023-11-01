@@ -1,7 +1,7 @@
 project "ExcludeStreamedAttributes"
 	kind "ConsoleApp"
 	language "C++"
-	cppdialect "C++11"
+	cppdialect "C++17"
 	flags { "FatalWarnings" }
 
 	targetdir "../../builds/features/excludestreamedattributes"
