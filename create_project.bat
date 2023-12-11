@@ -12,12 +12,12 @@ GOTO END
 
 :TWO
  ECHO Creating VS2019 Android Project
- external\udCore\bin\premake-bin\premake5.exe vs2019 --os=android
+ external\udCore\bin\premake-bin\premake5.exe vs2019 --os=android %*
  GOTO END
 
 :ONE
  ECHO Creating VS2019 Project...
- external\udCore\bin\premake-bin\premake5.exe vs2019
+ external\udCore\bin\premake-bin\premake5.exe vs2019 %*
  GOTO END
 
 :END
