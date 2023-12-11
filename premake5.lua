@@ -106,7 +106,7 @@ solution "udSDKSamples"
 		platforms { "x64" }
 	end
 
-	cppdialect "C++14"
+	cppdialect "C++17"
 	pic "On"
 	startproject "cSample"
 
